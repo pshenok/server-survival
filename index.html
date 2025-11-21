@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SERVER: Survival Protocol</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        /* Base styles and aesthetics */
+        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* Glassmorphism UI */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Interactive elements styles */
+        .service-btn { transition: all 0.2s ease; }
+        .service-btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); 
+            border-color: rgba(56, 189, 248, 0.5);
+        }
+        .service-btn:active { transform: translateY(0); }
+        .service-btn.active { 
+            background: rgba(56, 189, 248, 0.2); 
+            border: 1px solid #38bdf8;
+            box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.2);
+        }
+
+        .time-btn { transition: all 0.1s ease; }
+        .time-btn.active {
+            background: rgba(56, 189, 248, 0.4);
+            border-color: #38bdf8;
+            color: white;
+        }
+        
+        .tooltip {
+            position: absolute; pointer-events: none;
+            background: rgba(0, 0, 0, 0.9); color: white;
+            padding: 8px 12px; border-radius: 6px;
+            font-size: 12px; display: none; z-index: 100;
+            border: 1px solid #333; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .ai-btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .ai-btn:hover {
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.6);
+            filter: brightness(1.2);
+        }
+        
+        /* Typing cursor */
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s step-start infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <!-- UI Overlay: Top Bar -->
+    <div class="absolute top-0 left-0 w-full p-4 z-10 pointer-events-none flex justify-between items-start">
+        <!-- Stats Panel -->
+        <div class="glass-panel rounded-xl p-5 w-80 pointer-events-auto">
+            <div class="flex justify-between items-end mb-3 border-b border-gray-700 pb-2">
+                <h1 class="text-2xl font-bold text-red-500 tracking-widest animate-pulse">SURVIVAL</h1>
+                <span class="text-xs text-gray-500 font-mono">v2.1 Scoring</span>
+            </div>
+            
+            <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">BUDGET</span>
+                    <span id="money-display" class="text-green-400 font-mono text-xl font-bold transition-colors duration-300">$5000</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">REPUTATION</span>
+                    <div class="w-32 h-3 bg-gray-800 rounded-full overflow-hidden relative">
+                        <div id="rep-bar" class="h-full bg-yellow-500 transition-all duration-500" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center pt-1">
+                    <span class="text-gray-400 text-sm">LOAD (RPS)</span>
+                    <span id="rps-display" class="text-blue-300 font-mono text-sm">0.0 req/s</span>
+                </div>
+                <div class="flex justify-between items-center pt-3 border-t border-gray-700 mt-2">
+                    <span class="text-gray-300 font-bold text-lg">TOTAL SCORE</span>
+                    <span id="total-score-display" class="text-white font-mono text-2xl font-bold">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Score Details Panel -->
+        <div class="glass-panel rounded-xl p-4 w-60 pointer-events-auto">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 border-b border-gray-700 pb-1">Traffic Score Details</h3>
+            <div class="space-y-1 text-sm font-mono">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500">WEB (S3)</span>
+                    <span id="score-web" class="text-gray-300">0</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500">API (RDS)</span>
+                    <span id="score-api" class="text-gray-300">0</span>
+                </div>
+                <div class="flex justify-between items-center pt-1 border-t border-gray-800">
+                    <span class="text-purple-300 font-bold">WAF REFLECTED</span>
+                    <span id="score-fraud" class="text-purple-300">0</span>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Time Control Panel (Center) -->
+        <div class="glass-panel rounded-xl p-2 pointer-events-auto flex gap-2 absolute left-1/2 transform -translate-x-1/2">
+            <button onclick="restartGame()" id="btn-restart" class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-red-500 hover:text-red-400 flex items-center justify-center mr-2" title="Restart Game">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </button>
+            <div class="w-px bg-gray-700 mx-1"></div>
+            <button onclick="setTimeScale(0)" id="btn-pause" class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            </button>
+            <button onclick="setTimeScale(1)" id="btn-play" class="time-btn active w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button onclick="setTimeScale(3)" id="btn-fast" class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 flex items-center justify-center relative">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+            </button>
+        </div>
+
+        <!-- Objective Panel -->
+        <div class="glass-panel rounded-xl p-4 pointer-events-auto max-w-xs">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Objectives</h3>
+                <span class="text-[10px] bg-red-900/50 px-2 py-0.5 rounded text-red-400 border border-red-800 animate-pulse">LIVE</span>
+            </div>
+            <ul class="text-xs text-gray-300 space-y-2 font-mono">
+                <li class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span> 
+                    Survive Endless Traffic
+                </li>
+                <li id="goal-web" class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span> 
+                    Route WEB traffic to S3
+                </li>
+                <li id="goal-api" class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-yellow-500 mr-2"></span> 
+                    Route API traffic to RDS
+                </li>
+                <li id="goal-waf" class="flex items-center">
+                    <span class="w-2 h-2 rounded-full bg-purple-500 mr-2"></span> 
+                    Block FRAUD traffic with WAF
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- UI Overlay: Bottom Toolbar -->
+    <div class="absolute bottom-6 left-0 w-full z-10 pointer-events-none flex justify-center">
+        <div class="glass-panel rounded-2xl p-2 pointer-events-auto flex items-center gap-2 shadow-2xl">
+            
+            <!-- AI Button -->
+            <button id="tool-ai" class="ai-btn active text-white p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center mr-2 transition-all transform hover:scale-105" onclick="consultAI()">
+                <div class="text-xl">✨</div>
+                <span class="text-[9px] font-bold mt-1 uppercase">Audit</span>
+            </button>
+
+            <!-- Tools -->
+            <div class="flex gap-1 pr-4 border-r border-gray-700">
+                <button id="tool-select" class="service-btn active bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent" onclick="setTool('select')">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                    <span class="text-[10px] uppercase">Select</span>
+                </button>
+
+                <button id="tool-connect" class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent" onclick="setTool('connect')">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    <span class="text-[10px] uppercase">Link</span>
+                </button>
+
+                <button id="tool-delete" class="service-btn bg-red-900/30 text-red-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent hover:bg-red-900/50" onclick="setTool('delete')">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    <span class="text-[10px] uppercase">Demolish</span>
+                </button>
+            </div>
+
+            <!-- Shop -->
+            <div class="flex gap-2 pl-2">
+                <!-- WAF -->
+                <button id="tool-waf" class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden" onclick="setTool('waf')">
+                    <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">$50</div>
+                    <div class="w-4 h-4 bg-purple-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(168,85,247,0.6)]"></div>
+                    <span class="text-[10px] font-bold mt-1">WAF</span>
+                    <span class="text-[8px] text-gray-400">Sec</span>
+                </button>
+
+                <button id="tool-alb" class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden" onclick="setTool('alb')">
+                    <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">$50</div>
+                    <div class="w-4 h-4 bg-blue-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
+                    <span class="text-[10px] font-bold mt-1">ALB</span>
+                    <span class="text-[8px] text-gray-400">Load</span>
+                </button>
+
+                <button id="tool-lambda" class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden" onclick="setTool('lambda')">
+                    <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">$100</div>
+                    <div class="w-4 h-4 bg-orange-500 rounded-full mb-1 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></div>
+                    <span class="text-[10px] font-bold mt-1">EC2</span>
+                    <span class="text-[8px] text-gray-400">Comp</span>
+                </button>
+
+                <button id="tool-db" class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden" onclick="setTool('db')">
+                    <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">$200</div>
+                    <div class="w-4 h-4 bg-red-600 rounded-sm mb-1 shadow-[0_0_10px_rgba(220,38,38,0.6)] border-b-2 border-red-800"></div>
+                    <span class="text-[10px] font-bold mt-1">RDS</span>
+                    <span class="text-[8px] text-gray-400">Data</span>
+                </button>
+
+                <!-- S3 -->
+                <button id="tool-s3" class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden" onclick="setTool('s3')">
+                    <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">$25</div>
+                    <div class="w-4 h-4 bg-emerald-500 rounded-full mb-1 shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
+                    <span class="text-[10px] font-bold mt-1">S3</span>
+                    <span class="text-[8px] text-gray-400">Store</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hover Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Game Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- AI Advice Modal (Kept for completeness) -->
+    <div id="ai-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-end sm:items-center justify-center p-4 pointer-events-none">
+        <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 pointer-events-auto border border-indigo-500/30 shadow-[0_0_50px_rgba(79,70,229,0.2)] transform transition-all translate-y-10 opacity-0" id="ai-modal-content">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg">
+                    <span class="text-2xl">🧠</span>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-indigo-300 font-bold text-sm uppercase tracking-widest mb-1">AI Cloud Architect</h3>
+                    <div id="ai-response-text" class="text-gray-200 text-sm leading-relaxed min-h-[60px] font-mono">
+                        <!-- Text injected here -->
+                    </div>
+                </div>
+                <button onclick="closeAIModal()" class="text-gray-500 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- End/Next Level Modal -->
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="glass-panel p-8 rounded-2xl text-center max-w-md border border-gray-600">
+            <h2 id="modal-title" class="text-4xl font-bold mb-4 text-white font-mono tracking-tighter">SYSTEM FAILURE</h2>
+            <div class="h-px w-full bg-gray-700 mb-6"></div>
+            <p id="modal-desc" class="text-gray-300 mb-8 text-sm leading-relaxed">Infrastructure collapsed.</p>
+            <div class="flex justify-center gap-4">
+                <button onclick="restartGame()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-sm">
+                    Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * SERVER: Game Logic
+         * Single file implementation based on Three.js
+         */
+
+        const apiKey = ""; // System provided
+
+        // --- ENUMS & CONFIGURATION ---
+        const TRAFFIC_TYPES = {
+            WEB: 'WEB',     // Requires S3 (Simpler, lower reward)
+            API: 'API',     // Requires RDS (Complex, higher reward)
+            FRAUD: 'FRAUD'  // Must be blocked by WAF
+        };
+
+        const CONFIG = {
+            gridSize: 30,
+            tileSize: 4,
+            colors: {
+                bg: 0x050505, grid: 0x1a1a1a,
+                alb: 0x3b82f6, compute: 0xf97316, 
+                db: 0xdc2626, waf: 0xa855f7, 
+                s3: 0x10b981, line: 0x475569,
+                lineActive: 0x38bdf8,
+                requestWeb: 0x4ade80, // Green
+                requestApi: 0xffa500, // Orange
+                requestFraud: 0xff00ff, // Pink
+                requestFail: 0xef4444
+            },
+            services: {
+                waf: { name: "WAF Firewall", cost: 50, type: 'waf', processingTime: 20, capacity: 100, upkeep: 1 },
+                alb: { name: "Load Balancer", cost: 50, type: 'alb', processingTime: 50, capacity: 50, upkeep: 2 },
+                compute: { name: "EC2 Compute", cost: 100, type: 'compute', processingTime: 600, capacity: 5, upkeep: 5 },
+                db: { name: "RDS Database", cost: 200, type: 'db', processingTime: 300, capacity: 20, upkeep: 10 },
+                s3: { name: "S3 Storage", cost: 25, type: 's3', processingTime: 200, capacity: 100, upkeep: 1 }
+            },
+            survival: {
+                startBudget: 5000,
+                baseRPS: 1.0,
+                rampUp: 0.005, 
+                // Traffic Distribution (Must sum to 1.0)
+                trafficDistribution: {
+                    [TRAFFIC_TYPES.WEB]: 0.50, // 50%
+                    [TRAFFIC_TYPES.API]: 0.35, // 35%
+                    [TRAFFIC_TYPES.FRAUD]: 0.15 // 15%
+                },
+                
+                // Score Points based on outcome
+                SCORE_POINTS: {
+                    WEB_COMPLETED: 10,
+                    API_COMPLETED: 20,
+                    // BUG FIX: Removed reputation penalty for generic failure (queue overflow, wrong connection)
+                    FAIL_REPUTATION: 0, 
+                    FRAUD_PASSED_REPUTATION: -10, // Huge rep penalty for passed fraud (CRITICAL FAILURE)
+                    FRAUD_BLOCKED_SCORE: 25 // High score for WAF success
+                }
+            }
+        };
+
+        // --- GAME STATE ---
+        const STATE = {
+            money: 0,
+            reputation: 0,
+            requestsProcessed: 0,
+            
+            // New Scoring Variables
+            score: {
+                total: 0,
+                web: 0,
+                api: 0,
+                fraudBlocked: 0
+            },
+            
+            activeTool: 'select',
+            selectedNodeId: null, 
+            services: [], 
+            requests: [], 
+            connections: [], 
+            
+            lastTime: 0,
+            spawnTimer: 0,
+            currentRPS: 0.5,
+            timeScale: 1,
+            isRunning: true,
+            animationId: null,
+            
+            internetNode: {
+                id: 'internet',
+                type: 'internet',
+                position: new THREE.Vector3(-40, 0, 0),
+                connections: []
+            }
+        };
+
+        // --- INIT THREE.JS (Standard Orthographic Setup) ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(CONFIG.colors.bg);
+        scene.fog = new THREE.FogExp2(CONFIG.colors.bg, 0.008);
+
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 50;
+        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+        camera.position.set(40, 40, 40); 
+        camera.lookAt(scene.position);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(20, 50, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        const gridHelper = new THREE.GridHelper(CONFIG.gridSize * CONFIG.tileSize, CONFIG.gridSize, CONFIG.colors.grid, CONFIG.colors.grid);
+        scene.add(gridHelper);
+
+        const serviceGroup = new THREE.Group();
+        const connectionGroup = new THREE.Group();
+        const requestGroup = new THREE.Group();
+        scene.add(serviceGroup);
+        scene.add(connectionGroup);
+        scene.add(requestGroup);
+
+        const internetGeo = new THREE.BoxGeometry(6, 1, 10);
+        const internetMat = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0x00ffff, emissiveIntensity: 0.2, roughness: 0.2 });
+        const internetMesh = new THREE.Mesh(internetGeo, internetMat);
+        internetMesh.position.copy(STATE.internetNode.position);
+        internetMesh.castShadow = true;
+        internetMesh.receiveShadow = true;
+        scene.add(internetMesh);
+        STATE.internetNode.mesh = internetMesh;
+
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        
+        // Camera panning state
+        let isPanning = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        const panSpeed = 0.1; 
+
+        // --- GAME LOGIC ---
+
+        function startGame() {
+            // Reset State
+            STATE.money = CONFIG.survival.startBudget;
+            STATE.reputation = 100;
+            STATE.requestsProcessed = 0;
+            STATE.currentRPS = CONFIG.survival.baseRPS;
+            STATE.timeScale = 1;
+            STATE.spawnTimer = 0;
+            STATE.score = { total: 0, web: 0, api: 0, fraudBlocked: 0 };
+            
+            // Reset camera position
+            camera.position.set(40, 40, 40); 
+            camera.lookAt(0, 0, 0);
+
+            // Reset Objects
+            STATE.services.forEach(s => s.destroy());
+            STATE.services = [];
+            STATE.requests.forEach(r => r.destroy());
+            STATE.requests = [];
+            STATE.connections.forEach(c => connectionGroup.remove(c.mesh));
+            STATE.connections = [];
+            STATE.internetNode.connections = [];
+            
+            // UI Reset
+            document.getElementById('modal').classList.add('hidden');
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-play').classList.add('active');
+            updateScoreUI();
+
+            console.log(`Started Survival Mode`);
+            
+            STATE.isRunning = true;
+            STATE.lastTime = performance.now();
+            if (!STATE.animationId) {
+                animate(performance.now());
+            }
+        }
+
+        function restartGame() { startGame(); }
+        setTimeout(() => startGame(), 100);
+
+        // --- CLASSES ---
+
+        class Service {
+            constructor(type, pos) {
+                this.id = 'svc_' + Math.random().toString(36).substr(2, 9);
+                this.type = type;
+                this.config = CONFIG.services[type];
+                this.position = pos.clone();
+                this.queue = [];
+                this.processing = [];
+                this.connections = []; 
+
+                let geo, mat;
+                const materialProps = { roughness: 0.2 };
+                
+                switch(type) {
+                    case 'waf':
+                        geo = new THREE.BoxGeometry(3, 2, 0.5); 
+                        mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.waf, ...materialProps });
+                        break;
+                    case 'alb':
+                        geo = new THREE.BoxGeometry(3, 1.5, 3);
+                        mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.alb, roughness: 0.1 });
+                        break;
+                    case 'compute':
+                        geo = new THREE.CylinderGeometry(1.2, 1.2, 3, 16);
+                        mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.compute, ...materialProps });
+                        break;
+                    case 'db':
+                        geo = new THREE.CylinderGeometry(2, 2, 2, 6);
+                        mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.db, roughness: 0.3 });
+                        break;
+                    case 's3':
+                        geo = new THREE.CylinderGeometry(1.8, 1.5, 1.5, 8);
+                        mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.s3, ...materialProps });
+                        break;
+                }
+
+                this.mesh = new THREE.Mesh(geo, mat);
+                this.mesh.position.copy(pos);
+                
+                if (type === 'waf') this.mesh.position.y += 1;
+                else if (type === 'alb') this.mesh.position.y += 0.75;
+                else if (type === 'compute') this.mesh.position.y += 1.5;
+                else if (type === 's3') this.mesh.position.y += 0.75;
+                else this.mesh.position.y += 1;
+
+                this.mesh.castShadow = true;
+                this.mesh.receiveShadow = true;
+                this.mesh.userData = { id: this.id };
+
+                const ringGeo = new THREE.RingGeometry(2.5, 2.7, 32);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
+                this.loadRing = new THREE.Mesh(ringGeo, ringMat);
+                this.loadRing.rotation.x = -Math.PI / 2;
+                this.loadRing.position.y = -this.mesh.position.y + 0.1; 
+                this.mesh.add(this.loadRing);
+
+                serviceGroup.add(this.mesh);
+            }
+
+            processQueue() {
+                 while (this.processing.length < this.config.capacity && this.queue.length > 0) {
+                    const req = this.queue.shift();
+
+                    // WAF Logic
+                    if (this.type === 'waf' && req.type === TRAFFIC_TYPES.FRAUD) {
+                        // WAF blocks fraud
+                        updateScore(req, 'FRAUD_BLOCKED');
+                        req.destroy(); 
+                        continue; 
+                    }
+
+                    this.processing.push({ req: req, timer: 0 });
+                }
+            }
+
+            update(dt) {
+                STATE.money -= (this.config.upkeep / 60) * dt;
+
+                this.processQueue(); 
+
+                for (let i = this.processing.length - 1; i >= 0; i--) {
+                    let job = this.processing[i];
+                    job.timer += dt * 1000; 
+
+                    if (job.timer >= this.config.processingTime) {
+                        this.processing.splice(i, 1);
+                        
+                        // Check for End of Path (DB or S3)
+                        if (this.type === 'db' || this.type === 's3') {
+                            const expectedType = this.type === 'db' ? TRAFFIC_TYPES.API : TRAFFIC_TYPES.WEB;
+                            if (job.req.type === expectedType) {
+                                finishRequest(job.req); // Success
+                            } else {
+                                failRequest(job.req); // Wrong data sink!
+                            }
+                            continue;
+                        }
+
+                        // FORWARDING LOGIC (ALB, WAF, Compute)
+                        
+                        if (this.type === 'compute') {
+                            // Compute routing logic: must deterministically route to DB for API or S3 for WEB
+                            const requiredType = job.req.type === TRAFFIC_TYPES.API ? 'db' : (job.req.type === TRAFFIC_TYPES.WEB ? 's3' : null);
+
+                            if (requiredType) {
+                                // Find a connected service that matches the required type among ALL connections
+                                const correctTarget = STATE.services.find(s => 
+                                    this.connections.includes(s.id) && s.type === requiredType
+                                );
+
+                                if (correctTarget) {
+                                    job.req.flyTo(correctTarget);
+                                } else {
+                                    // Compute finished, but the correct data sink (RDS or S3) is not connected
+                                    failRequest(job.req); 
+                                }
+                            } else {
+                                // Should only happen if FRAUD traffic reaches compute unblocked
+                                failRequest(job.req);
+                            }
+                        } else {
+                            // Standard routing for WAF/ALB: Load balance across connected services
+                            const nextNodeId = this.connections[Math.floor(Math.random() * this.connections.length)];
+                            const nextSvc = STATE.services.find(s => s.id === nextNodeId);
+
+                            if (nextSvc) {
+                                job.req.flyTo(nextSvc);
+                            } else {
+                                // No connection
+                                failRequest(job.req);
+                            }
+                        }
+                    }
+                }
+
+                const load = this.processing.length / this.config.capacity;
+                if (load > 0.8) this.loadRing.material.color.setHex(0xff0000);
+                else if (load > 0.4) this.loadRing.material.color.setHex(0xffff00);
+                else this.loadRing.material.color.setHex(0x333333);
+            }
+
+            destroy() {
+                serviceGroup.remove(this.mesh);
+                this.mesh.geometry.dispose();
+                this.mesh.material.dispose();
+            }
+        }
+
+        class Request {
+            constructor(type) {
+                this.id = Math.random().toString(36);
+                this.value = 10;
+                this.type = type; 
+                
+                let color;
+                switch (this.type) {
+                    case TRAFFIC_TYPES.WEB: color = CONFIG.colors.requestWeb; break;
+                    case TRAFFIC_TYPES.API: color = CONFIG.colors.requestApi; break;
+                    case TRAFFIC_TYPES.FRAUD: color = CONFIG.colors.requestFraud; break;
+                }
+
+                const geo = new THREE.SphereGeometry(0.4, 8, 8);
+                const mat = new THREE.MeshBasicMaterial({ color: color });
+                this.mesh = new THREE.Mesh(geo, mat);
+                
+                this.mesh.position.copy(STATE.internetNode.position);
+                this.mesh.position.y = 2;
+                requestGroup.add(this.mesh);
+
+                this.target = null;
+                this.origin = STATE.internetNode.position.clone();
+                this.origin.y = 2;
+                this.progress = 0;
+                this.isMoving = false;
+            }
+
+            flyTo(service) {
+                this.origin.copy(this.mesh.position);
+                this.target = service;
+                this.progress = 0;
+                this.isMoving = true;
+            }
+
+            update(dt) {
+                if (this.isMoving && this.target) {
+                    this.progress += dt * 2; 
+                    if (this.progress >= 1) {
+                        this.progress = 1;
+                        this.isMoving = false;
+                        this.mesh.position.copy(this.target.position);
+                        this.mesh.position.y = 2;
+                        
+                        // Queue overflow check happens here
+                        if (this.target.queue.length < 20) {
+                            this.target.queue.push(this);
+                        } else {
+                            failRequest(this); // Queue overflow
+                        }
+                    } else {
+                        const dest = this.target.position.clone();
+                        dest.y = 2;
+                        this.mesh.position.lerpVectors(this.origin, dest, this.progress);
+                        this.mesh.position.y += Math.sin(this.progress * Math.PI) * 2;
+                    }
+                }
+            }
+
+            destroy() {
+                requestGroup.remove(this.mesh);
+                this.mesh.geometry.dispose();
+                this.mesh.material.dispose();
+            }
+        }
+
+        // --- HELPERS ---
+        
+        function getIntersect(clientX, clientY) {
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(serviceGroup.children, true);
+            if (intersects.length > 0) {
+                let obj = intersects[0].object;
+                while(obj.parent && obj.parent !== serviceGroup) obj = obj.parent;
+                return { type: 'service', id: obj.userData.id, obj: obj };
+            }
+            
+            const intInter = raycaster.intersectObject(STATE.internetNode.mesh);
+            if (intInter.length > 0) return { type: 'internet', id: 'internet', obj: STATE.internetNode.mesh };
+
+            const target = new THREE.Vector3();
+            raycaster.ray.intersectPlane(plane, target);
+            return { type: 'ground', pos: target };
+        }
+
+        function snapToGrid(vec) {
+            const s = CONFIG.tileSize;
+            return new THREE.Vector3(
+                Math.round(vec.x / s) * s,
+                0,
+                Math.round(vec.z / s) * s
+            );
+        }
+        
+        function getTrafficType() {
+            const r = Math.random();
+            const dist = CONFIG.survival.trafficDistribution;
+            if (r < dist[TRAFFIC_TYPES.WEB]) return TRAFFIC_TYPES.WEB;
+            if (r < dist[TRAFFIC_TYPES.WEB] + dist[TRAFFIC_TYPES.API]) return TRAFFIC_TYPES.API;
+            return TRAFFIC_TYPES.FRAUD;
+        }
+
+        function spawnRequest() {
+            const type = getTrafficType();
+            const req = new Request(type);
+            STATE.requests.push(req);
+            const conns = STATE.internetNode.connections;
+            if (conns.length > 0) {
+                // If WAF exists, always route through WAF first if it is the entry point
+                const entryNodes = conns.map(id => STATE.services.find(s => s.id === id));
+                const wafEntry = entryNodes.find(s => s?.type === 'waf');
+                const target = wafEntry || entryNodes[Math.floor(Math.random() * entryNodes.length)];
+
+                if (target) req.flyTo(target); else failRequest(req);
+            } else failRequest(req);
+        }
+
+        function updateScore(req, outcome) {
+            const points = CONFIG.survival.SCORE_POINTS;
+            
+            if (outcome === 'FRAUD_BLOCKED') {
+                STATE.score.fraudBlocked += points.FRAUD_BLOCKED_SCORE;
+                STATE.score.total += points.FRAUD_BLOCKED_SCORE;
+            } else if (req.type === TRAFFIC_TYPES.FRAUD && outcome === 'FRAUD_PASSED') {
+                // This is the CRITICAL failure that results in reputation loss
+                STATE.reputation += points.FRAUD_PASSED_REPUTATION; 
+                console.warn(`FRAUD PASSED: ${points.FRAUD_PASSED_REPUTATION} Rep. (Critical Failure)`);
+            } else if (outcome === 'COMPLETED') {
+                if (req.type === TRAFFIC_TYPES.WEB) {
+                    STATE.score.web += points.WEB_COMPLETED;
+                    STATE.score.total += points.WEB_COMPLETED;
+                    STATE.money += points.WEB_COMPLETED;
+                } else if (req.type === TRAFFIC_TYPES.API) {
+                    STATE.score.api += points.API_COMPLETED;
+                    STATE.score.total += points.API_COMPLETED;
+                    STATE.money += points.API_COMPLETED;
+                }
+            } else if (outcome === 'FAILED') {
+                 // Common failure (Queue Overflow, Wrong Sink, No Connection).
+                 // Reputation loss for generic failures is set to 0 in CONFIG.
+                STATE.reputation += points.FAIL_REPUTATION; // This is 0 now
+                STATE.score.total -= (req.type === TRAFFIC_TYPES.API ? points.API_COMPLETED : points.WEB_COMPLETED) / 2; // Deduct half potential earnings
+            }
+            
+            updateScoreUI();
+        }
+
+        function finishRequest(req) {
+            STATE.requestsProcessed++;
+            updateScore(req, 'COMPLETED');
+            removeRequest(req);
+        }
+
+        function failRequest(req) {
+            // Special check for fraud that bypassed WAF
+            if (req.type === TRAFFIC_TYPES.FRAUD) {
+                updateScore(req, 'FRAUD_PASSED'); 
+            } else {
+                updateScore(req, 'FAILED');
+            }
+            req.mesh.material.color.setHex(CONFIG.colors.requestFail);
+            setTimeout(() => removeRequest(req), 500);
+        }
+
+        function removeRequest(req) {
+            req.destroy();
+            STATE.requests = STATE.requests.filter(r => r !== req);
+        }
+
+        function updateScoreUI() {
+            document.getElementById('total-score-display').innerText = STATE.score.total;
+            document.getElementById('score-web').innerText = STATE.score.web;
+            document.getElementById('score-api').innerText = STATE.score.api;
+            document.getElementById('score-fraud').innerText = STATE.score.fraudBlocked;
+        }
+
+        function flashMoney() {
+            const el = document.getElementById('money-display');
+            el.classList.add('text-red-500');
+            setTimeout(() => el.classList.remove('text-red-500'), 300);
+        }
+
+        // --- INPUT & ACTIONS ---
+
+        function createService(type, pos) {
+            if (STATE.money < CONFIG.services[type].cost) { flashMoney(); return; }
+            if (STATE.services.find(s => s.position.distanceTo(pos) < 1)) return;
+            STATE.money -= CONFIG.services[type].cost;
+            STATE.services.push(new Service(type, pos));
+        }
+
+        function createConnection(fromId, toId) {
+            if (fromId === toId) return;
+            const getEntity = (id) => id === 'internet' ? STATE.internetNode : STATE.services.find(s => s.id === id);
+            const from = getEntity(fromId), to = getEntity(toId);
+            if (!from || !to || from.connections.includes(toId)) return;
+
+            // Validation: Only specific flows are allowed
+            let valid = false;
+            const t1 = from.type, t2 = to.type;
+
+            if (t1 === 'internet' && (t2 === 'waf' || t2 === 'alb')) valid = true;
+            else if (t1 === 'waf' && t2 === 'alb') valid = true; // WAF -> ALB
+            else if (t1 === 'alb' && t2 === 'compute') valid = true; // ALB -> Compute
+            // Compute must connect to both DB and S3
+            else if (t1 === 'compute' && (t2 === 'db' || t2 === 's3')) valid = true; 
+            
+            if (!valid) { 
+                // Using a non-alert message for invalid connections
+                console.error("Invalid connection topology: WAF/ALB from Internet -> WAF -> ALB -> Compute -> (RDS/S3)");
+                return; 
+            }
+
+            from.connections.push(toId);
+            const pts = [from.position.clone(), to.position.clone()];
+            pts[0].y = pts[1].y = 1;
+            const geo = new THREE.BufferGeometry().setFromPoints(pts);
+            const mat = new THREE.LineBasicMaterial({ color: CONFIG.colors.line });
+            const line = new THREE.Line(geo, mat);
+            connectionGroup.add(line);
+            STATE.connections.push({ from: fromId, to: toId, mesh: line });
+        }
+
+        function deleteObject(id) {
+            const svc = STATE.services.find(s => s.id === id);
+            if (!svc) return;
+            
+            // Clean connections
+            STATE.services.forEach(s => s.connections = s.connections.filter(c => c !== id));
+            STATE.internetNode.connections = STATE.internetNode.connections.filter(c => c !== id);
+            const toRemove = STATE.connections.filter(c => c.from === id || c.to === id);
+            toRemove.forEach(c => connectionGroup.remove(c.mesh));
+            STATE.connections = STATE.connections.filter(c => !toRemove.includes(c));
+
+            svc.destroy();
+            STATE.services = STATE.services.filter(s => s.id !== id);
+            STATE.money += Math.floor(svc.config.cost / 2);
+        }
+
+
+        // Input Handlers
+        window.setTool = (t) => {
+            STATE.activeTool = t; STATE.selectedNodeId = null;
+            document.querySelectorAll('.service-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tool-${t}`).classList.add('active');
+        };
+
+        window.setTimeScale = (s) => {
+            STATE.timeScale = s;
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+            if(s===0) document.getElementById('btn-pause').classList.add('active');
+            else if(s===1) document.getElementById('btn-play').classList.add('active');
+            else if(s>1) document.getElementById('btn-fast').classList.add('active');
+        };
+
+        // --- MOUSE LISTENERS FOR INTERACTION AND CAMERA PANNING ---
+
+        container.addEventListener('contextmenu', (e) => e.preventDefault()); // Prevent context menu on right click
+
+        container.addEventListener('mousedown', (e) => {
+            if (!STATE.isRunning) return;
+            
+            // Camera Panning Setup (Right-click or middle-click)
+            if (e.button === 2 || e.button === 1) { // 2 = Right, 1 = Middle
+                isPanning = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                container.style.cursor = 'grabbing';
+                e.preventDefault(); 
+                return;
+            }
+
+            // Game Interaction Logic (Left-click only)
+            const i = getIntersect(e.clientX, e.clientY);
+            if (STATE.activeTool === 'delete' && i.type === 'service') deleteObject(i.id);
+            else if (STATE.activeTool === 'connect' && (i.type === 'service' || i.type === 'internet')) {
+                if (STATE.selectedNodeId) { createConnection(STATE.selectedNodeId, i.id); STATE.selectedNodeId = null; }
+                else STATE.selectedNodeId = i.id;
+            } else if (['waf', 'alb', 'lambda', 'db', 's3'].includes(STATE.activeTool) && i.type === 'ground') {
+                createService({ 'waf':'waf', 'alb':'alb', 'lambda':'compute', 'db':'db', 's3':'s3' }[STATE.activeTool], snapToGrid(i.pos));
+            }
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            // Tooltip Logic
+            const i = getIntersect(e.clientX, e.clientY);
+            const t = document.getElementById('tooltip');
+            if (i.type === 'service') {
+                const s = STATE.services.find(s => s.id === i.id);
+                if (s) {
+                    t.style.display = 'block'; t.style.left = e.clientX+15+'px'; t.style.top = e.clientY+15+'px';
+                    
+                    const load = s.processing.length / s.config.capacity;
+                    let loadColor = load > 0.8 ? 'text-red-400' : (load > 0.4 ? 'text-yellow-400' : 'text-green-400');
+
+                    t.innerHTML = `<strong class="text-blue-300">${s.config.name}</strong><br>
+                        Queue: <span class="${loadColor}">${s.queue.length}</span><br>
+                        Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span>`;
+                }
+            } else if (!isPanning) {
+                t.style.display = 'none';
+            }
+
+
+            // Camera Panning Logic (Right-click drag)
+            if (isPanning) {
+                const dx = e.clientX - lastMouseX;
+                const dy = e.clientY - lastMouseY;
+
+                // Convert screen movement to world movement for Orthographic camera
+                // Scaling by camera's view size to keep movement consistent regardless of zoom/aspect ratio
+                const panX = -dx * (camera.right - camera.left) / window.innerWidth * panSpeed;
+                const panY = dy * (camera.top - camera.bottom) / window.innerHeight * panSpeed;
+                
+                // Move the camera position (both X and Z axes)
+                camera.position.x += panX;
+                camera.position.z += panY;
+                
+                // Keep the camera pointing at its new position on the ground plane (Y=0)
+                camera.lookAt(camera.position.x, 0, camera.position.z);
+                camera.updateProjectionMatrix();
+
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+            }
+        });
+
+        container.addEventListener('mouseup', (e) => {
+            if (e.button === 2 || e.button === 1) {
+                isPanning = false;
+                container.style.cursor = 'default';
+            }
+        });
+
+
+        // Game Loop
+        function animate(time) {
+            STATE.animationId = requestAnimationFrame(animate);
+            if (!STATE.isRunning) return;
+            
+            const dt = ((time - STATE.lastTime) / 1000) * STATE.timeScale;
+            STATE.lastTime = time;
+
+            STATE.services.forEach(s => s.update(dt));
+            STATE.requests.forEach(r => r.update(dt));
+
+            STATE.spawnTimer += dt;
+            if (STATE.spawnTimer > (1 / STATE.currentRPS)) {
+                STATE.spawnTimer = 0;
+                spawnRequest();
+                STATE.currentRPS += CONFIG.survival.rampUp; 
+            }
+
+            document.getElementById('money-display').innerText = `$${Math.floor(STATE.money)}`;
+            STATE.reputation = Math.min(100, STATE.reputation);
+            document.getElementById('rep-bar').style.width = `${Math.max(0, STATE.reputation)}%`;
+            document.getElementById('rps-display').innerText = `${STATE.currentRPS.toFixed(1)} req/s`;
+            
+            // Survival Game Over Check Only
+            if (STATE.reputation <= 0 || STATE.money <= -1000) {
+                STATE.isRunning = false;
+                document.getElementById('modal-title').innerText = "SYSTEM FAILURE";
+                document.getElementById('modal-title').classList.add("text-red-500");
+                document.getElementById('modal-desc').innerText = `Final Score: ${STATE.score.total}`;
+                document.getElementById('modal').classList.remove('hidden');
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            // Update camera frustum to maintain aspect ratio for orthographic camera
+            camera.left = -d * aspect;
+            camera.right = d * aspect;
+            camera.top = d;
+            camera.bottom = -d;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // --- AI (Consult AI - kept as a placeholder) ---
+        function collectSystemState() {
+            const counts = { waf: 0, alb: 0, compute: 0, db: 0, s3: 0 };
+            STATE.services.forEach(s => { 
+                if (counts[s.type] !== undefined) counts[s.type]++;
+            });
+
+            return {
+                budget: Math.floor(STATE.money),
+                reputation: STATE.reputation,
+                counts: counts,
+                entryConnected: STATE.internetNode.connections.length > 0,
+                rps: STATE.currentRPS.toFixed(1),
+                totalScore: STATE.score.total,
+                fraudBlocked: STATE.score.fraudBlocked
+            };
+        }
+
+        async function consultAI() {
+            const textDiv = document.getElementById('ai-response-text');
+            document.getElementById('ai-modal').classList.remove('hidden');
+            document.getElementById('ai-modal-content').classList.remove('opacity-0', 'translate-y-10');
+            textDiv.innerHTML = '<span class="animate-pulse text-indigo-400">Analyzing...</span>';
+            
+            const data = collectSystemState();
+            const prompt = `Role: Cloud Architect Game AI (Survival Mode). 
+            State: Score ${data.totalScore}, Money $${data.budget}, Rep ${data.reputation}%, Load ${data.rps} RPS. Fraud Blocked: ${data.fraudBlocked}.
+            Infra: ${JSON.stringify(data.counts)}.
+            Advice (English, cynical, max 2 sentences):`;
+
+            try {
+                // Implementing exponential backoff logic for API call robustness
+                const maxRetries = 5;
+                let delay = 1000; 
+
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        });
+
+                        if (resp.ok) {
+                            const json = await resp.json();
+                            const text = json.candidates?.[0]?.content?.parts?.[0]?.text || "AI Offline.";
+                            
+                            textDiv.innerHTML = '';
+                            textDiv.classList.add('typing-cursor');
+                            let i = 0;
+                            const interval = setInterval(() => {
+                                textDiv.textContent += text.charAt(i++);
+                                if (i >= text.length) { clearInterval(interval); textDiv.classList.remove('typing-cursor'); }
+                            }, 30);
+                            return; // Success, exit function
+                        } else if (resp.status === 429) {
+                            // Rate limit exceeded, retry with backoff
+                            console.log(`Rate limit exceeded. Retrying in ${delay / 1000}s...`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; // Exponential backoff
+                        } else {
+                            // Other error status
+                            throw new Error(`API returned status ${resp.status}`);
+                        }
+                    } catch (e) {
+                         // Network error or fetch failure, retry with backoff
+                        console.error(`Fetch error on attempt ${attempt + 1}:`, e);
+                        if (attempt < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2;
+                        } else {
+                            // Final failure
+                            textDiv.innerText = "Connection Error or API Failure.";
+                            return;
+                        }
+                    }
+                }
+            } catch (e) { textDiv.innerText = "Connection Error or API Failure."; }
+        }
+
+        function closeAIModal() {
+            document.getElementById('ai-modal-content').classList.add('opacity-0', 'translate-y-10');
+            setTimeout(() => document.getElementById('ai-modal').classList.add('hidden'), 300);
+        }
+
+    </script>
+</body>
+</html>
