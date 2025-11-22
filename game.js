@@ -574,10 +574,13 @@ function createConnection(fromId, toId) {
     else if (t1 === 'compute' && (t2 === 'db' || t2 === 's3')) valid = true;
 
     if (!valid) {
+	new Audio('assets/sounds/click-9.mp3').play();
         // Using a non-alert message for invalid connections
         console.error("Invalid connection topology: WAF/ALB from Internet -> WAF -> ALB -> Compute -> (RDS/S3)");
         return;
     }
+    
+    new Audio('assets/sounds/click-5.mp3').play();
 
     from.connections.push(toId);
     const pts = [from.position.clone(), to.position.clone()];
@@ -646,7 +649,7 @@ container.addEventListener('mousedown', (e) => {
     if (STATE.activeTool === 'delete' && i.type === 'service') deleteObject(i.id);
     else if (STATE.activeTool === 'connect' && (i.type === 'service' || i.type === 'internet')) {
         if (STATE.selectedNodeId) { createConnection(STATE.selectedNodeId, i.id); STATE.selectedNodeId = null; }
-        else STATE.selectedNodeId = i.id;
+        else { STATE.selectedNodeId = i.id; new Audio('assets/sounds/click-5.mp3').play(); }
     } else if (['waf', 'alb', 'lambda', 'db', 's3'].includes(STATE.activeTool) && i.type === 'ground') {
         createService({ 'waf': 'waf', 'alb': 'alb', 'lambda': 'compute', 'db': 'db', 's3': 's3' }[STATE.activeTool], snapToGrid(i.pos));
     }
