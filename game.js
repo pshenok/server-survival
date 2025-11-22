@@ -39,7 +39,7 @@ const CONFIG = {
         SCORE_POINTS: {
             WEB_COMPLETED: 5,
             API_COMPLETED: 10,
-            FAIL_REPUTATION: 0,
+            FAIL_REPUTATION: -5,
             FRAUD_PASSED_REPUTATION: -10,
             FRAUD_BLOCKED_SCORE: 25
         }
@@ -358,6 +358,12 @@ class Service {
             if (job.timer >= this.config.processingTime) {
                 this.processing.splice(i, 1);
 
+                const failChance = calculateFailChanceBasedOnLoad(this.totalLoad);
+                if (Math.random() < failChance) {
+                    failRequest(job.req);
+                    continue;
+                }
+
                 if (this.type === 'db' || this.type === 's3') {
                     const expectedType = this.type === 'db' ? TRAFFIC_TYPES.API : TRAFFIC_TYPES.WEB;
                     if (job.req.type === expectedType) {
@@ -397,20 +403,23 @@ class Service {
             }
         }
 
-        const totalLoad = (this.processing.length + this.queue.length) / (this.config.capacity * 2);
-        if (totalLoad > 0.8) {
+        if (this.totalLoad > 0.8) {
             this.loadRing.material.color.setHex(0xff0000);
             this.loadRing.material.opacity = 0.8;
-        } else if (totalLoad > 0.5) {
+        } else if (this.totalLoad > 0.5) {
             this.loadRing.material.color.setHex(0xffaa00);
             this.loadRing.material.opacity = 0.6;
-        } else if (totalLoad > 0.2) {
+        } else if (this.totalLoad > 0.2) {
             this.loadRing.material.color.setHex(0xffff00);
             this.loadRing.material.opacity = 0.4;
         } else {
             this.loadRing.material.color.setHex(0x00ff00);
             this.loadRing.material.opacity = 0.3;
         }
+    }
+
+    get totalLoad () {
+        return (this.processing.length + this.queue.length) / (this.config.capacity * 2);
     }
 
     destroy() {
@@ -573,11 +582,8 @@ function finishRequest(req) {
 }
 
 function failRequest(req) {
-    if (req.type === TRAFFIC_TYPES.FRAUD) {
-        updateScore(req, 'FRAUD_PASSED');
-    } else {
-        updateScore(req, 'FAILED');
-    }
+    const failType = req.type === TRAFFIC_TYPES.FRAUD ? 'FRAUD_PASSED' : 'FAILED';
+    updateScore(req, failType);
     STATE.sound.playFail();
     req.mesh.material.color.setHex(CONFIG.colors.requestFail);
     setTimeout(() => removeRequest(req), 500);
@@ -676,7 +682,15 @@ function deleteObject(id) {
     STATE.sound.playDelete();
 }
 
-
+/**
+ * Calculates the percentage if failure based on the load of the node.
+ * @param {number} load fractions of 1 (0 to 1) of how loaded the node is
+ * @returns {number} chance of failure (0 to 1)
+ */
+function calculateFailChanceBasedOnLoad(load) {
+    if (load <= 0.5) return 0;
+    return 2 * (load - 0.5);
+}
 
 window.setTool = (t) => {
     STATE.activeTool = t; STATE.selectedNodeId = null;
