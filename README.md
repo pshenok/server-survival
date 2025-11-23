@@ -24,15 +24,22 @@ Build your architecture using the toolbar. Each service has a cost and upkeep:
 | :--- | :--- | :--- | :--- |
 | **WAF** | $50 | Low | **Firewall.** The first line of defense. Blocks Fraud traffic. |
 | **ALB** | $50 | Medium | **Load Balancer.** Distributes traffic to multiple Compute instances. |
-| **Compute** | $100 | High | **EC2 Instance.** Processes requests and routes them to storage. |
-| **Database** | $200 | Very High | **RDS.** The destination for API traffic. |
-| **S3** | $25 | Low | **Storage.** The destination for Web traffic. |
+| **Compute** | $100 | High | **EC2 Instance.** Processes requests. **Upgradeable (Tiers 1-3).** |
+| **Database** | $200 | Very High | **RDS.** Destination for API traffic. **Upgradeable (Tiers 1-3).** |
+| **S3** | $25 | Low | **Storage.** Destination for Web traffic. |
 
 ### Scoring & Economy
-- **Web Request:** +$10 / +10 Score
-- **API Request:** +$20 / +20 Score
-- **Fraud Blocked:** +25 Score (Critical for survival!)
-- **Fraud Leak:** -10 Reputation (Huge penalty!)
+- **Web Request:** +$1.25 / +5 Score
+- **API Request:** +$1.25 / +5 Score
+- **Fraud Blocked:** +5 Score
+- **Fraud Leak:** -5 Reputation
+
+### Last Features 🌟
+- **Service Upgrades:** Click on **Compute** or **Database** instances with their respective tools to upgrade them.
+    - **Tier 2:** Increased capacity (Cost: $200/$400).
+    - **Tier 3:** Maximum capacity (Cost: $250/$600).
+- **Smart Load Balancing:** ALBs now use **Round Robin** to distribute traffic evenly across all connected instances.
+- **Visual Feedback:** Upgradeable services glow when hovered, and rings indicate their current tier.
 
 ### Controls
 - **Left Click:** Select tools, place services, and connect nodes.

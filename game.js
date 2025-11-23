@@ -22,26 +22,42 @@ const CONFIG = {
     services: {
         waf: { name: "WAF Firewall", cost: 50, type: 'waf', processingTime: 20, capacity: 100, upkeep: 5 },
         alb: { name: "Load Balancer", cost: 50, type: 'alb', processingTime: 50, capacity: 50, upkeep: 8 },
-        compute: { name: "EC2 Compute", cost: 100, type: 'compute', processingTime: 600, capacity: 5, upkeep: 15 },
-        db: { name: "RDS Database", cost: 200, type: 'db', processingTime: 300, capacity: 20, upkeep: 30 },
+        compute: {
+            name: "EC2 Compute", cost: 100, type: 'compute', processingTime: 600, capacity: 5, upkeep: 15,
+            tiers: [
+                { level: 1, capacity: 5, cost: 0 },
+                { level: 2, capacity: 15, cost: 200 },
+                { level: 3, capacity: 25, cost: 250 }
+            ]
+        },
+        db: {
+            name: "RDS Database", cost: 200, type: 'db', processingTime: 300, capacity: 20, upkeep: 30,
+            tiers: [
+                { level: 1, capacity: 10, cost: 0 },
+                { level: 2, capacity: 30, cost: 400 },
+                { level: 3, capacity: 50, cost: 600 }
+            ]
+        },
         s3: { name: "S3 Storage", cost: 25, type: 's3', processingTime: 200, capacity: 100, upkeep: 5 }
     },
     survival: {
         startBudget: 500,
         baseRPS: 1.0,
-        rampUp: 0.005,
+        rampUp: 0.025,
         trafficDistribution: {
             [TRAFFIC_TYPES.WEB]: 0.50,
-            [TRAFFIC_TYPES.API]: 0.35,
-            [TRAFFIC_TYPES.FRAUD]: 0.15
+            [TRAFFIC_TYPES.API]: 0.45,
+            [TRAFFIC_TYPES.FRAUD]: 0.05
         },
 
         SCORE_POINTS: {
-            WEB_COMPLETED: 5,
-            API_COMPLETED: 10,
-            FAIL_REPUTATION: -5,
-            FRAUD_PASSED_REPUTATION: -10,
-            FRAUD_BLOCKED_SCORE: 25
+            WEB_SCORE: 5,
+            API_SCORE: 5,
+            WEB_REWARD: 1.5,
+            API_REWARD: 1.4,
+            FAIL_REPUTATION: -2.5,
+            FRAUD_PASSED_REPUTATION: -5,
+            FRAUD_BLOCKED_SCORE: 5
         }
     }
 };
@@ -329,7 +345,35 @@ class Service {
         this.loadRing.position.y = -this.mesh.position.y + 0.1;
         this.mesh.add(this.loadRing);
 
+        this.tier = 1;
+        this.tierRings = [];
+        this.rrIndex = 0;
+
         serviceGroup.add(this.mesh);
+    }
+
+    upgrade() {
+        if (!['compute', 'db'].includes(this.type)) return;
+        const tiers = CONFIG.services[this.type].tiers;
+        if (this.tier >= tiers.length) return;
+
+        const nextTier = tiers[this.tier];
+        if (STATE.money < nextTier.cost) { flashMoney(); return; }
+
+        STATE.money -= nextTier.cost;
+        this.tier++;
+        this.config = { ...this.config, capacity: nextTier.capacity };
+        STATE.sound.playPlace();
+
+        // Visuals
+        const ringGeo = new THREE.TorusGeometry(this.type === 'db' ? 2.2 : 1.3, 0.1, 8, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: this.type === 'db' ? 0xff0000 : 0xffff00 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        // Tier rings
+        ring.position.y = -this.mesh.position.y + (this.tier === 2 ? 0.5 : 1.0);
+        this.mesh.add(ring);
+        this.tierRings.push(ring);
     }
 
     processQueue() {
@@ -391,11 +435,15 @@ class Service {
                         failRequest(job.req);
                     }
                 } else {
-                    const nextNodeId = this.connections[Math.floor(Math.random() * this.connections.length)];
-                    const nextSvc = STATE.services.find(s => s.id === nextNodeId);
+                    // Round Robin Load Balancing
+                    const candidates = this.connections
+                        .map(id => STATE.services.find(s => s.id === id))
+                        .filter(s => s !== undefined);
 
-                    if (nextSvc) {
-                        job.req.flyTo(nextSvc);
+                    if (candidates.length > 0) {
+                        const target = candidates[this.rrIndex % candidates.length];
+                        this.rrIndex++;
+                        job.req.flyTo(target);
                     } else {
                         failRequest(job.req);
                     }
@@ -418,12 +466,18 @@ class Service {
         }
     }
 
-    get totalLoad () {
+    get totalLoad() {
         return (this.processing.length + this.queue.length) / (this.config.capacity * 2);
     }
 
     destroy() {
         serviceGroup.remove(this.mesh);
+        if (this.tierRings) {
+            this.tierRings.forEach(r => {
+                r.geometry.dispose();
+                r.material.dispose();
+            });
+        }
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
     }
@@ -559,17 +613,17 @@ function updateScore(req, outcome) {
         console.warn(`FRAUD PASSED: ${points.FRAUD_PASSED_REPUTATION} Rep. (Critical Failure)`);
     } else if (outcome === 'COMPLETED') {
         if (req.type === TRAFFIC_TYPES.WEB) {
-            STATE.score.web += points.WEB_COMPLETED;
-            STATE.score.total += points.WEB_COMPLETED;
-            STATE.money += points.WEB_COMPLETED;
+            STATE.score.web += points.WEB_SCORE;
+            STATE.score.total += points.WEB_SCORE;
+            STATE.money += points.WEB_REWARD;
         } else if (req.type === TRAFFIC_TYPES.API) {
-            STATE.score.api += points.API_COMPLETED;
-            STATE.score.total += points.API_COMPLETED;
-            STATE.money += points.API_COMPLETED;
+            STATE.score.api += points.API_SCORE;
+            STATE.score.total += points.API_SCORE;
+            STATE.money += points.API_REWARD;
         }
     } else if (outcome === 'FAILED') {
         STATE.reputation += points.FAIL_REPUTATION;
-        STATE.score.total -= (req.type === TRAFFIC_TYPES.API ? points.API_COMPLETED : points.WEB_COMPLETED) / 2;
+        STATE.score.total -= (req.type === TRAFFIC_TYPES.API ? points.API_SCORE : points.WEB_SCORE) / 2;
     }
 
     updateScoreUI();
@@ -736,30 +790,21 @@ container.addEventListener('mousedown', (e) => {
     else if (STATE.activeTool === 'connect' && (i.type === 'service' || i.type === 'internet')) {
         if (STATE.selectedNodeId) { createConnection(STATE.selectedNodeId, i.id); STATE.selectedNodeId = null; }
         else { STATE.selectedNodeId = i.id; new Audio('assets/sounds/click-5.mp3').play(); }
-    } else if (['waf', 'alb', 'lambda', 'db', 's3'].includes(STATE.activeTool) && i.type === 'ground') {
-        createService({ 'waf': 'waf', 'alb': 'alb', 'lambda': 'compute', 'db': 'db', 's3': 's3' }[STATE.activeTool], snapToGrid(i.pos));
+    } else if (['waf', 'alb', 'lambda', 'db', 's3'].includes(STATE.activeTool)) {
+        if ((STATE.activeTool === 'lambda' && i.type === 'service') || (STATE.activeTool === 'db' && i.type === 'service')) {
+            const svc = STATE.services.find(s => s.id === i.id);
+            if (svc && ((STATE.activeTool === 'lambda' && svc.type === 'compute') || (STATE.activeTool === 'db' && svc.type === 'db'))) {
+                svc.upgrade();
+                return;
+            }
+        }
+        if (i.type === 'ground') {
+            createService({ 'waf': 'waf', 'alb': 'alb', 'lambda': 'compute', 'db': 'db', 's3': 's3' }[STATE.activeTool], snapToGrid(i.pos));
+        }
     }
 });
 
 container.addEventListener('mousemove', (e) => {
-    const i = getIntersect(e.clientX, e.clientY);
-    const t = document.getElementById('tooltip');
-    if (i.type === 'service') {
-        const s = STATE.services.find(s => s.id === i.id);
-        if (s) {
-            t.style.display = 'block'; t.style.left = e.clientX + 15 + 'px'; t.style.top = e.clientY + 15 + 'px';
-
-            const load = s.processing.length / s.config.capacity;
-            let loadColor = load > 0.8 ? 'text-red-400' : (load > 0.4 ? 'text-yellow-400' : 'text-green-400');
-
-            t.innerHTML = `<strong class="text-blue-300">${s.config.name}</strong><br>
-            Queue: <span class="${loadColor}">${s.queue.length}</span><br>
-            Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span>`;
-        }
-    } else if (!isPanning) {
-        t.style.display = 'none';
-    }
-
     if (isPanning) {
         const dx = e.clientX - lastMouseX;
         const dy = e.clientY - lastMouseY;
@@ -775,7 +820,53 @@ container.addEventListener('mousemove', (e) => {
 
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
+        document.getElementById('tooltip').style.display = 'none';
+        return;
     }
+
+    const i = getIntersect(e.clientX, e.clientY);
+    const t = document.getElementById('tooltip');
+    let cursor = 'default';
+
+    if (i.type === 'service') {
+        const s = STATE.services.find(s => s.id === i.id);
+        if (s) {
+            t.style.display = 'block'; t.style.left = e.clientX + 15 + 'px'; t.style.top = e.clientY + 15 + 'px';
+
+            const load = s.processing.length / s.config.capacity;
+            let loadColor = load > 0.8 ? 'text-red-400' : (load > 0.4 ? 'text-yellow-400' : 'text-green-400');
+
+            t.innerHTML = `<strong class="text-blue-300">${s.config.name}</strong> <span class="text-xs text-yellow-400">T${s.tier || 1}</span><br>
+            Queue: <span class="${loadColor}">${s.queue.length}</span><br>
+            Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span>`;
+
+            // Reset previous highlights
+            STATE.services.forEach(svc => {
+                if (svc.mesh.material.emissive) svc.mesh.material.emissive.setHex(0x000000);
+            });
+
+            if ((STATE.activeTool === 'lambda' && s.type === 'compute') || (STATE.activeTool === 'db' && s.type === 'db')) {
+                const tiers = CONFIG.services[s.type].tiers;
+                if (s.tier < tiers.length) {
+                    cursor = 'pointer';
+                    const nextCost = tiers[s.tier].cost;
+                    t.innerHTML += `<br><span class="text-green-300 text-xs font-bold">Upgrade: $${nextCost}</span>`;
+
+                    if (s.mesh.material.emissive) s.mesh.material.emissive.setHex(0x333333);
+                } else {
+                    t.innerHTML += `<br><span class="text-gray-500 text-xs">Max Tier</span>`;
+                }
+            }
+        }
+    } else {
+        t.style.display = 'none';
+        // Reset highlights when not hovering service
+        STATE.services.forEach(svc => {
+            if (svc.mesh.material.emissive) svc.mesh.material.emissive.setHex(0x000000);
+        });
+    }
+
+    container.style.cursor = cursor;
 });
 
 container.addEventListener('mouseup', (e) => {
