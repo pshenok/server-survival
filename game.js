@@ -56,46 +56,35 @@ let lastMouseX = 0;
 let lastMouseY = 0;
 const panSpeed = 0.1;
 
-function startGame() {
+function resetGame() {
     STATE.money = CONFIG.survival.startBudget;
     STATE.reputation = 100;
     STATE.requestsProcessed = 0;
-    STATE.currentRPS = CONFIG.survival.baseRPS;
-    STATE.timeScale = 0;
-    STATE.spawnTimer = 0;
-    STATE.score = { total: 0, web: 0, api: 0, fraudBlocked: 0 };
-
-    STATE.sound.init();
-
-    camera.position.set(40, 40, 40);
-    camera.lookAt(0, 0, 0);
-
-    STATE.services.forEach(s => s.destroy());
     STATE.services = [];
-    STATE.requests.forEach(r => r.destroy());
     STATE.requests = [];
-    STATE.connections.forEach(c => connectionGroup.remove(c.mesh));
     STATE.connections = [];
-    STATE.internetNode.connections = [];
-
-    document.getElementById('modal').classList.add('hidden');
-    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('btn-pause').classList.add('active');
-    updateScoreUI();
-
-    console.log(`Started Survival Mode (Paused)`);
-
+    STATE.score = { total: 0, web: 0, api: 0, fraudBlocked: 0 };
     STATE.isRunning = true;
     STATE.lastTime = performance.now();
+    STATE.timeScale = 0;
+
+    // Reset UI
+    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-pause').classList.add('active');
+    document.getElementById('btn-play').classList.add('pulse-green');
+
+    // Ensure loop is running
     if (!STATE.animationId) {
         animate(performance.now());
     }
-
-    showOnboarding();
 }
 
-function restartGame() { startGame(); }
-setTimeout(() => startGame(), 100);
+function restartGame() { resetGame(); }
+
+// Initial setup - show menu, don't start game loop yet
+setTimeout(() => {
+    showMainMenu();
+}, 100);
 
 
 function getIntersect(clientX, clientY) {
@@ -209,23 +198,41 @@ function flashMoney() {
     setTimeout(() => el.classList.remove('text-red-500'), 300);
 }
 
-function showOnboarding() {
-    document.getElementById('onboarding-modal').style.display = 'flex';
-    nextOnboardingStep(1);
+function showMainMenu() {
+    document.getElementById('main-menu-modal').classList.remove('hidden');
+    document.getElementById('faq-modal').classList.add('hidden');
+    document.getElementById('modal').classList.add('hidden');
 }
 
-function nextOnboardingStep(step) {
-    document.querySelectorAll('.onboarding-step').forEach(el => el.classList.remove('active'));
-    document.getElementById(`step-${step}`).classList.add('active');
-}
+let faqSource = 'menu'; // 'menu' or 'game'
 
-function closeOnboarding() {
-    document.getElementById('onboarding-modal').style.display = 'none';
+window.showFAQ = (source = 'menu') => {
+    faqSource = source;
+    // If called from button (onclick="showFAQ()"), it defaults to 'menu' effectively unless we change the HTML.
+    // But wait, the button in index.html just calls showFAQ(). 
+    // We can check if main menu is visible.
 
-    if (STATE.timeScale === 0) {
-        document.getElementById('btn-play').classList.add('pulse-green');
+    if (!document.getElementById('main-menu-modal').classList.contains('hidden')) {
+        faqSource = 'menu';
+        document.getElementById('main-menu-modal').classList.add('hidden');
+    } else {
+        faqSource = 'game';
     }
-}
+
+    document.getElementById('faq-modal').classList.remove('hidden');
+};
+
+window.closeFAQ = () => {
+    document.getElementById('faq-modal').classList.add('hidden');
+    if (faqSource === 'menu') {
+        document.getElementById('main-menu-modal').classList.remove('hidden');
+    }
+};
+
+window.startGame = () => {
+    document.getElementById('main-menu-modal').classList.add('hidden');
+    resetGame();
+};
 
 function createService(type, pos) {
     if (STATE.money < CONFIG.services[type].cost) { flashMoney(); return; }
@@ -304,12 +311,17 @@ window.setTool = (t) => {
 window.setTimeScale = (s) => {
     STATE.timeScale = s;
     document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-    if (s === 0) document.getElementById('btn-pause').classList.add('active');
-    if (s === 1) {
+
+    if (s === 0) {
+        document.getElementById('btn-pause').classList.add('active');
+        document.getElementById('btn-play').classList.add('pulse-green');
+    } else if (s === 1) {
         document.getElementById('btn-play').classList.add('active');
         document.getElementById('btn-play').classList.remove('pulse-green');
+    } else if (s === 3) {
+        document.getElementById('btn-fast').classList.add('active');
+        document.getElementById('btn-play').classList.remove('pulse-green');
     }
-    if (s === 3) document.getElementById('btn-fast').classList.add('active');
 };
 
 window.toggleMute = () => {

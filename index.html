@@ -142,7 +142,7 @@
             <!-- Help Button -->
             <button id="tool-help"
                 class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center mr-2 border border-gray-600"
-                onclick="showOnboarding()">
+                onclick="showFAQ()">
                 <div class="text-xl">?</div>
                 <span class="text-[9px] font-bold mt-1 uppercase">Help</span>
             </button>
@@ -280,177 +280,171 @@
         </div>
     </div>
 
-    <!-- Onboarding Modal -->
-    <div id="onboarding-modal"
-        class="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center backdrop-blur-md"
-        style="display: none;">
+    <!-- Main Menu Modal -->
+    <div id="main-menu-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
         <div
-            class="glass-panel p-8 rounded-2xl max-w-2xl w-full border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.2)] relative">
-            <!-- Close Button -->
-            <button onclick="closeOnboarding()" class="absolute top-4 right-4 text-gray-500 hover:text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                    </path>
-                </svg>
-            </button>
+            class="glass-panel p-8 rounded-2xl max-w-md w-full text-center border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.2)]">
+            <h1
+                class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 mb-2 tracking-tighter">
+                SERVER</h1>
+            <h2 class="text-xl font-bold text-blue-200 mb-8 tracking-widest">SURVIVAL PROTOCOL</h2>
 
-            <!-- Step 1: Welcome -->
-            <div id="step-1" class="onboarding-step active">
-                <div class="text-center mb-8">
-                    <div class="inline-block p-4 rounded-full bg-blue-900/30 mb-4 border border-blue-500/50">
-                        <svg class="w-12 h-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
-                            </path>
-                        </svg>
-                    </div>
-                    <h2 class="text-3xl font-bold text-white mb-2 tracking-wide">WELCOME ARCHITECT</h2>
-                    <p class="text-gray-400 text-lg">Your mission: Design a scalable cloud infrastructure to survive the
-                        traffic spike.</p>
-                </div>
-                <div class="grid grid-cols-3 gap-4 mb-8">
-                    <div class="bg-gray-800/50 p-4 rounded-xl border border-gray-700 text-center">
-                        <div class="text-2xl mb-2">💰</div>
-                        <h3 class="text-white font-bold text-sm">Manage Budget</h3>
-                        <p class="text-xs text-gray-400 mt-1">Services cost money to build and maintain.</p>
-                    </div>
-                    <div class="bg-gray-800/50 p-4 rounded-xl border border-gray-700 text-center">
-                        <div class="text-2xl mb-2">🛡️</div>
-                        <h3 class="text-white font-bold text-sm">Defend</h3>
-                        <p class="text-xs text-gray-400 mt-1">Block malicious traffic before it crashes your system.</p>
-                    </div>
-                    <div class="bg-gray-800/50 p-4 rounded-xl border border-gray-700 text-center">
-                        <div class="text-2xl mb-2">📈</div>
-                        <h3 class="text-white font-bold text-sm">Scale</h3>
-                        <p class="text-xs text-gray-400 mt-1">Handle increasing Request Per Second (RPS) load.</p>
-                    </div>
-                </div>
-                <div class="flex justify-end">
-                    <button onclick="nextOnboardingStep(2)"
-                        class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition flex items-center">
-                        Next: Traffic Types <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
-                            </path>
-                        </svg>
-                    </button>
-                </div>
+            <div class="space-y-4">
+                <button onclick="startGame()"
+                    class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-green-400/50">
+                    Start Survival
+                </button>
+
+                <button onclick="showFAQ()"
+                    class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-8 rounded-lg border border-gray-600 transition hover:text-white font-mono uppercase">
+                    Manual / FAQ
+                </button>
             </div>
 
-            <!-- Step 2: Traffic -->
-            <div id="step-2" class="onboarding-step">
-                <h2 class="text-2xl font-bold text-white mb-6 border-b border-gray-700 pb-2">KNOW YOUR TRAFFIC</h2>
-                <div class="space-y-4 mb-8">
-                    <div class="flex items-center bg-gray-800/30 p-3 rounded-lg border border-green-900/50">
-                        <div
-                            class="w-4 h-4 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.6)] mr-4 shrink-0">
-                        </div>
-                        <div>
-                            <h3 class="text-green-400 font-bold">WEB Traffic</h3>
-                            <p class="text-sm text-gray-400">Must be routed to <span
-                                    class="text-emerald-400 font-bold">S3 Storage</span>.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center bg-gray-800/30 p-3 rounded-lg border border-orange-900/50">
-                        <div
-                            class="w-4 h-4 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.6)] mr-4 shrink-0">
-                        </div>
-                        <div>
-                            <h3 class="text-orange-400 font-bold">API Traffic</h3>
-                            <p class="text-sm text-gray-400">Must be routed to <span class="text-red-500 font-bold">RDS
-                                    Database</span>.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center bg-gray-800/30 p-3 rounded-lg border border-purple-900/50">
-                        <div
-                            class="w-4 h-4 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.6)] mr-4 shrink-0">
-                        </div>
-                        <div>
-                            <h3 class="text-purple-400 font-bold">FRAUD Traffic</h3>
-                            <p class="text-sm text-gray-400">Must be BLOCKED by <span
-                                    class="text-purple-400 font-bold">WAF Firewall</span>. Do not let it pass!</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-between">
-                    <button onclick="nextOnboardingStep(1)"
-                        class="text-gray-400 hover:text-white font-bold py-2 px-4">Back</button>
-                    <button onclick="nextOnboardingStep(3)"
-                        class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition flex items-center">
-                        Next: Controls <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
-                            </path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
+            <div class="mt-8 text-xs text-gray-500 font-mono">
 
-            <!-- Step 3: Controls & Examples -->
-            <div id="step-3" class="onboarding-step">
-                <h2 class="text-2xl font-bold text-white mb-6 border-b border-gray-700 pb-2">HOW TO CONNECT</h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                    <!-- Example 1: Web Flow -->
-                    <div class="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-                        <h3 class="text-green-400 font-bold mb-4 text-center text-sm">WEB TRAFFIC FLOW</h3>
-                        <div class="flow-container">
-                            <div class="flow-node border-gray-500" title="Internet">🌐</div>
-                            <div class="flow-line">
-                                <div class="flow-packet bg-green-400"></div>
-                            </div>
-                            <div class="flow-node border-blue-500" title="Load Balancer">⚖️</div>
-                            <div class="flow-line">
-                                <div class="flow-packet bg-green-400" style="animation-delay: 0.75s"></div>
-                            </div>
-                            <div class="flow-node border-emerald-500" title="S3 Storage">💾</div>
-                        </div>
-                        <p class="text-xs text-gray-400 text-center">Route <span class="text-green-400">WEB</span>
-                            traffic to <span class="text-emerald-400">S3</span> via Load Balancer.</p>
-                    </div>
-
-                    <!-- Example 2: API Flow -->
-                    <div class="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-                        <h3 class="text-orange-400 font-bold mb-4 text-center text-sm">API TRAFFIC FLOW</h3>
-                        <div class="flow-container">
-                            <div class="flow-node border-gray-500">🌐</div>
-                            <div class="flow-line">
-                                <div class="flow-packet bg-orange-400"></div>
-                            </div>
-                            <div class="flow-node border-orange-500" title="Compute">⚙️</div>
-                            <div class="flow-line">
-                                <div class="flow-packet bg-orange-400" style="animation-delay: 0.75s"></div>
-                            </div>
-                            <div class="flow-node border-red-500" title="Database">🗄️</div>
-                        </div>
-                        <p class="text-xs text-gray-400 text-center">Route <span class="text-orange-400">API</span>
-                            traffic to <span class="text-red-400">DB</span> via Compute.</p>
-                    </div>
-                </div>
-
-                <div class="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 text-center mb-6">
-                    <p class="text-blue-200 text-sm">
-                        <span class="key-badge">LINK TOOL</span> : Click <strong>Source</strong> then
-                        <strong>Destination</strong> to connect.
-                    </p>
-                </div>
-
-                <div class="flex justify-between">
-                    <button onclick="nextOnboardingStep(2)"
-                        class="text-gray-400 hover:text-white font-bold py-2 px-4">Back</button>
-                    <button onclick="closeOnboarding()"
-                        class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase">
-                        START SIMULATION
-                    </button>
-                </div>
             </div>
         </div>
+    </div>
 
-        <script src="src/config.js"></script>
-        <script src="src/state.js"></script>
-        <script src="src/entities/Request.js"></script>
-        <script src="src/entities/Service.js"></script>
-        <script src="src/services/SoundService.js"></script>
-        <script src="game.js"></script>
+    <!-- FAQ Modal -->
+    <div id="faq-modal" class="fixed inset-0 bg-black/95 flex items-center justify-center z-50 hidden">
+        <div class="glass-panel p-8 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+            <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                <h2 class="text-2xl font-bold text-white">OPERATOR MANUAL</h2>
+                <button onclick="closeFAQ()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Traffic Types -->
+                <div>
+                    <h3 class="text-lg font-bold text-blue-400 mb-4">TRAFFIC TYPES</h3>
+                    <div class="space-y-3">
+                        <div class="bg-gray-800/50 p-3 rounded border border-green-900/50">
+                            <strong class="text-green-400">WEB Traffic</strong>
+                            <p class="text-sm text-gray-400">Route to <span class="text-emerald-400">S3 Storage</span>
+                                via Load Balancer.</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-3 rounded border border-orange-900/50">
+                            <strong class="text-orange-400">API Traffic</strong>
+                            <p class="text-sm text-gray-400">Route to <span class="text-red-400">RDS Database</span> via
+                                Compute.</p>
+                        </div>
+                        <div class="bg-gray-800/50 p-3 rounded border border-purple-900/50">
+                            <strong class="text-purple-400">FRAUD Traffic</strong>
+                            <p class="text-sm text-gray-400">Block with <span class="text-purple-400">WAF
+                                    Firewall</span>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services -->
+                <div>
+                    <h3 class="text-lg font-bold text-blue-400 mb-4">SERVICES</h3>
+                    <ul class="space-y-2 text-sm text-gray-300">
+                        <li class="flex justify-between"><span class="text-purple-400 font-bold">WAF</span> <span>Blocks
+                                Fraud ($50)</span></li>
+                        <li class="flex justify-between"><span class="text-blue-400 font-bold">Load Balancer</span>
+                            <span>Distributes Traffic ($50)</span>
+                        </li>
+                        <li class="flex justify-between"><span class="text-orange-400 font-bold">Compute</span>
+                            <span>Processes API ($100)</span>
+                        </li>
+                        <li class="flex justify-between"><span class="text-red-400 font-bold">Database</span>
+                            <span>Stores API Data ($200)</span>
+                        </li>
+                        <li class="flex justify-between"><span class="text-emerald-400 font-bold">S3</span> <span>Stores
+                                Web Data ($25)</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tools -->
+            <div class="mt-8">
+                <h3 class="text-lg font-bold text-blue-400 mb-4">TOOLS & CONTROLS</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+                        <div class="flex items-center mb-2">
+                            <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center mr-2">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122">
+                                    </path>
+                                </svg>
+                            </div>
+                            <strong class="text-white">SELECT</strong>
+                        </div>
+                        <p class="text-gray-400">Inspect services to see load and stats. Click Compute/DB to upgrade.
+                        </p>
+                    </div>
+                    <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+                        <div class="flex items-center mb-2">
+                            <div class="w-6 h-6 bg-gray-700 rounded flex items-center justify-center mr-2">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+                                    </path>
+                                </svg>
+                            </div>
+                            <strong class="text-white">CONNECT</strong>
+                        </div>
+                        <p class="text-gray-400">Link nodes together. Click <span class="text-green-400">Source</span>
+                            then <span class="text-blue-400">Destination</span>.</p>
+                    </div>
+                    <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+                        <div class="flex items-center mb-2">
+                            <div class="w-6 h-6 bg-red-900/50 rounded flex items-center justify-center mr-2">
+                                <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                    </path>
+                                </svg>
+                            </div>
+                            <strong class="text-white">DELETE</strong>
+                        </div>
+                        <p class="text-gray-400">Remove services or connections. Refunds 50% of cost.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mechanics -->
+            <div class="mt-8">
+                <h3 class="text-lg font-bold text-blue-400 mb-4">MECHANICS</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="bg-gray-800/30 p-3 rounded">
+                        <strong class="text-white block mb-1">Upgrades</strong>
+                        <p class="text-gray-400">Click existing Compute/DB instances to upgrade capacity (Tier 1-3).</p>
+                    </div>
+                    <div class="bg-gray-800/30 p-3 rounded">
+                        <strong class="text-white block mb-1">Load Balancing</strong>
+                        <p class="text-gray-400">ALBs use Round Robin to distribute traffic evenly.</p>
+                    </div>
+                    <div class="bg-gray-800/30 p-3 rounded">
+                        <strong class="text-white block mb-1">Failure Conditions</strong>
+                        <p class="text-gray-400">Reputation reaches 0% or Money reaches -$1000.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center">
+                <button onclick="closeFAQ()"
+                    class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-8 rounded-lg transition">
+                    Close Manual
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="src/config.js"></script>
+    <script src="src/state.js"></script>
+    <script src="src/entities/Request.js"></script>
+    <script src="src/entities/Service.js"></script>
+    <script src="src/services/SoundService.js"></script>
+    <script src="game.js"></script>
 </body>
 
 </html>
