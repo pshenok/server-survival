@@ -1,9 +1,7 @@
 class SoundService {
     constructor() {
         this.ctx = null;
-        this.ctx = null;
         this.muted = true;
-        this.masterGain = null;
         this.masterGain = null;
         this.gameBgm = new Audio('assets/sounds/game-background.mp3');
         this.gameBgm.loop = true;
