@@ -71,11 +71,28 @@ function resetGame(mode = 'survival') {
     STATE.isRunning = true;
     STATE.lastTime = performance.now();
     STATE.timeScale = 0;
+    STATE.currentRPS = 0.5;
+    STATE.spawnTimer = 0;
+
+    // Clear visual elements
+    while (serviceGroup.children.length > 0) {
+        serviceGroup.remove(serviceGroup.children[0]);
+    }
+    while (connectionGroup.children.length > 0) {
+        connectionGroup.remove(connectionGroup.children[0]);
+    }
+    while (requestGroup.children.length > 0) {
+        requestGroup.remove(requestGroup.children[0]);
+    }
+    STATE.internetNode.connections = [];
 
     // Reset UI
     document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('btn-pause').classList.add('active');
     document.getElementById('btn-play').classList.add('pulse-green');
+
+    // Update UI displays
+    updateScoreUI();
 
     // Ensure loop is running
     if (!STATE.animationId) {
