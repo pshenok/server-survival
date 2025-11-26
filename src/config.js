@@ -58,5 +58,12 @@ const CONFIG = {
             FRAUD_PASSED_REPUTATION: -5,
             FRAUD_BLOCKED_SCORE: 5
         }
+    },
+    sandbox: {
+        defaultBudget: 2000,
+        defaultRPS: 1.0,
+        defaultBurstCount: 10,
+        upkeepEnabled: false,
+        trafficDistribution: { WEB: 50, API: 45, FRAUD: 5 }
     }
 };

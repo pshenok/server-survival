@@ -61,7 +61,26 @@ function resetGame(mode = 'survival') {
     STATE.sound.init();
     STATE.sound.playGameBGM();
     STATE.gameMode = mode;
-    STATE.money = CONFIG.survival.startBudget;
+
+    // Set budget based on mode
+    if (mode === 'sandbox') {
+        STATE.sandboxBudget = CONFIG.sandbox.defaultBudget;
+        STATE.money = STATE.sandboxBudget;
+        STATE.upkeepEnabled = CONFIG.sandbox.upkeepEnabled;
+        STATE.trafficDistribution = {
+            WEB: CONFIG.sandbox.trafficDistribution.WEB / 100,
+            API: CONFIG.sandbox.trafficDistribution.API / 100,
+            FRAUD: CONFIG.sandbox.trafficDistribution.FRAUD / 100
+        };
+        STATE.burstCount = CONFIG.sandbox.defaultBurstCount;
+        STATE.currentRPS = CONFIG.sandbox.defaultRPS;
+    } else {
+        STATE.money = CONFIG.survival.startBudget;
+        STATE.upkeepEnabled = true;
+        STATE.trafficDistribution = { ...CONFIG.survival.trafficDistribution };
+        STATE.currentRPS = 0.5;
+    }
+
     STATE.reputation = 100;
     STATE.requestsProcessed = 0;
     STATE.services = [];
@@ -71,7 +90,6 @@ function resetGame(mode = 'survival') {
     STATE.isRunning = true;
     STATE.lastTime = performance.now();
     STATE.timeScale = 0;
-    STATE.currentRPS = 0.5;
     STATE.spawnTimer = 0;
 
     // Clear visual elements
@@ -94,6 +112,39 @@ function resetGame(mode = 'survival') {
     // Update UI displays
     updateScoreUI();
 
+    // Mark game as started
+    STATE.gameStarted = true;
+
+    // Show/hide sandbox panel and objectives panel based on mode
+    const sandboxPanel = document.getElementById('sandboxPanel');
+    const objectivesPanel = document.getElementById('objectivesPanel');
+
+    if (mode === 'sandbox') {
+        // Show sandbox panel, hide objectives
+        if (sandboxPanel) {
+            sandboxPanel.classList.remove('hidden');
+            // Sync sandbox UI controls
+            syncInput('budget', STATE.sandboxBudget);
+            syncInput('rps', STATE.currentRPS);
+            syncInput('web', STATE.trafficDistribution.WEB * 100);
+            syncInput('api', STATE.trafficDistribution.API * 100);
+            syncInput('fraud', STATE.trafficDistribution.FRAUD * 100);
+            syncInput('burst', STATE.burstCount);
+            // Reset upkeep toggle button
+            const upkeepBtn = document.getElementById('upkeep-toggle');
+            if (upkeepBtn) {
+                upkeepBtn.textContent = STATE.upkeepEnabled ? 'Upkeep: ON' : 'Upkeep: OFF';
+                upkeepBtn.classList.toggle('bg-red-900/50', STATE.upkeepEnabled);
+                upkeepBtn.classList.toggle('bg-green-900/50', !STATE.upkeepEnabled);
+            }
+        }
+        if (objectivesPanel) objectivesPanel.classList.add('hidden');
+    } else {
+        // Show objectives, hide sandbox panel
+        if (sandboxPanel) sandboxPanel.classList.add('hidden');
+        if (objectivesPanel) objectivesPanel.classList.remove('hidden');
+    }
+
     // Ensure loop is running
     if (!STATE.animationId) {
         animate(performance.now());
@@ -102,7 +153,7 @@ function resetGame(mode = 'survival') {
 
 function restartGame() {
     document.getElementById('modal').classList.add('hidden');
-    resetGame();
+    resetGame(STATE.gameMode);
 }
 
 // Initial setup - show menu, don't start game loop yet
@@ -141,10 +192,12 @@ function snapToGrid(vec) {
 }
 
 function getTrafficType() {
-    const r = Math.random();
-    const dist = CONFIG.survival.trafficDistribution;
-    if (r < dist[TRAFFIC_TYPES.WEB]) return TRAFFIC_TYPES.WEB;
-    if (r < dist[TRAFFIC_TYPES.WEB] + dist[TRAFFIC_TYPES.API]) return TRAFFIC_TYPES.API;
+    const dist = STATE.trafficDistribution;
+    const total = dist.WEB + dist.API + dist.FRAUD;
+    if (total === 0) return TRAFFIC_TYPES.WEB;
+    const r = Math.random() * total;
+    if (r < dist.WEB) return TRAFFIC_TYPES.WEB;
+    if (r < dist.WEB + dist.API) return TRAFFIC_TYPES.API;
     return TRAFFIC_TYPES.FRAUD;
 }
 
@@ -260,6 +313,11 @@ window.closeFAQ = () => {
 window.startGame = () => {
     document.getElementById('main-menu-modal').classList.add('hidden');
     resetGame();
+};
+
+window.startSandbox = () => {
+    document.getElementById('main-menu-modal').classList.add('hidden');
+    resetGame('sandbox');
 };
 
 function createService(type, pos) {
@@ -498,10 +556,13 @@ function animate(time) {
     STATE.requests.forEach(r => r.update(dt));
 
     STATE.spawnTimer += dt;
-    if (STATE.spawnTimer > (1 / STATE.currentRPS)) {
+    if (STATE.currentRPS > 0 && STATE.spawnTimer > (1 / STATE.currentRPS)) {
         STATE.spawnTimer = 0;
         spawnRequest();
-        STATE.currentRPS += CONFIG.survival.rampUp;
+        // Only ramp up in survival mode
+        if (STATE.gameMode === 'survival') {
+            STATE.currentRPS += CONFIG.survival.rampUp;
+        }
     }
 
     document.getElementById('money-display').innerText = `$${Math.floor(STATE.money)}`;
@@ -515,7 +576,8 @@ function animate(time) {
     document.getElementById('rps-display').innerText = `${STATE.currentRPS.toFixed(1)} req/s`;
 
 
-    if (STATE.reputation <= 0 || STATE.money <= -1000) {
+    // Game over only in survival mode
+    if (STATE.gameMode === 'survival' && (STATE.reputation <= 0 || STATE.money <= -1000)) {
         STATE.isRunning = false;
         document.getElementById('modal-title').innerText = "SYSTEM FAILURE";
         document.getElementById('modal-title').classList.add("text-red-500");
@@ -538,6 +600,16 @@ window.addEventListener('resize', () => {
 });
 
 document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        // Toggle main menu
+        const menu = document.getElementById('main-menu-modal');
+        if (menu.classList.contains('hidden')) {
+            openMainMenu();
+        } else if (STATE.gameStarted && STATE.isRunning) {
+            resumeGame();
+        }
+        return;
+    }
     if (event.key === 'H' || event.key === 'h') {
         document.getElementById('statsPanel').classList.toggle("hidden");
         document.getElementById('detailsPanel').classList.toggle("hidden");
@@ -566,3 +638,108 @@ function resetCamera() {
         camera.lookAt(0, 0, 0);
     }
 }
+
+// ==================== SANDBOX MODE FUNCTIONS ====================
+
+function syncInput(name, value) {
+    const slider = document.getElementById(`${name}-slider`);
+    const input = document.getElementById(`${name}-input`);
+    if (slider) slider.value = value;
+    if (input) input.value = value;
+}
+
+window.setSandboxBudget = (value) => {
+    const v = Math.max(0, parseInt(value) || 0);
+    STATE.sandboxBudget = v;
+    STATE.money = v;
+    syncInput('budget', v);
+};
+
+window.resetBudget = () => {
+    STATE.money = STATE.sandboxBudget;
+};
+
+window.setSandboxRPS = (value) => {
+    const v = Math.max(0, parseFloat(value) || 0);
+    STATE.currentRPS = v;
+    syncInput('rps', v);
+};
+
+window.setTrafficMix = (type, value) => {
+    const v = Math.max(0, Math.min(100, parseFloat(value) || 0));
+    STATE.trafficDistribution[type] = v / 100;
+    syncInput(type.toLowerCase(), v);
+};
+
+window.setBurstCount = (value) => {
+    const v = Math.max(1, parseInt(value) || 10);
+    STATE.burstCount = v;
+    syncInput('burst', v);
+};
+
+window.spawnBurst = (type) => {
+    for (let i = 0; i < STATE.burstCount; i++) {
+        setTimeout(() => {
+            const req = new Request(type);
+            STATE.requests.push(req);
+            const conns = STATE.internetNode.connections;
+            if (conns.length > 0) {
+                const entryNodes = conns.map(id => STATE.services.find(s => s.id === id));
+                const wafEntry = entryNodes.find(s => s?.type === 'waf');
+                const target = wafEntry || entryNodes[Math.floor(Math.random() * entryNodes.length)];
+                if (target) req.flyTo(target); else failRequest(req);
+            } else {
+                failRequest(req);
+            }
+        }, i * 30);
+    }
+};
+
+window.toggleUpkeep = () => {
+    STATE.upkeepEnabled = !STATE.upkeepEnabled;
+    const btn = document.getElementById('upkeep-toggle');
+    if (btn) {
+        btn.textContent = STATE.upkeepEnabled ? 'Upkeep: ON' : 'Upkeep: OFF';
+        btn.classList.toggle('bg-red-900/50', STATE.upkeepEnabled);
+        btn.classList.toggle('bg-green-900/50', !STATE.upkeepEnabled);
+    }
+};
+
+window.clearAllServices = () => {
+    STATE.services.forEach(s => s.destroy());
+    STATE.services = [];
+    STATE.connections.forEach(c => connectionGroup.remove(c.mesh));
+    STATE.connections = [];
+    STATE.internetNode.connections = [];
+    STATE.requests.forEach(r => r.destroy());
+    STATE.requests = [];
+    STATE.money = STATE.sandboxBudget;
+};
+
+// ==================== MENU FUNCTIONS ====================
+
+function openMainMenu() {
+    // Store current time scale and pause
+    STATE.previousTimeScale = STATE.timeScale;
+    setTimeScale(0);
+
+    // Show resume button if game is active
+    const resumeBtn = document.getElementById('resume-btn');
+    if (resumeBtn) {
+        if (STATE.gameStarted && STATE.isRunning) {
+            resumeBtn.classList.remove('hidden');
+        } else {
+            resumeBtn.classList.add('hidden');
+        }
+    }
+
+    // Show main menu
+    document.getElementById('main-menu-modal').classList.remove('hidden');
+    STATE.sound.playMenuBGM();
+}
+
+window.resumeGame = () => {
+    // Hide main menu, keep game paused
+    document.getElementById('main-menu-modal').classList.add('hidden');
+    STATE.sound.playGameBGM();
+};

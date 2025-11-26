@@ -30,5 +30,16 @@ const STATE = {
         connections: []
     },
 
-    sound: null
+    sound: null,
+
+    // Sandbox mode state
+    gameMode: 'survival',
+    sandboxBudget: 2000,
+    upkeepEnabled: true,
+    trafficDistribution: { WEB: 0.5, API: 0.45, FRAUD: 0.05 },
+    burstCount: 10,
+
+    // Menu state
+    gameStarted: false,
+    previousTimeScale: 1
 };

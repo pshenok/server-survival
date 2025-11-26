@@ -34,7 +34,28 @@ Build your architecture using the toolbar. Each service has a cost and upkeep:
 - **Fraud Blocked:** +5 Score
 - **Fraud Leak:** -5 Reputation
 
-### Last Features 🌟
+### Game Modes
+
+#### Survival Mode
+The classic experience - survive as long as possible against escalating traffic.
+
+#### Sandbox Mode
+A fully customizable testing environment for experimenting with any architecture:
+
+| Control | Description |
+| :--- | :--- |
+| **Budget** | Set any starting budget (slider 0-10K, or type any amount) |
+| **RPS** | Control traffic rate (0 = stopped, or type 100+ for stress tests) |
+| **Traffic Mix** | Adjust WEB/API/FRAUD percentages independently |
+| **Burst** | Spawn instant bursts of specific traffic types |
+| **Upkeep Toggle** | Enable/disable service costs |
+| **Clear All** | Reset all services and restore budget |
+
+**No game over in Sandbox** - experiment freely!
+
+### Last Features
+- **Sandbox Mode:** Full control over budget, traffic rate, traffic mix, and burst spawning
+- **ESC Menu:** Press ESC to pause and open main menu, Resume to return (stays paused)
 - **Service Upgrades:** Click on **Compute** or **Database** instances with their respective tools to upgrade them.
     - **Tier 2:** Increased capacity (Cost: $200/$400).
     - **Tier 3:** Maximum capacity (Cost: $250/$600).
@@ -44,8 +65,10 @@ Build your architecture using the toolbar. Each service has a cost and upkeep:
 ### Controls
 - **Left Click:** Select tools, place services, and connect nodes.
 - **Right Click + Drag:** Pan the camera.
+- **ESC:** Open main menu and pause game. Press again or click Resume to close menu (stays paused).
 - **Camera Reset:** Press `R` to reset the camera position.
-- **Birds-Eye View:** Press `T` to switch between isometric and top-down view
+- **Birds-Eye View:** Press `T` to switch between isometric and top-down view.
+- **Hide HUD:** Press `H` to toggle UI panels.
 - **Connect Tool:** Click two nodes to create a connection (flow direction matters!).
     - *Valid Flows:* Internet -> WAF -> ALB -> Compute -> (DB/S3)
 - **Delete Tool:** Remove services to recover 50% of the cost.

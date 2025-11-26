@@ -100,7 +100,9 @@ class Service {
     }
 
     update(dt) {
-        STATE.money -= (this.config.upkeep / 60) * dt;
+        if (STATE.upkeepEnabled) {
+            STATE.money -= (this.config.upkeep / 60) * dt;
+        }
 
         this.processQueue();
 

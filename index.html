@@ -104,6 +104,69 @@
             </button>
         </div>
 
+        <!-- Sandbox Control Panel (Bottom Left - replaces objectives in sandbox mode) -->
+        <div id="sandboxPanel" class="hidden absolute bottom-24 left-4 glass-panel rounded-xl p-4 pointer-events-auto w-80">
+            <div class="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
+                <h3 class="text-sm font-bold text-purple-400">SANDBOX</h3>
+                <button onclick="clearAllServices()" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 border border-red-900 rounded">Clear All</button>
+            </div>
+
+            <!-- BUDGET -->
+            <div class="mb-3">
+                <div class="text-xs text-gray-400 mb-1">Budget ($)</div>
+                <div class="flex items-center gap-2">
+                    <input type="range" id="budget-slider" min="0" max="10000" step="100" value="2000" oninput="setSandboxBudget(this.value)" class="flex-1 h-2 bg-gray-700 rounded-lg accent-green-500">
+                    <input type="number" id="budget-input" value="2000" min="0" onchange="setSandboxBudget(this.value)" class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-green-400 text-sm text-center font-mono">
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <button onclick="resetBudget()" class="flex-1 text-xs py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded">Reset $</button>
+                    <button onclick="toggleUpkeep()" id="upkeep-toggle" class="flex-1 text-xs py-1.5 bg-green-900/50 text-gray-300 rounded border border-gray-600">Upkeep: OFF</button>
+                </div>
+            </div>
+
+            <!-- RPS -->
+            <div class="mb-3">
+                <div class="text-xs text-gray-400 mb-1">Traffic Rate (req/s)</div>
+                <div class="flex items-center gap-2">
+                    <input type="range" id="rps-slider" min="0" max="50" step="0.5" value="1" oninput="setSandboxRPS(this.value)" class="flex-1 h-2 bg-gray-700 rounded-lg accent-blue-500">
+                    <input type="number" id="rps-input" value="1" min="0" step="0.5" onchange="setSandboxRPS(this.value)" class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-blue-400 text-sm text-center font-mono">
+                </div>
+            </div>
+
+            <!-- TRAFFIC MIX -->
+            <div class="mb-3">
+                <div class="text-xs text-gray-400 mb-1">Traffic Mix (%)</div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-12 text-xs text-green-400">WEB</span>
+                    <input type="range" id="web-slider" min="0" max="100" value="50" oninput="setTrafficMix('WEB',this.value)" class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-green-500">
+                    <input type="number" id="web-input" value="50" min="0" max="100" onchange="setTrafficMix('WEB',this.value)" class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-green-400 text-xs text-center font-mono">
+                </div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-12 text-xs text-orange-400">API</span>
+                    <input type="range" id="api-slider" min="0" max="100" value="45" oninput="setTrafficMix('API',this.value)" class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-orange-500">
+                    <input type="number" id="api-input" value="45" min="0" max="100" onchange="setTrafficMix('API',this.value)" class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-orange-400 text-xs text-center font-mono">
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-12 text-xs text-purple-400">FRAUD</span>
+                    <input type="range" id="fraud-slider" min="0" max="100" value="5" oninput="setTrafficMix('FRAUD',this.value)" class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-purple-500">
+                    <input type="number" id="fraud-input" value="5" min="0" max="100" onchange="setTrafficMix('FRAUD',this.value)" class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-purple-400 text-xs text-center font-mono">
+                </div>
+            </div>
+
+            <!-- BURST -->
+            <div class="border-t border-gray-700 pt-2">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs text-gray-400">Burst:</span>
+                    <input type="number" id="burst-input" value="10" min="1" onchange="setBurstCount(this.value)" class="w-16 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs text-center font-mono">
+                </div>
+                <div class="flex gap-1.5">
+                    <button onclick="spawnBurst('WEB')" class="flex-1 bg-green-900/50 hover:bg-green-800 text-green-400 text-xs py-1.5 rounded border border-green-700/50">WEB</button>
+                    <button onclick="spawnBurst('API')" class="flex-1 bg-orange-900/50 hover:bg-orange-800 text-orange-400 text-xs py-1.5 rounded border border-orange-700/50">API</button>
+                    <button onclick="spawnBurst('FRAUD')" class="flex-1 bg-purple-900/50 hover:bg-purple-800 text-purple-400 text-xs py-1.5 rounded border border-purple-700/50">DDoS</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Objective Panel (Bottom Left) -->
         <div id="objectivesPanel"
             class="absolute bottom-24 left-4 glass-panel rounded-xl p-4 pointer-events-auto max-w-xs">
@@ -298,9 +361,19 @@
             </h1>
 
             <div class="space-y-4">
+                <button id="resume-btn" onclick="resumeGame()"
+                    class="hidden w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-blue-400/50">
+                    Resume Game
+                </button>
+
                 <button onclick="startGame()"
                     class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-green-400/50">
                     Start Survival
+                </button>
+
+                <button onclick="startSandbox()"
+                    class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-purple-400/50">
+                    Sandbox Mode
                 </button>
 
                 <button onclick="showFAQ()"
