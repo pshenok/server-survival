@@ -164,16 +164,36 @@ class Service {
 
         if (this.totalLoad > 0.8) {
             this.loadRing.material.color.setHex(0xff0000);
-            this.loadRing.material.opacity = 0.8;
+            if (STATE.selectedNodeId === this.id) {
+                this.loadRing.material.opacity = 1.0;
+            }
+            else {
+                this.loadRing.material.opacity = 0.8;
+            };
         } else if (this.totalLoad > 0.5) {
             this.loadRing.material.color.setHex(0xffaa00);
-            this.loadRing.material.opacity = 0.6;
+            if (STATE.selectedNodeId === this.id) {
+                this.loadRing.material.opacity = 1.0;
+            }
+            else {
+                this.loadRing.material.opacity = 0.6;
+            };
         } else if (this.totalLoad > 0.2) {
             this.loadRing.material.color.setHex(0xffff00);
-            this.loadRing.material.opacity = 0.4;
+            if (STATE.selectedNodeId === this.id) {
+                this.loadRing.material.opacity = 1.0;
+            }
+            else {
+                this.loadRing.material.opacity = 0.4;
+            };
         } else {
             this.loadRing.material.color.setHex(0x00ff00);
-            this.loadRing.material.opacity = 0.3;
+            if (STATE.selectedNodeId === this.id) {
+                this.loadRing.material.opacity = 1.0;
+            }
+            else {
+                this.loadRing.material.opacity = 0.3;
+            };
         }
     }
 

@@ -39,13 +39,21 @@ scene.add(connectionGroup);
 scene.add(requestGroup);
 
 const internetGeo = new THREE.BoxGeometry(6, 1, 10);
-const internetMat = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0x00ffff, emissiveIntensity: 0.2, roughness: 0.2 });
+const internetMat = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0x00ffff, emissiveIntensity: 0.7, roughness: 0.2 });
 const internetMesh = new THREE.Mesh(internetGeo, internetMat);
 internetMesh.position.copy(STATE.internetNode.position);
 internetMesh.castShadow = true;
 internetMesh.receiveShadow = true;
 scene.add(internetMesh);
 STATE.internetNode.mesh = internetMesh;
+
+const intRingGeo = new THREE.RingGeometry(7, 7.2, 32);
+const intRingMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+const internetRing = new THREE.Mesh(intRingGeo, intRingMat);
+internetRing.rotation.x = -Math.PI / 2;
+internetRing.position.set(internetMesh.position.x, -internetMesh.position.y + 0.1, internetMesh.position.z);
+scene.add(internetRing);
+STATE.internetNode.ring = internetRing;
 
 
 const raycaster = new THREE.Raycaster();
@@ -574,6 +582,14 @@ function animate(time) {
     STATE.reputation = Math.min(100, STATE.reputation);
     document.getElementById('rep-bar').style.width = `${Math.max(0, STATE.reputation)}%`;
     document.getElementById('rps-display').innerText = `${STATE.currentRPS.toFixed(1)} req/s`;
+
+    if (STATE.internetNode.ring) {
+        if (STATE.selectedNodeId === 'internet') {
+            STATE.internetNode.ring.material.opacity = 1.0;
+        } else {
+            STATE.internetNode.ring.material.opacity = 0.2;
+        }
+    }
 
 
     // Game over only in survival mode
