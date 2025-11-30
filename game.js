@@ -53,8 +53,8 @@ const intRingGeo = new THREE.RingGeometry(7, 7.2, 32);
 const intRingMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
 const internetRing = new THREE.Mesh(intRingGeo, intRingMat);
 internetRing.rotation.x = -Math.PI / 2;
-internetRing.position.set(0, 0.1, 0);
-internetMesh.add(internetRing);
+internetRing.position.set(internetMesh.position.x, -internetMesh.position.y + 0.1, internetMesh.position.z);
+scene.add(internetRing);
 STATE.internetNode.ring = internetRing;
 
 
@@ -303,6 +303,13 @@ function showMainMenu() {
     document.getElementById('main-menu-modal').classList.remove('hidden');
     document.getElementById('faq-modal').classList.add('hidden');
     document.getElementById('modal').classList.add('hidden');
+
+    // Check for saved game and show/hide load button
+    const loadBtn = document.getElementById('load-btn');
+    const hasSave = localStorage.getItem('serverSurvivalSave') !== null;
+    if (loadBtn) {
+        loadBtn.style.display = hasSave ? 'block' : 'none';
+    }
 }
 
 let faqSource = 'menu'; // 'menu' or 'game'
@@ -345,6 +352,12 @@ function createService(type, pos) {
     if (STATE.services.find(s => s.position.distanceTo(pos) < 1)) return;
     STATE.money -= CONFIG.services[type].cost;
     STATE.services.push(new Service(type, pos));
+    STATE.sound.playPlace();
+}
+
+function restoreService(serviceData, pos) {
+    const service = Service.restore(serviceData, pos);
+    STATE.services.push(service);
     STATE.sound.playPlace();
 }
 
@@ -837,6 +850,13 @@ function openMainMenu() {
         }
     }
 
+    // Check for saved game and show/hide load button
+    const loadBtn = document.getElementById('load-btn');
+    const hasSave = localStorage.getItem('serverSurvivalSave') !== null;
+    if (loadBtn) {
+        loadBtn.style.display = hasSave ? 'block' : 'none';
+    }
+
     // Show main menu
     document.getElementById('main-menu-modal').classList.remove('hidden');
     STATE.sound.playMenuBGM();
@@ -847,3 +867,164 @@ window.resumeGame = () => {
     document.getElementById('main-menu-modal').classList.add('hidden');
     STATE.sound.playGameBGM();
 };
+
+// ==================== SAVE/LOAD FUNCTIONS ====================
+
+window.saveGameState = () => {
+    try {
+        const saveData = {
+            timestamp: Date.now(),
+            version: '1.0',
+            ...STATE,
+            score: { ...STATE.score },
+            trafficDistribution: { ...STATE.trafficDistribution },
+            services: STATE.services.map(service => ({
+                id: service.id,
+                type: service.type,
+                position: [service.position.x, service.position.y, service.position.z],
+                connections: [...service.connections],
+                tier: service.tier
+            })),
+            connections: STATE.connections.map(conn => ({
+                from: conn.from,
+                to: conn.to
+            })),
+            requests: [],
+            internetConnections: [...STATE.internetNode.connections]
+        };
+
+        localStorage.setItem('serverSurvivalSave', JSON.stringify(saveData));
+
+        const saveBtn = document.getElementById('btn-save');
+        const originalColor = saveBtn.classList.contains('hover:border-green-500') ? '' : saveBtn.style.borderColor;
+        saveBtn.style.borderColor = '#10b981'; // green-500
+        saveBtn.style.color = '#10b981';
+        setTimeout(() => {
+            saveBtn.style.borderColor = originalColor;
+            saveBtn.style.color = '';
+        }, 1000);
+
+        STATE.sound.playPlace(); // Use place sound as feedback
+    } catch (error) {
+        console.error('Failed to save game:', error);
+        alert('Failed to save game. Please try again.');
+    }
+};
+
+window.loadGameState = () => {
+    try {
+        const saveDataStr = localStorage.getItem('serverSurvivalSave');
+        if (!saveDataStr) {
+            alert('No saved game found.');
+            return;
+        }
+
+        const saveData = JSON.parse(saveDataStr);
+
+        clearCurrentGame();
+
+        STATE.money = saveData.money || 0;
+        STATE.reputation = saveData.reputation || 100;
+        STATE.requestsProcessed = saveData.requestsProcessed || 0;
+        STATE.score = { ...saveData.score } || { total: 0, web: 0, api: 0, fraudBlocked: 0 };
+        STATE.activeTool = saveData.activeTool || 'select';
+        STATE.selectedNodeId = saveData.selectedNodeId || null;
+        STATE.lastTime = performance.now(); // Reset timing
+        STATE.spawnTimer = saveData.spawnTimer || 0;
+        STATE.currentRPS = saveData.currentRPS || 0.5;
+        STATE.timeScale = saveData.timeScale || 0; // Start paused
+        STATE.isRunning = saveData.isRunning || false;
+
+        STATE.gameMode = saveData.gameMode || 'survival';
+        STATE.sandboxBudget = saveData.sandboxBudget || 2000;
+        STATE.upkeepEnabled = saveData.upkeepEnabled !== false;
+        STATE.trafficDistribution = { ...saveData.trafficDistribution } || { WEB: 0.5, API: 0.45, FRAUD: 0.05 };
+        STATE.burstCount = saveData.burstCount || 10;
+        STATE.gameStarted = saveData.gameStarted || true;
+        STATE.previousTimeScale = saveData.previousTimeScale || 1;
+
+        restoreServices(saveData.services);
+
+        restoreConnections(saveData.connections, saveData.internetConnections || []);
+
+        updateScoreUI();
+        document.getElementById('money-display').innerText = `$${Math.floor(STATE.money)}`;
+        document.getElementById('rep-bar').style.width = `${Math.max(0, STATE.reputation)}%`;
+        document.getElementById('rps-display').innerText = `${STATE.currentRPS.toFixed(1)} req/s`;
+
+        const sandboxPanel = document.getElementById('sandboxPanel');
+        const objectivesPanel = document.getElementById('objectivesPanel');
+
+        if (STATE.gameMode === 'sandbox') {
+            if (sandboxPanel) sandboxPanel.classList.remove('hidden');
+            if (objectivesPanel) objectivesPanel.classList.add('hidden');
+            syncInput('budget', STATE.sandboxBudget);
+            syncInput('rps', STATE.currentRPS);
+            syncInput('web', STATE.trafficDistribution.WEB * 100);
+            syncInput('api', STATE.trafficDistribution.API * 100);
+            syncInput('fraud', STATE.trafficDistribution.FRAUD * 100);
+            syncInput('burst', STATE.burstCount);
+            const upkeepBtn = document.getElementById('upkeep-toggle');
+            if (upkeepBtn) {
+                upkeepBtn.textContent = STATE.upkeepEnabled ? 'Upkeep: ON' : 'Upkeep: OFF';
+                upkeepBtn.classList.toggle('bg-red-900/50', STATE.upkeepEnabled);
+                upkeepBtn.classList.toggle('bg-green-900/50', !STATE.upkeepEnabled);
+            }
+        } else {
+            if (sandboxPanel) sandboxPanel.classList.add('hidden');
+            if (objectivesPanel) objectivesPanel.classList.remove('hidden');
+        }
+
+        document.getElementById('main-menu-modal').classList.add('hidden');
+
+        if (!STATE.animationId) {
+            animate(performance.now());
+        }
+
+        STATE.sound.playPlace();
+
+    } catch (error) {
+        console.error('Failed to load game:', error);
+        alert('Failed to load game. The save file may be corrupted.');
+    }
+};
+
+function clearCurrentGame() {
+    while (serviceGroup.children.length > 0) {
+        serviceGroup.remove(serviceGroup.children[0]);
+    }
+    while (connectionGroup.children.length > 0) {
+        connectionGroup.remove(connectionGroup.children[0]);
+    }
+    while (requestGroup.children.length > 0) {
+        requestGroup.remove(requestGroup.children[0]);
+    }
+
+    STATE.services.forEach(s => s.destroy());
+    STATE.services = [];
+    STATE.requests = [];
+    STATE.connections = [];
+    STATE.internetNode.connections = [];
+}
+
+function restoreServices(savedServices) {
+    savedServices.forEach(serviceData => {
+        const position = new THREE.Vector3(
+            serviceData.position[0],
+            serviceData.position[1],
+            serviceData.position[2]
+        );
+
+        restoreService(serviceData, position);
+    });
+}
+
+function restoreConnections(savedConnections, internetConnections) {
+    internetConnections.forEach(connData => {
+        createConnection(connData.from, connData.to);
+    });
+
+    savedConnections.forEach(connData => {
+        createConnection(connData.from, connData.to);
+    });
+}

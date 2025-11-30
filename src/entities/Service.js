@@ -212,4 +212,10 @@ class Service {
         this.mesh.geometry.dispose();
         this.mesh.material.dispose();
     }
+
+    static restore(serviceData, pos) {
+        const service = new Service(serviceData.type, pos);
+        service.id = serviceData.id;
+        return service;
+    }
 }

@@ -74,6 +74,15 @@
         <!-- Time Control Panel (Top Center) -->
         <div
             class="absolute top-4 left-1/2 transform -translate-x-1/2 glass-panel rounded-xl p-2 pointer-events-auto flex gap-2">
+            <button onclick="saveGameState()" id="btn-save"
+                class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-green-500 hover:text-green-400 flex items-center justify-center"
+                title="Save Game">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4">
+                    </path>
+                </svg>
+            </button>
             <button onclick="restartGame()" id="btn-restart"
                 class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-red-500 hover:text-red-400 flex items-center justify-center mr-2"
                 title="Restart Game">
@@ -374,6 +383,11 @@
                 <button onclick="startSandbox()"
                     class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-purple-400/50">
                     Sandbox Mode
+                </button>
+
+                <button onclick="loadGameState()" id="load-btn"
+                    class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-cyan-400/50">
+                    Continue Game
                 </button>
 
                 <button onclick="showFAQ()"
