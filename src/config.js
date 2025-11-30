@@ -18,6 +18,7 @@ const CONFIG = {
         requestFraud: 0xff00ff, // Pink
         requestFail: 0xef4444
     },
+    internetNodeStartPos: { x: -40, y: 0, z: 0 },
     services: {
         waf: { name: "WAF Firewall", cost: 50, type: 'waf', processingTime: 20, capacity: 100, upkeep: 5 },
         alb: { name: "Load Balancer", cost: 50, type: 'alb', processingTime: 50, capacity: 50, upkeep: 8 },

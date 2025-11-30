@@ -1,11 +1,13 @@
-
 STATE.sound = new SoundService();
-
 
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(CONFIG.colors.bg);
 scene.fog = new THREE.FogExp2(CONFIG.colors.bg, 0.008);
+
+let isDraggingNode = false;
+let draggedNode = null;
+let dragOffset = new THREE.Vector3();
 
 const aspect = window.innerWidth / window.innerHeight;
 const d = 50;
@@ -51,8 +53,8 @@ const intRingGeo = new THREE.RingGeometry(7, 7.2, 32);
 const intRingMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
 const internetRing = new THREE.Mesh(intRingGeo, intRingMat);
 internetRing.rotation.x = -Math.PI / 2;
-internetRing.position.set(internetMesh.position.x, -internetMesh.position.y + 0.1, internetMesh.position.z);
-scene.add(internetRing);
+internetRing.position.set(0, 0.1, 0);
+internetMesh.add(internetRing);
 STATE.internetNode.ring = internetRing;
 
 
@@ -111,6 +113,16 @@ function resetGame(mode = 'survival') {
         requestGroup.remove(requestGroup.children[0]);
     }
     STATE.internetNode.connections = [];
+    STATE.internetNode.position.set(
+        CONFIG.internetNodeStartPos.x,
+        CONFIG.internetNodeStartPos.y,
+        CONFIG.internetNodeStartPos.z
+    );
+    STATE.internetNode.mesh.position.set(
+        CONFIG.internetNodeStartPos.x,
+        CONFIG.internetNodeStartPos.y,
+        CONFIG.internetNodeStartPos.z
+    );
 
     // Reset UI
     document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
@@ -456,7 +468,19 @@ container.addEventListener('mousedown', (e) => {
     }
 
     const i = getIntersect(e.clientX, e.clientY);
-    if (STATE.activeTool === 'delete' && i.type === 'service') deleteObject(i.id);
+    if (STATE.activeTool === 'select') {
+        const i = getIntersect(e.clientX, e.clientY);
+        if (i.type === 'service') { draggedNode = STATE.services.find(s => s.id === i.id); } 
+        else if (i.type === 'internet') { draggedNode = STATE.internetNode; }
+        if (draggedNode) { isDraggingNode = true;
+            const hit = getIntersect(e.clientX, e.clientY);
+            if (hit.pos) { dragOffset.copy(draggedNode.position).sub(hit.pos); }
+            container.style.cursor = 'grabbing';
+            e.preventDefault();
+            return;
+        }
+    }
+    else if (STATE.activeTool === 'delete' && i.type === 'service') deleteObject(i.id);
     else if (STATE.activeTool === 'connect' && (i.type === 'service' || i.type === 'internet')) {
         if (STATE.selectedNodeId) { createConnection(STATE.selectedNodeId, i.id); STATE.selectedNodeId = null; }
         else { STATE.selectedNodeId = i.id; new Audio('assets/sounds/click-5.mp3').play(); }
@@ -475,6 +499,30 @@ container.addEventListener('mousedown', (e) => {
 });
 
 container.addEventListener('mousemove', (e) => {
+    if (isDraggingNode && draggedNode) {
+        const hit = getIntersect(e.clientX, e.clientY);
+        if (hit.pos) {
+            const newPos = hit.pos.clone().add(dragOffset);
+            newPos.y = 0;
+
+            draggedNode.position.copy(newPos);
+
+            if (draggedNode.mesh) {
+                draggedNode.mesh.position.x = newPos.x;
+                draggedNode.mesh.position.z = newPos.z;
+            } else {
+                STATE.internetNode.mesh.position.x = newPos.x;
+                STATE.internetNode.mesh.position.z = newPos.z;
+                STATE.internetNode.ring.position.x = newPos.x;
+                STATE.internetNode.ring.position.z = newPos.z;
+            }
+
+            updateConnectionsForNode(draggedNode.id);
+
+            container.style.cursor = 'grabbing';
+        }
+        return;
+    }
     if (isPanning) {
         const dx = e.clientX - lastMouseX;
         const dy = e.clientY - lastMouseY;
@@ -549,9 +597,49 @@ container.addEventListener('mouseup', (e) => {
         isPanning = false;
         container.style.cursor = 'default';
     }
+    if (isDraggingNode && draggedNode) {
+        isDraggingNode = false;
+
+        const snapped = snapToGrid(draggedNode.position);
+
+        draggedNode.position.copy(snapped);
+
+        if (draggedNode.mesh) {
+            draggedNode.mesh.position.x = snapped.x;
+            draggedNode.mesh.position.z = snapped.z;
+        } else {
+            STATE.internetNode.mesh.position.x = snapped.x;
+            STATE.internetNode.mesh.position.z = snapped.z;
+            STATE.internetNode.ring.position.x = snapped.x;
+            STATE.internetNode.ring.position.z = snapped.z;
+        }
+
+        updateConnectionsForNode(draggedNode.id);
+
+        draggedNode = null;
+        container.style.cursor = 'default';
+        return;
+    }
 });
 
+function updateConnectionsForNode(nodeId) {
+    STATE.connections.forEach(c => {
+        if (c.from === nodeId || c.to === nodeId) {
+            const from = (c.from === 'internet') ? STATE.internetNode : STATE.services.find(s => s.id === c.from);
+            const to = (c.to === 'internet') ? STATE.internetNode : STATE.services.find(s => s.id === c.to);
 
+            if (!from || !to) return;
+
+            const pts = [
+                new THREE.Vector3(from.position.x, 1, from.position.z),
+                new THREE.Vector3(to.position.x, 1, to.position.z)
+            ];
+
+            c.mesh.geometry.dispose();
+            c.mesh.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+        }
+    });
+}
 
 function animate(time) {
     STATE.animationId = requestAnimationFrame(animate);

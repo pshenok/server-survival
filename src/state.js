@@ -26,7 +26,11 @@ const STATE = {
     internetNode: {
         id: 'internet',
         type: 'internet',
-        position: new THREE.Vector3(-40, 0, 0),
+        position: new THREE.Vector3(
+            CONFIG.internetNodeStartPos.x,
+            CONFIG.internetNodeStartPos.y,
+            CONFIG.internetNodeStartPos.z
+        ),
         connections: []
     },
 
