@@ -269,6 +269,17 @@
                     </svg>
                     <span class="text-[10px] uppercase">Demolish</span>
                 </button>
+
+                <button id="tool-unlink"
+                    class="service-btn bg-orange-900/30 text-orange-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent hover:bg-orange-900/50"
+                    onclick="setTool('unlink')">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                        </path>
+                    </svg>
+                    <span class="text-[10px] uppercase">Unlink</span>
+                </button>
             </div>
 
             <!-- Shop -->
@@ -539,7 +550,20 @@
                             </div>
                             <strong class="text-white">DELETE</strong>
                         </div>
-                        <p class="text-gray-400">Remove services or connections. Refunds 50% of cost.</p>
+                        <p class="text-gray-400">Remove services. Refunds 50% of cost.</p>
+                    </div>
+                    <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+                        <div class="flex items-center mb-2">
+                            <div class="w-6 h-6 bg-orange-900/50 rounded flex items-center justify-center mr-2">
+                                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                                    </path>
+                                </svg>
+                            </div>
+                            <strong class="text-white">UNLINK</strong>
+                        </div>
+                        <p class="text-gray-400">Remove connections between services. Click on a link to delete it.</p>
                     </div>
 
                     <div class="bg-gray-800/30 p-3 rounded border border-gray-700">

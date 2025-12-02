@@ -534,6 +534,67 @@ function createConnection(fromId, toId) {
     STATE.sound.playConnect();
 }
 
+function deleteConnection(fromId, toId) {
+    const getEntity = (id) => id === 'internet' ? STATE.internetNode : STATE.services.find(s => s.id === id);
+    const from = getEntity(fromId);
+    if (!from) return false;
+
+    // Check if connection exists
+    if (!from.connections.includes(toId)) return false;
+
+    // Remove from service connections array
+    from.connections = from.connections.filter(c => c !== toId);
+
+    // Find and remove the visual mesh
+    const conn = STATE.connections.find(c => c.from === fromId && c.to === toId);
+    if (conn) {
+        connectionGroup.remove(conn.mesh);
+        conn.mesh.geometry.dispose();
+        conn.mesh.material.dispose();
+        STATE.connections = STATE.connections.filter(c => c !== conn);
+    }
+
+    STATE.sound.playDelete();
+    return true;
+}
+
+function getConnectionAtPoint(clientX, clientY) {
+    mouse.x = (clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    // Get the click point on the ground plane
+    const clickPoint = new THREE.Vector3();
+    raycaster.ray.intersectPlane(plane, clickPoint);
+    clickPoint.y = 1; // Lines are at y=1
+
+    // Check each connection for proximity to click
+    const threshold = 2; // Distance threshold for clicking on a line
+
+    for (const conn of STATE.connections) {
+        const from = (conn.from === 'internet') ? STATE.internetNode : STATE.services.find(s => s.id === conn.from);
+        const to = (conn.to === 'internet') ? STATE.internetNode : STATE.services.find(s => s.id === conn.to);
+
+        if (!from || !to) continue;
+
+        const p1 = new THREE.Vector3(from.position.x, 1, from.position.z);
+        const p2 = new THREE.Vector3(to.position.x, 1, to.position.z);
+
+        // Calculate distance from point to line segment
+        const line = new THREE.Line3(p1, p2);
+        const closestPoint = new THREE.Vector3();
+        line.closestPointToPoint(clickPoint, true, closestPoint);
+
+        const distance = clickPoint.distanceTo(closestPoint);
+
+        if (distance < threshold) {
+            return conn;
+        }
+    }
+
+    return null;
+}
+
 function deleteObject(id) {
     const svc = STATE.services.find(s => s.id === id);
     if (!svc) return;
@@ -634,6 +695,14 @@ container.addEventListener('mousedown', (e) => {
         }
     }
     else if (STATE.activeTool === 'delete' && i.type === 'service') deleteObject(i.id);
+    else if (STATE.activeTool === 'unlink') {
+        const conn = getConnectionAtPoint(e.clientX, e.clientY);
+        if (conn) {
+            deleteConnection(conn.from, conn.to);
+        } else {
+            new Audio('assets/sounds/click-9.mp3').play();
+        }
+    }
     else if (STATE.activeTool === 'connect' && (i.type === 'service' || i.type === 'internet')) {
         if (STATE.selectedNodeId) { createConnection(STATE.selectedNodeId, i.id); STATE.selectedNodeId = null; }
         else { STATE.selectedNodeId = i.id; new Audio('assets/sounds/click-5.mp3').play(); }
@@ -717,6 +786,42 @@ container.addEventListener('mousemove', (e) => {
     const i = getIntersect(e.clientX, e.clientY);
     const t = document.getElementById('tooltip');
     let cursor = 'default';
+
+    // Reset all connection colors first
+    STATE.connections.forEach(c => {
+        if (c.mesh && c.mesh.material) {
+            c.mesh.material.color.setHex(CONFIG.colors.line);
+        }
+    });
+
+    // Handle unlink tool hover
+    if (STATE.activeTool === 'unlink') {
+        const conn = getConnectionAtPoint(e.clientX, e.clientY);
+        if (conn) {
+            cursor = 'pointer';
+            // Highlight the connection in red
+            if (conn.mesh && conn.mesh.material) {
+                conn.mesh.material.color.setHex(0xff4444);
+            }
+
+            // Get source and target names for tooltip
+            const from = (conn.from === 'internet') ? STATE.internetNode : STATE.services.find(s => s.id === conn.from);
+            const to = (conn.to === 'internet') ? STATE.internetNode : STATE.services.find(s => s.id === conn.to);
+            const fromName = conn.from === 'internet' ? 'Internet' : (from?.config?.name || 'Unknown');
+            const toName = conn.to === 'internet' ? 'Internet' : (to?.config?.name || 'Unknown');
+
+            t.style.display = 'block';
+            t.style.left = e.clientX + 15 + 'px';
+            t.style.top = e.clientY + 15 + 'px';
+            t.innerHTML = `<strong class="text-orange-400">Remove Link</strong><br>
+            <span class="text-gray-300">${fromName}</span> → <span class="text-gray-300">${toName}</span><br>
+            <span class="text-red-400 text-xs">Click to remove</span>`;
+        } else {
+            t.style.display = 'none';
+        }
+        container.style.cursor = cursor;
+        return;
+    }
 
     if (i.type === 'service') {
         const s = STATE.services.find(s => s.id === i.id);
