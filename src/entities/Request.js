@@ -42,7 +42,9 @@ class Request {
                 this.mesh.position.copy(this.target.position);
                 this.mesh.position.y = 2;
 
-                if (this.target.queue.length < 20) {
+                // Use service-specific max queue size
+                const maxQueue = this.target.config.maxQueueSize || 20;
+                if (this.target.queue.length < maxQueue) {
                     this.target.queue.push(this);
                 } else {
                     failRequest(this);

@@ -1,5 +1,127 @@
 STATE.sound = new SoundService();
 
+// ==================== BALANCE OVERHAUL FUNCTIONS ====================
+
+function calculateTargetRPS(gameTimeSeconds) {
+    // Logarithmic curve: fast growth early, plateaus later
+    // At 0s: 0.5, at 60s: ~2.5, at 180s: ~4, at 300s: ~5, at 600s: ~6.5
+    const base = CONFIG.survival.baseRPS;
+    const growth = Math.log(1 + gameTimeSeconds / 30) * 1.8;
+    return base + growth;
+}
+
+function getUpkeepMultiplier() {
+    if (STATE.gameMode !== 'survival') return 1.0;
+    if (!CONFIG.survival.upkeepScaling.enabled) return 1.0;
+
+    const gameTime = (performance.now() - STATE.gameStartTime) / 1000;
+    const progress = Math.min(gameTime / CONFIG.survival.upkeepScaling.scaleTime, 1.0);
+
+    const base = CONFIG.survival.upkeepScaling.baseMultiplier;
+    const max = CONFIG.survival.upkeepScaling.maxMultiplier;
+
+    // Smooth curve from base to max
+    return base + (max - base) * progress;
+}
+
+function updateFraudSpike(dt) {
+    if (STATE.gameMode !== 'survival') return;
+    if (!CONFIG.survival.fraudSpike.enabled) return;
+
+    STATE.fraudSpikeTimer += dt;
+
+    const interval = CONFIG.survival.fraudSpike.interval;
+    const duration = CONFIG.survival.fraudSpike.duration;
+    const warning = CONFIG.survival.fraudSpike.warningTime;
+
+    const cycleTime = STATE.fraudSpikeTimer % interval;
+
+    // Warning phase
+    if (cycleTime >= interval - warning && cycleTime < interval - warning + dt && !STATE.fraudSpikeActive) {
+        showFraudWarning();
+    }
+
+    // Start spike
+    if (cycleTime < dt && STATE.fraudSpikeTimer > warning) {
+        startFraudSpike();
+    }
+
+    // End spike
+    if (STATE.fraudSpikeActive && cycleTime >= duration && cycleTime < duration + dt) {
+        endFraudSpike();
+    }
+}
+
+function showFraudWarning() {
+    // Visual warning
+    const warning = document.createElement('div');
+    warning.id = 'fraud-warning';
+    warning.className = 'fixed top-1/3 left-1/2 transform -translate-x-1/2 text-center z-50 pointer-events-none';
+    warning.innerHTML = `
+        <div class="text-red-500 text-2xl font-bold animate-pulse">⚠️ DDoS INCOMING ⚠️</div>
+        <div class="text-red-300 text-sm">Fraud spike in 5 seconds!</div>
+    `;
+    document.body.appendChild(warning);
+
+    STATE.sound.playTone(400, 'sawtooth', 0.3);
+    STATE.sound.playTone(300, 'sawtooth', 0.3, 0.15);
+
+    setTimeout(() => warning.remove(), 4000);
+}
+
+function startFraudSpike() {
+    STATE.fraudSpikeActive = true;
+
+    // Store normal distribution
+    STATE.normalTrafficDist = { ...STATE.trafficDistribution };
+
+    // Apply spike distribution
+    const fraudPct = CONFIG.survival.fraudSpike.fraudPercent;
+    const remaining = 1 - fraudPct;
+    STATE.trafficDistribution = {
+        WEB: remaining * 0.5,
+        API: remaining * 0.5,
+        FRAUD: fraudPct
+    };
+
+    // Visual indicator
+    const indicator = document.createElement('div');
+    indicator.id = 'fraud-spike-indicator';
+    indicator.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-40 pointer-events-none';
+    indicator.innerHTML = `
+        <div class="bg-red-900/80 border-2 border-red-500 rounded-lg px-4 py-2 animate-pulse">
+            <span class="text-red-400 font-bold">🔥 DDoS ATTACK ACTIVE 🔥</span>
+        </div>
+    `;
+    document.body.appendChild(indicator);
+
+    // Update mix display
+    const fraudEl = document.getElementById('mix-fraud');
+    if (fraudEl) fraudEl.className = 'text-red-500 font-bold animate-pulse';
+}
+
+function endFraudSpike() {
+    STATE.fraudSpikeActive = false;
+
+    // Restore normal distribution
+    if (STATE.normalTrafficDist) {
+        STATE.trafficDistribution = { ...STATE.normalTrafficDist };
+        STATE.normalTrafficDist = null;
+    }
+
+    // Remove indicator
+    const indicator = document.getElementById('fraud-spike-indicator');
+    if (indicator) indicator.remove();
+
+    // Reset mix display styling
+    const fraudEl = document.getElementById('mix-fraud');
+    if (fraudEl) fraudEl.className = 'text-purple-400';
+
+    STATE.sound.playSuccess();
+}
+
+// ==================== END BALANCE OVERHAUL FUNCTIONS ====================
+
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(CONFIG.colors.bg);
@@ -101,6 +223,18 @@ function resetGame(mode = 'survival') {
     STATE.lastTime = performance.now();
     STATE.timeScale = 0;
     STATE.spawnTimer = 0;
+
+    // Initialize balance overhaul state
+    STATE.gameStartTime = performance.now();
+    STATE.fraudSpikeTimer = 0;
+    STATE.fraudSpikeActive = false;
+    STATE.normalTrafficDist = null;
+
+    // Remove any leftover fraud spike indicators
+    const fraudWarning = document.getElementById('fraud-warning');
+    if (fraudWarning) fraudWarning.remove();
+    const fraudIndicator = document.getElementById('fraud-spike-indicator');
+    if (fraudIndicator) fraudIndicator.remove();
 
     // Clear visual elements
     while (serviceGroup.children.length > 0) {
@@ -372,7 +506,13 @@ function createConnection(fromId, toId) {
 
     if (t1 === 'internet' && (t2 === 'waf' || t2 === 'alb')) valid = true;
     else if (t1 === 'waf' && t2 === 'alb') valid = true;
+    else if (t1 === 'waf' && t2 === 'sqs') valid = true;
+    else if (t1 === 'sqs' && t2 === 'alb') valid = true;
+    else if (t1 === 'alb' && t2 === 'sqs') valid = true;
+    else if (t1 === 'sqs' && t2 === 'compute') valid = true;
     else if (t1 === 'alb' && t2 === 'compute') valid = true;
+    else if (t1 === 'compute' && t2 === 'cache') valid = true;
+    else if (t1 === 'cache' && (t2 === 'db' || t2 === 's3')) valid = true;
     else if (t1 === 'compute' && (t2 === 'db' || t2 === 's3')) valid = true;
 
     if (!valid) {
@@ -497,16 +637,30 @@ container.addEventListener('mousedown', (e) => {
     else if (STATE.activeTool === 'connect' && (i.type === 'service' || i.type === 'internet')) {
         if (STATE.selectedNodeId) { createConnection(STATE.selectedNodeId, i.id); STATE.selectedNodeId = null; }
         else { STATE.selectedNodeId = i.id; new Audio('assets/sounds/click-5.mp3').play(); }
-    } else if (['waf', 'alb', 'lambda', 'db', 's3'].includes(STATE.activeTool)) {
-        if ((STATE.activeTool === 'lambda' && i.type === 'service') || (STATE.activeTool === 'db' && i.type === 'service')) {
+    } else if (['waf', 'alb', 'lambda', 'db', 's3', 'sqs', 'cache'].includes(STATE.activeTool)) {
+        // Handle upgrades for compute, db, and cache
+        if ((STATE.activeTool === 'lambda' && i.type === 'service') ||
+            (STATE.activeTool === 'db' && i.type === 'service') ||
+            (STATE.activeTool === 'cache' && i.type === 'service')) {
             const svc = STATE.services.find(s => s.id === i.id);
-            if (svc && ((STATE.activeTool === 'lambda' && svc.type === 'compute') || (STATE.activeTool === 'db' && svc.type === 'db'))) {
+            if (svc && ((STATE.activeTool === 'lambda' && svc.type === 'compute') ||
+                        (STATE.activeTool === 'db' && svc.type === 'db') ||
+                        (STATE.activeTool === 'cache' && svc.type === 'cache'))) {
                 svc.upgrade();
                 return;
             }
         }
         if (i.type === 'ground') {
-            createService({ 'waf': 'waf', 'alb': 'alb', 'lambda': 'compute', 'db': 'db', 's3': 's3' }[STATE.activeTool], snapToGrid(i.pos));
+            const typeMap = {
+                'waf': 'waf',
+                'alb': 'alb',
+                'lambda': 'compute',
+                'db': 'db',
+                's3': 's3',
+                'sqs': 'sqs',
+                'cache': 'cache'
+            };
+            createService(typeMap[STATE.activeTool], snapToGrid(i.pos));
         }
     }
 });
@@ -572,16 +726,37 @@ container.addEventListener('mousemove', (e) => {
             const load = s.processing.length / s.config.capacity;
             let loadColor = load > 0.8 ? 'text-red-400' : (load > 0.4 ? 'text-yellow-400' : 'text-green-400');
 
-            t.innerHTML = `<strong class="text-blue-300">${s.config.name}</strong> <span class="text-xs text-yellow-400">T${s.tier || 1}</span><br>
-            Queue: <span class="${loadColor}">${s.queue.length}</span><br>
-            Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span>`;
+            // Service-specific tooltips
+            if (s.type === 'cache') {
+                const hitRate = Math.round((s.config.cacheHitRate || 0.35) * 100);
+                t.innerHTML = `<strong class="text-red-400">${s.config.name}</strong> <span class="text-xs text-yellow-400">T${s.tier || 1}</span><br>
+                Queue: <span class="${loadColor}">${s.queue.length}</span><br>
+                Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span><br>
+                Hit Rate: <span class="text-green-400">${hitRate}%</span>`;
+            } else if (s.type === 'sqs') {
+                const maxQ = s.config.maxQueueSize || 200;
+                const fillPercent = Math.round((s.queue.length / maxQ) * 100);
+                const status = fillPercent > 80 ? 'Critical' : (fillPercent > 50 ? 'Busy' : 'Healthy');
+                const statusColor = fillPercent > 80 ? 'text-red-400' : (fillPercent > 50 ? 'text-yellow-400' : 'text-green-400');
+                t.innerHTML = `<strong class="text-orange-400">${s.config.name}</strong><br>
+                Buffered: <span class="${loadColor}">${s.queue.length}/${maxQ}</span><br>
+                Processing: ${s.processing.length}/${s.config.capacity}<br>
+                Status: <span class="${statusColor}">${status}</span>`;
+            } else {
+                t.innerHTML = `<strong class="text-blue-300">${s.config.name}</strong> <span class="text-xs text-yellow-400">T${s.tier || 1}</span><br>
+                Queue: <span class="${loadColor}">${s.queue.length}</span><br>
+                Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span>`;
+            }
 
             // Reset previous highlights
             STATE.services.forEach(svc => {
                 if (svc.mesh.material.emissive) svc.mesh.material.emissive.setHex(0x000000);
             });
 
-            if ((STATE.activeTool === 'lambda' && s.type === 'compute') || (STATE.activeTool === 'db' && s.type === 'db')) {
+            // Show upgrade option for upgradeable services
+            if ((STATE.activeTool === 'lambda' && s.type === 'compute') ||
+                (STATE.activeTool === 'db' && s.type === 'db') ||
+                (STATE.activeTool === 'cache' && s.type === 'cache')) {
                 const tiers = CONFIG.services[s.type].tiers;
                 if (s.tier < tiers.length) {
                     cursor = 'pointer';
@@ -668,17 +843,45 @@ function animate(time) {
     if (STATE.currentRPS > 0 && STATE.spawnTimer > (1 / STATE.currentRPS)) {
         STATE.spawnTimer = 0;
         spawnRequest();
-        // Only ramp up in survival mode
+        // Only ramp up in survival mode - use logarithmic growth
         if (STATE.gameMode === 'survival') {
-            STATE.currentRPS += CONFIG.survival.rampUp;
+            const gameTime = (performance.now() - STATE.gameStartTime) / 1000;
+            const targetRPS = calculateTargetRPS(gameTime);
+
+            // Smooth transition to target
+            STATE.currentRPS += (targetRPS - STATE.currentRPS) * 0.01;
+            STATE.currentRPS = Math.min(STATE.currentRPS, CONFIG.survival.maxRPS);
         }
     }
 
+    // Update fraud spike system
+    updateFraudSpike(dt);
+
     document.getElementById('money-display').innerText = `$${Math.floor(STATE.money)}`;
 
-    const totalUpkeep = STATE.services.reduce((sum, s) => sum + s.config.upkeep / 60, 0);
+    const baseUpkeep = STATE.services.reduce((sum, s) => sum + s.config.upkeep / 60, 0);
+    const multiplier = typeof getUpkeepMultiplier === 'function' ? getUpkeepMultiplier() : 1.0;
+    const totalUpkeep = baseUpkeep * multiplier;
     const upkeepDisplay = document.getElementById('upkeep-display');
-    if (upkeepDisplay) upkeepDisplay.innerText = `-$${totalUpkeep.toFixed(2)}/s`;
+    if (upkeepDisplay) {
+        if (multiplier > 1.05) {
+            upkeepDisplay.innerText = `-$${totalUpkeep.toFixed(2)}/s (×${multiplier.toFixed(2)})`;
+            upkeepDisplay.className = 'text-red-400 font-mono';
+        } else {
+            upkeepDisplay.innerText = `-$${totalUpkeep.toFixed(2)}/s`;
+            upkeepDisplay.className = 'text-red-400 font-mono';
+        }
+    }
+
+    // Update traffic mix display
+    if (STATE.gameMode === 'survival') {
+        const webEl = document.getElementById('mix-web');
+        const apiEl = document.getElementById('mix-api');
+        const fraudEl = document.getElementById('mix-fraud');
+        if (webEl) webEl.textContent = Math.round(STATE.trafficDistribution.WEB * 100) + '%';
+        if (apiEl) apiEl.textContent = Math.round(STATE.trafficDistribution.API * 100) + '%';
+        if (fraudEl && !STATE.fraudSpikeActive) fraudEl.textContent = Math.round(STATE.trafficDistribution.FRAUD * 100) + '%';
+    }
 
     STATE.reputation = Math.min(100, STATE.reputation);
     document.getElementById('rep-bar').style.width = `${Math.max(0, STATE.reputation)}%`;
@@ -883,7 +1086,8 @@ window.saveGameState = () => {
                 type: service.type,
                 position: [service.position.x, service.position.y, service.position.z],
                 connections: [...service.connections],
-                tier: service.tier
+                tier: service.tier,
+                cacheHitRate: service.config.cacheHitRate || null
             })),
             connections: STATE.connections.map(conn => ({
                 from: conn.from,

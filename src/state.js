@@ -45,5 +45,11 @@ const STATE = {
 
     // Menu state
     gameStarted: false,
-    previousTimeScale: 1
+    previousTimeScale: 1,
+
+    // Balance overhaul state
+    gameStartTime: 0,
+    fraudSpikeTimer: 0,
+    fraudSpikeActive: false,
+    normalTrafficDist: null
 };

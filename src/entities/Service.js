@@ -32,6 +32,14 @@ class Service {
                 geo = new THREE.CylinderGeometry(1.8, 1.5, 1.5, 8);
                 mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.s3, ...materialProps });
                 break;
+            case 'cache':
+                geo = new THREE.BoxGeometry(2.5, 1.5, 2.5);
+                mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.cache, ...materialProps });
+                break;
+            case 'sqs':
+                geo = new THREE.BoxGeometry(4, 0.8, 2);
+                mat = new THREE.MeshStandardMaterial({ color: CONFIG.colors.sqs, ...materialProps });
+                break;
         }
 
         this.mesh = new THREE.Mesh(geo, mat);
@@ -41,6 +49,8 @@ class Service {
         else if (type === 'alb') this.mesh.position.y += 0.75;
         else if (type === 'compute') this.mesh.position.y += 1.5;
         else if (type === 's3') this.mesh.position.y += 0.75;
+        else if (type === 'cache') this.mesh.position.y += 0.75;
+        else if (type === 'sqs') this.mesh.position.y += 0.4;
         else this.mesh.position.y += 1;
 
         this.mesh.castShadow = true;
@@ -58,11 +68,25 @@ class Service {
         this.tierRings = [];
         this.rrIndex = 0;
 
+        // SQS queue fill indicator
+        if (type === 'sqs') {
+            const fillGeo = new THREE.BoxGeometry(3.8, 0.6, 1.8);
+            const fillMat = new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
+                transparent: true,
+                opacity: 0.3
+            });
+            this.queueFill = new THREE.Mesh(fillGeo, fillMat);
+            this.queueFill.position.set(0, 0, 0);
+            this.queueFill.scale.x = 0;
+            this.mesh.add(this.queueFill);
+        }
+
         serviceGroup.add(this.mesh);
     }
 
     upgrade() {
-        if (!['compute', 'db'].includes(this.type)) return;
+        if (!['compute', 'db', 'cache'].includes(this.type)) return;
         const tiers = CONFIG.services[this.type].tiers;
         if (this.tier >= tiers.length) return;
 
@@ -72,11 +96,29 @@ class Service {
         STATE.money -= nextTier.cost;
         this.tier++;
         this.config = { ...this.config, capacity: nextTier.capacity };
+
+        // Update cacheHitRate for cache type
+        if (this.type === 'cache' && nextTier.cacheHitRate) {
+            this.config = { ...this.config, cacheHitRate: nextTier.cacheHitRate };
+        }
+
         STATE.sound.playPlace();
 
         // Visuals
-        const ringGeo = new THREE.TorusGeometry(this.type === 'db' ? 2.2 : 1.3, 0.1, 8, 32);
-        const ringMat = new THREE.MeshBasicMaterial({ color: this.type === 'db' ? 0xff0000 : 0xffff00 });
+        let ringSize, ringColor;
+        if (this.type === 'db') {
+            ringSize = 2.2;
+            ringColor = 0xff0000;
+        } else if (this.type === 'cache') {
+            ringSize = 1.5;
+            ringColor = 0xDC382D; // Redis red
+        } else {
+            ringSize = 1.3;
+            ringColor = 0xffff00;
+        }
+
+        const ringGeo = new THREE.TorusGeometry(ringSize, 0.1, 8, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: ringColor });
         const ring = new THREE.Mesh(ringGeo, ringMat);
         ring.rotation.x = Math.PI / 2;
         // Tier rings
@@ -101,7 +143,8 @@ class Service {
 
     update(dt) {
         if (STATE.upkeepEnabled) {
-            STATE.money -= (this.config.upkeep / 60) * dt;
+            const multiplier = typeof getUpkeepMultiplier === 'function' ? getUpkeepMultiplier() : 1.0;
+            STATE.money -= (this.config.upkeep / 60) * dt * multiplier;
         }
 
         this.processQueue();
@@ -129,18 +172,99 @@ class Service {
                     continue;
                 }
 
-                if (this.type === 'compute') {
-                    const requiredType = job.req.type === TRAFFIC_TYPES.API ? 'db' : (job.req.type === TRAFFIC_TYPES.WEB ? 's3' : null);
+                // Cache processing logic
+                if (this.type === 'cache') {
+                    const hitRate = this.config.cacheHitRate || 0.35;
 
-                    if (requiredType) {
-                        const correctTarget = STATE.services.find(s =>
-                            this.connections.includes(s.id) && s.type === requiredType
+                    if (Math.random() < hitRate) {
+                        // CACHE HIT - request completes here
+                        STATE.sound.playSuccess();
+                        this.flashCacheHit();
+                        finishRequest(job.req);
+                    } else {
+                        // CACHE MISS - forward to DB or S3
+                        const requiredType = job.req.type === TRAFFIC_TYPES.API ? 'db' :
+                            (job.req.type === TRAFFIC_TYPES.WEB ? 's3' : null);
+
+                        if (requiredType) {
+                            const target = STATE.services.find(s =>
+                                this.connections.includes(s.id) && s.type === requiredType
+                            );
+
+                            if (target) {
+                                job.req.flyTo(target);
+                            } else {
+                                failRequest(job.req);
+                            }
+                        } else {
+                            // FRAUD should never reach cache
+                            failRequest(job.req);
+                        }
+                    }
+                    continue;
+                }
+
+                // SQS processing logic
+                if (this.type === 'sqs') {
+                    // SQS just forwards requests with backpressure check
+                    const downstreamTypes = ['alb', 'compute'];
+                    const candidates = this.connections
+                        .map(id => STATE.services.find(s => s.id === id))
+                        .filter(s => s && downstreamTypes.includes(s.type));
+
+                    if (candidates.length === 0) {
+                        failRequest(job.req);
+                        continue;
+                    }
+
+                    // Round-robin with backpressure check
+                    let sent = false;
+                    for (let attempt = 0; attempt < candidates.length; attempt++) {
+                        const target = candidates[this.rrIndex % candidates.length];
+                        this.rrIndex++;
+
+                        // Check if target can accept (has queue space)
+                        const targetMaxQueue = target.config.maxQueueSize || 20;
+                        if (target.queue.length < targetMaxQueue) {
+                            job.req.flyTo(target);
+                            sent = true;
+                            break;
+                        }
+                    }
+
+                    if (!sent) {
+                        // All downstream busy - put back in OUR queue
+                        this.queue.unshift(job.req);
+                        this.processing.splice(i, 1);
+                        break; // Don't process more this frame
+                    }
+                    continue;
+                }
+
+                if (this.type === 'compute') {
+                    const requiredEndpoint = job.req.type === TRAFFIC_TYPES.API ? 'db' :
+                        (job.req.type === TRAFFIC_TYPES.WEB ? 's3' : null);
+
+                    if (requiredEndpoint) {
+                        // Check if cache is connected (preferred path)
+                        const cacheTarget = STATE.services.find(s =>
+                            this.connections.includes(s.id) && s.type === 'cache'
                         );
 
-                        if (correctTarget) {
-                            job.req.flyTo(correctTarget);
+                        if (cacheTarget) {
+                            // Route through cache
+                            job.req.flyTo(cacheTarget);
                         } else {
-                            failRequest(job.req);
+                            // Direct to DB/S3 (existing logic)
+                            const directTarget = STATE.services.find(s =>
+                                this.connections.includes(s.id) && s.type === requiredEndpoint
+                            );
+
+                            if (directTarget) {
+                                job.req.flyTo(directTarget);
+                            } else {
+                                failRequest(job.req);
+                            }
                         }
                     } else {
                         failRequest(job.req);
@@ -195,6 +319,32 @@ class Service {
                 this.loadRing.material.opacity = 0.3;
             };
         }
+
+        // SQS queue fill visualization
+        if (this.type === 'sqs' && this.queueFill) {
+            const maxQ = this.config.maxQueueSize || 200;
+            const fillPercent = this.queue.length / maxQ;
+            this.queueFill.scale.x = fillPercent;
+            this.queueFill.position.x = (fillPercent - 1) * 1.9;
+
+            // Color based on fill level
+            if (fillPercent > 0.8) {
+                this.queueFill.material.color.setHex(0xff0000);
+            } else if (fillPercent > 0.5) {
+                this.queueFill.material.color.setHex(0xffaa00);
+            } else {
+                this.queueFill.material.color.setHex(0x00ff00);
+            }
+        }
+    }
+
+    flashCacheHit() {
+        if (!this.mesh) return;
+        const originalColor = this.mesh.material.color.getHex();
+        this.mesh.material.color.setHex(0x00ff00); // Green flash
+        setTimeout(() => {
+            this.mesh.material.color.setHex(originalColor);
+        }, 100);
     }
 
     get totalLoad() {
@@ -216,6 +366,43 @@ class Service {
     static restore(serviceData, pos) {
         const service = new Service(serviceData.type, pos);
         service.id = serviceData.id;
+
+        // Restore tier and upgrade-related properties
+        if (serviceData.tier && serviceData.tier > 1) {
+            const tiers = CONFIG.services[serviceData.type]?.tiers;
+            if (tiers) {
+                service.tier = serviceData.tier;
+                const tierData = tiers[service.tier - 1];
+                if (tierData) {
+                    service.config = { ...service.config, capacity: tierData.capacity };
+                    if (tierData.cacheHitRate) {
+                        service.config = { ...service.config, cacheHitRate: tierData.cacheHitRate };
+                    }
+                }
+                // Add visual tier rings
+                for (let t = 2; t <= service.tier; t++) {
+                    let ringSize, ringColor;
+                    if (service.type === 'db') {
+                        ringSize = 2.2;
+                        ringColor = 0xff0000;
+                    } else if (service.type === 'cache') {
+                        ringSize = 1.5;
+                        ringColor = 0xDC382D;
+                    } else {
+                        ringSize = 1.3;
+                        ringColor = 0xffff00;
+                    }
+                    const ringGeo = new THREE.TorusGeometry(ringSize, 0.1, 8, 32);
+                    const ringMat = new THREE.MeshBasicMaterial({ color: ringColor });
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = Math.PI / 2;
+                    ring.position.y = -service.mesh.position.y + (t === 2 ? 0.5 : 1.0);
+                    service.mesh.add(ring);
+                    service.tierRings.push(ring);
+                }
+            }
+        }
+
         return service;
     }
 }
