@@ -97,7 +97,7 @@ A fully customizable testing environment for experimenting with any architecture
 ## 💬 Community
 
 Join our Discord server to discuss strategies and share your high scores:
-[Join Discord](https://discord.gg/bYSktNXy)
+[Join Discord](https://discord.gg/zqcF8CXK)
 
 ---
 *Built with code and chaos.*
