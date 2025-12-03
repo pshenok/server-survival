@@ -22,17 +22,20 @@ Build your architecture using the toolbar. Each service has a cost and upkeep:
 
 | Service | Cost | Upkeep | Function |
 | :--- | :--- | :--- | :--- |
-| **WAF** | $50 | Low | **Firewall.** The first line of defense. Blocks Fraud traffic. |
+| **WAF** | $40 | Low | **Firewall.** The first line of defense. Blocks Fraud traffic. |
+| **SQS** | $40 | Low | **Queue.** Buffers requests during spikes. Prevents drops. |
 | **ALB** | $50 | Medium | **Load Balancer.** Distributes traffic to multiple Compute instances. |
-| **Compute** | $100 | High | **EC2 Instance.** Processes requests. **Upgradeable (Tiers 1-3).** |
-| **Database** | $200 | Very High | **RDS.** Destination for API traffic. **Upgradeable (Tiers 1-3).** |
-| **S3** | $25 | Low | **Storage.** Destination for Web traffic. |
+| **Compute** | $80 | High | **EC2 Instance.** Processes requests. **Upgradeable (Tiers 1-3).** |
+| **ElastiCache** | $75 | Medium | **Redis Cache.** Caches responses to reduce DB load. |
+| **Database** | $180 | Very High | **RDS.** Destination for API traffic. **Upgradeable (Tiers 1-3).** |
+| **S3** | $30 | Low | **Storage.** Destination for Web traffic. |
 
 ### Scoring & Economy
-- **Web Request:** +$1.25 / +5 Score
-- **API Request:** +$1.25 / +5 Score
-- **Fraud Blocked:** +5 Score
-- **Fraud Leak:** -5 Reputation
+- **Web Request:** +$0.80 / +5 Score
+- **API Request:** +$1.20 / +8 Score
+- **Fraud Blocked:** +10 Score
+- **Fraud Leak:** -8 Reputation
+- **Upkeep Scaling:** Costs increase 1x to 2x over 10 minutes.
 
 ### Game Modes
 
@@ -70,7 +73,7 @@ A fully customizable testing environment for experimenting with any architecture
 - **Birds-Eye View:** Press `T` to switch between isometric and top-down view.
 - **Hide HUD:** Press `H` to toggle UI panels.
 - **Connect Tool:** Click two nodes to create a connection (flow direction matters!).
-    - *Valid Flows:* Internet -> WAF -> ALB -> Compute -> (DB/S3)
+    - *Valid Flows:* Internet -> WAF -> ALB -> SQS -> Compute -> Cache -> (DB/S3)
 - **Delete Tool:** Remove services to recover 50% of the cost.
 - **Time Controls:** Pause, Play (1x), and Fast Forward (3x).
 
