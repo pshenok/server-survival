@@ -49,6 +49,7 @@ const STATE = {
 
     // Balance overhaul state
     gameStartTime: 0,
+    elapsedGameTime: 0,
     fraudSpikeTimer: 0,
     fraudSpikeActive: false,
     normalTrafficDist: null
