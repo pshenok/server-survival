@@ -14,7 +14,8 @@ function getUpkeepMultiplier() {
     if (STATE.gameMode !== 'survival') return 1.0;
     if (!CONFIG.survival.upkeepScaling.enabled) return 1.0;
 
-    const gameTime = (performance.now() - STATE.gameStartTime) / 1000;
+    // Use simulated elapsed time so timeScale affects upkeep ramp
+    const gameTime = STATE.elapsedGameTime ?? ((performance.now() - STATE.gameStartTime) / 1000);
     const progress = Math.min(gameTime / CONFIG.survival.upkeepScaling.scaleTime, 1.0);
 
     const base = CONFIG.survival.upkeepScaling.baseMultiplier;
@@ -225,6 +226,7 @@ function resetGame(mode = 'survival') {
     STATE.spawnTimer = 0;
 
     // Initialize balance overhaul state
+    STATE.elapsedGameTime = 0;
     STATE.gameStartTime = performance.now();
     STATE.fraudSpikeTimer = 0;
     STATE.fraudSpikeActive = false;
@@ -991,6 +993,7 @@ function animate(time) {
 
     const dt = ((time - STATE.lastTime) / 1000) * STATE.timeScale;
     STATE.lastTime = time;
+    STATE.elapsedGameTime += dt;
 
     STATE.services.forEach(s => s.update(dt));
     STATE.requests.forEach(r => r.update(dt));
@@ -1001,7 +1004,7 @@ function animate(time) {
         spawnRequest();
         // Only ramp up in survival mode - use logarithmic growth
         if (STATE.gameMode === 'survival') {
-            const gameTime = (performance.now() - STATE.gameStartTime) / 1000;
+            const gameTime = STATE.elapsedGameTime;
             const targetRPS = calculateTargetRPS(gameTime);
 
             // Smooth transition to target
@@ -1293,7 +1296,9 @@ window.loadGameState = () => {
         STATE.spawnTimer = saveData.spawnTimer || 0;
         STATE.currentRPS = saveData.currentRPS || 0.5;
         STATE.timeScale = saveData.timeScale || 0; // Start paused
+        STATE.elapsedGameTime = saveData.elapsedGameTime ?? 0;
         STATE.isRunning = saveData.isRunning || false;
+        STATE.gameStartTime = performance.now();
 
         STATE.gameMode = saveData.gameMode || 'survival';
         STATE.sandboxBudget = saveData.sandboxBudget || 2000;
