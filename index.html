@@ -64,15 +64,15 @@
                 Traffic Score Details</h3>
             <div class="space-y-1 text-sm font-mono">
                 <div class="flex justify-between items-center">
-                    <span class="text-gray-500">WEB (S3)</span>
+                    <span class="text-gray-500">WEB (Storage)</span>
                     <span id="score-web" class="text-gray-300">0</span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <span class="text-gray-500">API (RDS)</span>
+                    <span class="text-gray-500">API (SQL DB)</span>
                     <span id="score-api" class="text-gray-300">0</span>
                 </div>
                 <div class="flex justify-between items-center pt-1 border-t border-gray-800">
-                    <span class="text-purple-300 font-bold">WAF REFLECTED</span>
+                    <span class="text-purple-300 font-bold">FIREWALL BLOCKED</span>
                     <span id="score-fraud" class="text-purple-300">0</span>
                 </div>
             </div>
@@ -122,22 +122,32 @@
         </div>
 
         <!-- Sandbox Control Panel (Bottom Left - replaces objectives in sandbox mode) -->
-        <div id="sandboxPanel" class="hidden absolute bottom-24 left-4 glass-panel rounded-xl p-4 pointer-events-auto w-80">
+        <div id="sandboxPanel"
+            class="hidden absolute bottom-24 left-4 glass-panel rounded-xl p-4 pointer-events-auto w-80">
             <div class="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
                 <h3 class="text-sm font-bold text-purple-400">SANDBOX</h3>
-                <button onclick="clearAllServices()" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 border border-red-900 rounded">Clear All</button>
+                <button onclick="clearAllServices()"
+                    class="text-xs text-red-400 hover:text-red-300 px-2 py-1 border border-red-900 rounded">Clear
+                    All</button>
             </div>
 
             <!-- BUDGET -->
             <div class="mb-3">
                 <div class="text-xs text-gray-400 mb-1">Budget ($)</div>
                 <div class="flex items-center gap-2">
-                    <input type="range" id="budget-slider" min="0" max="10000" step="100" value="2000" oninput="setSandboxBudget(this.value)" class="flex-1 h-2 bg-gray-700 rounded-lg accent-green-500">
-                    <input type="number" id="budget-input" value="2000" min="0" onchange="setSandboxBudget(this.value)" class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-green-400 text-sm text-center font-mono">
+                    <input type="range" id="budget-slider" min="0" max="10000" step="100" value="2000"
+                        oninput="setSandboxBudget(this.value)"
+                        class="flex-1 h-2 bg-gray-700 rounded-lg accent-green-500">
+                    <input type="number" id="budget-input" value="2000" min="0" onchange="setSandboxBudget(this.value)"
+                        class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-green-400 text-sm text-center font-mono">
                 </div>
                 <div class="flex gap-2 mt-2">
-                    <button onclick="resetBudget()" class="flex-1 text-xs py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded">Reset $</button>
-                    <button onclick="toggleUpkeep()" id="upkeep-toggle" class="flex-1 text-xs py-1.5 bg-green-900/50 text-gray-300 rounded border border-gray-600">Upkeep: OFF</button>
+                    <button onclick="resetBudget()"
+                        class="flex-1 text-xs py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded">Reset
+                        $</button>
+                    <button onclick="toggleUpkeep()" id="upkeep-toggle"
+                        class="flex-1 text-xs py-1.5 bg-green-900/50 text-gray-300 rounded border border-gray-600">Upkeep:
+                        OFF</button>
                 </div>
             </div>
 
@@ -145,8 +155,11 @@
             <div class="mb-3">
                 <div class="text-xs text-gray-400 mb-1">Traffic Rate (req/s)</div>
                 <div class="flex items-center gap-2">
-                    <input type="range" id="rps-slider" min="0" max="50" step="0.5" value="1" oninput="setSandboxRPS(this.value)" class="flex-1 h-2 bg-gray-700 rounded-lg accent-blue-500">
-                    <input type="number" id="rps-input" value="1" min="0" step="0.5" onchange="setSandboxRPS(this.value)" class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-blue-400 text-sm text-center font-mono">
+                    <input type="range" id="rps-slider" min="0" max="50" step="0.5" value="1"
+                        oninput="setSandboxRPS(this.value)" class="flex-1 h-2 bg-gray-700 rounded-lg accent-blue-500">
+                    <input type="number" id="rps-input" value="1" min="0" step="0.5"
+                        onchange="setSandboxRPS(this.value)"
+                        class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-blue-400 text-sm text-center font-mono">
                 </div>
             </div>
 
@@ -155,18 +168,30 @@
                 <div class="text-xs text-gray-400 mb-1">Traffic Mix (%)</div>
                 <div class="flex items-center gap-2 mb-1">
                     <span class="w-12 text-xs text-green-400">WEB</span>
-                    <input type="range" id="web-slider" min="0" max="100" value="50" oninput="setTrafficMix('WEB',this.value)" class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-green-500">
-                    <input type="number" id="web-input" value="50" min="0" max="100" onchange="setTrafficMix('WEB',this.value)" class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-green-400 text-xs text-center font-mono">
+                    <input type="range" id="web-slider" min="0" max="100" value="50"
+                        oninput="setTrafficMix('WEB',this.value)"
+                        class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-green-500">
+                    <input type="number" id="web-input" value="50" min="0" max="100"
+                        onchange="setTrafficMix('WEB',this.value)"
+                        class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-green-400 text-xs text-center font-mono">
                 </div>
                 <div class="flex items-center gap-2 mb-1">
                     <span class="w-12 text-xs text-orange-400">API</span>
-                    <input type="range" id="api-slider" min="0" max="100" value="45" oninput="setTrafficMix('API',this.value)" class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-orange-500">
-                    <input type="number" id="api-input" value="45" min="0" max="100" onchange="setTrafficMix('API',this.value)" class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-orange-400 text-xs text-center font-mono">
+                    <input type="range" id="api-slider" min="0" max="100" value="45"
+                        oninput="setTrafficMix('API',this.value)"
+                        class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-orange-500">
+                    <input type="number" id="api-input" value="45" min="0" max="100"
+                        onchange="setTrafficMix('API',this.value)"
+                        class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-orange-400 text-xs text-center font-mono">
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="w-12 text-xs text-purple-400">FRAUD</span>
-                    <input type="range" id="fraud-slider" min="0" max="100" value="5" oninput="setTrafficMix('FRAUD',this.value)" class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-purple-500">
-                    <input type="number" id="fraud-input" value="5" min="0" max="100" onchange="setTrafficMix('FRAUD',this.value)" class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-purple-400 text-xs text-center font-mono">
+                    <input type="range" id="fraud-slider" min="0" max="100" value="5"
+                        oninput="setTrafficMix('FRAUD',this.value)"
+                        class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-purple-500">
+                    <input type="number" id="fraud-input" value="5" min="0" max="100"
+                        onchange="setTrafficMix('FRAUD',this.value)"
+                        class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-purple-400 text-xs text-center font-mono">
                 </div>
             </div>
 
@@ -174,12 +199,16 @@
             <div class="border-t border-gray-700 pt-2">
                 <div class="flex items-center gap-2 mb-2">
                     <span class="text-xs text-gray-400">Burst:</span>
-                    <input type="number" id="burst-input" value="10" min="1" onchange="setBurstCount(this.value)" class="w-16 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs text-center font-mono">
+                    <input type="number" id="burst-input" value="10" min="1" onchange="setBurstCount(this.value)"
+                        class="w-16 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs text-center font-mono">
                 </div>
                 <div class="flex gap-1.5">
-                    <button onclick="spawnBurst('WEB')" class="flex-1 bg-green-900/50 hover:bg-green-800 text-green-400 text-xs py-1.5 rounded border border-green-700/50">WEB</button>
-                    <button onclick="spawnBurst('API')" class="flex-1 bg-orange-900/50 hover:bg-orange-800 text-orange-400 text-xs py-1.5 rounded border border-orange-700/50">API</button>
-                    <button onclick="spawnBurst('FRAUD')" class="flex-1 bg-purple-900/50 hover:bg-purple-800 text-purple-400 text-xs py-1.5 rounded border border-purple-700/50">DDoS</button>
+                    <button onclick="spawnBurst('WEB')"
+                        class="flex-1 bg-green-900/50 hover:bg-green-800 text-green-400 text-xs py-1.5 rounded border border-green-700/50">WEB</button>
+                    <button onclick="spawnBurst('API')"
+                        class="flex-1 bg-orange-900/50 hover:bg-orange-800 text-orange-400 text-xs py-1.5 rounded border border-orange-700/50">API</button>
+                    <button onclick="spawnBurst('FRAUD')"
+                        class="flex-1 bg-purple-900/50 hover:bg-purple-800 text-purple-400 text-xs py-1.5 rounded border border-purple-700/50">DDoS</button>
                 </div>
             </div>
         </div>
@@ -199,15 +228,15 @@
                 </li>
                 <li id="goal-web" class="flex items-center">
                     <span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-                    Route WEB traffic to S3
+                    Route WEB traffic to File Storage
                 </li>
                 <li id="goal-api" class="flex items-center">
                     <span class="w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>
-                    Route API traffic to RDS
+                    Route API traffic to Relational DB
                 </li>
                 <li id="goal-waf" class="flex items-center">
                     <span class="w-2 h-2 rounded-full bg-purple-500 mr-2"></span>
-                    Block FRAUD traffic with WAF
+                    Block FRAUD traffic with Firewall
                 </li>
             </ul>
         </div>
@@ -292,18 +321,18 @@
                         class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
                         $40</div>
                     <div class="w-4 h-4 bg-purple-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(168,85,247,0.6)]"></div>
-                    <span class="text-[10px] font-bold mt-1">WAF</span>
-                    <span class="text-[8px] text-gray-400">Sec</span>
+                    <span class="text-[10px] font-bold mt-1">FW</span>
                 </button>
 
                 <!-- SQS -->
                 <button id="tool-sqs"
                     class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
                     onclick="setTool('sqs')">
-                    <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">$40</div>
+                    <div
+                        class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+                        $40</div>
                     <div class="w-5 h-3 bg-orange-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(255,153,0,0.6)]"></div>
-                    <span class="text-[10px] font-bold mt-1">SQS</span>
-                    <span class="text-[8px] text-gray-400">Queue</span>
+                    <span class="text-[10px] font-bold mt-1">Queue</span>
                 </button>
 
                 <button id="tool-alb"
@@ -313,8 +342,7 @@
                         class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
                         $50</div>
                     <div class="w-4 h-4 bg-blue-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
-                    <span class="text-[10px] font-bold mt-1">ALB</span>
-                    <span class="text-[8px] text-gray-400">Load</span>
+                    <span class="text-[10px] font-bold mt-1">LB</span>
                 </button>
 
                 <button id="tool-lambda"
@@ -324,8 +352,7 @@
                         class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
                         $80</div>
                     <div class="w-4 h-4 bg-orange-500 rounded-full mb-1 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></div>
-                    <span class="text-[10px] font-bold mt-1">EC2</span>
-                    <span class="text-[8px] text-gray-400">Comp</span>
+                    <span class="text-[10px] font-bold mt-1">Compute</span>
                 </button>
 
                 <button id="tool-db"
@@ -337,18 +364,18 @@
                     <div
                         class="w-4 h-4 bg-red-600 rounded-sm mb-1 shadow-[0_0_10px_rgba(220,38,38,0.6)] border-b-2 border-red-800">
                     </div>
-                    <span class="text-[10px] font-bold mt-1">RDS</span>
-                    <span class="text-[8px] text-gray-400">Data</span>
+                    <span class="text-[10px] font-bold mt-1">SQL DB</span>
                 </button>
 
                 <!-- Cache -->
                 <button id="tool-cache"
                     class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
                     onclick="setTool('cache')">
-                    <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">$75</div>
+                    <div
+                        class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+                        $75</div>
                     <div class="w-4 h-4 bg-red-600 rounded mb-1 shadow-[0_0_10px_rgba(220,56,45,0.6)]"></div>
                     <span class="text-[10px] font-bold mt-1">Cache</span>
-                    <span class="text-[8px] text-gray-400">Redis</span>
                 </button>
 
                 <!-- S3 -->
@@ -359,8 +386,7 @@
                         class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
                         $30</div>
                     <div class="w-4 h-4 bg-emerald-500 rounded-full mb-1 shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
-                    <span class="text-[10px] font-bold mt-1">S3</span>
-                    <span class="text-[8px] text-gray-400">Store</span>
+                    <span class="text-[10px] font-bold mt-1">Storage</span>
                 </button>
             </div>
         </div>
@@ -461,18 +487,19 @@
                     <div class="space-y-3">
                         <div class="bg-gray-800/50 p-3 rounded border border-green-900/50">
                             <strong class="text-green-400">WEB Traffic</strong>
-                            <p class="text-sm text-gray-400">Route to <span class="text-emerald-400">S3 Storage</span>
+                            <p class="text-sm text-gray-400">Route to <span class="text-emerald-400">File Storage</span>
                                 via Load Balancer.</p>
                         </div>
                         <div class="bg-gray-800/50 p-3 rounded border border-orange-900/50">
                             <strong class="text-orange-400">API Traffic</strong>
-                            <p class="text-sm text-gray-400">Route to <span class="text-red-400">RDS Database</span> via
+                            <p class="text-sm text-gray-400">Route to <span class="text-red-400">Relational DB</span>
+                                via
                                 Compute.</p>
                         </div>
                         <div class="bg-gray-800/50 p-3 rounded border border-purple-900/50">
                             <strong class="text-purple-400">FRAUD Traffic</strong>
-                            <p class="text-sm text-gray-400">Block with <span class="text-purple-400">WAF
-                                    Firewall</span>.</p>
+                            <p class="text-sm text-gray-400">Block with <span class="text-purple-400">Firewall</span>.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -481,9 +508,11 @@
                 <div>
                     <h3 class="text-lg font-bold text-blue-400 mb-4">SERVICES</h3>
                     <ul class="space-y-2 text-sm text-gray-300">
-                        <li class="flex justify-between"><span class="text-purple-400 font-bold">WAF</span> <span>Blocks
-                                Fraud ($40)</span></li>
-                        <li class="flex justify-between"><span class="text-orange-500 font-bold">SQS</span>
+                        <li class="flex justify-between"><span class="text-purple-400 font-bold">Firewall</span>
+                            <span>Blocks
+                                Fraud ($40)</span>
+                        </li>
+                        <li class="flex justify-between"><span class="text-orange-500 font-bold">Message Queue</span>
                             <span>Buffers 200 requests ($40)</span>
                         </li>
                         <li class="flex justify-between"><span class="text-blue-400 font-bold">Load Balancer</span>
@@ -492,14 +521,16 @@
                         <li class="flex justify-between"><span class="text-orange-400 font-bold">Compute</span>
                             <span>Processes Requests ($80)</span>
                         </li>
-                        <li class="flex justify-between"><span class="text-red-400 font-bold">Database</span>
+                        <li class="flex justify-between"><span class="text-red-400 font-bold">Relational DB</span>
                             <span>Stores API Data ($180)</span>
                         </li>
-                        <li class="flex justify-between"><span class="text-red-500 font-bold">ElastiCache</span>
+                        <li class="flex justify-between"><span class="text-red-500 font-bold">Memory Cache</span>
                             <span>Cache layer ($75)</span>
                         </li>
-                        <li class="flex justify-between"><span class="text-emerald-400 font-bold">S3</span> <span>Stores
-                                Web Data ($30)</span></li>
+                        <li class="flex justify-between"><span class="text-emerald-400 font-bold">File Storage</span>
+                            <span>Stores
+                                Web Data ($30)</span>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -513,7 +544,7 @@
                             <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center mr-2">
                                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122">
+                                        d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122">
                                     </path>
                                 </svg>
                             </div>
@@ -528,7 +559,7 @@
                             <div class="w-6 h-6 bg-gray-700 rounded flex items-center justify-center mr-2">
                                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+                                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
                                     </path>
                                 </svg>
                             </div>
@@ -544,7 +575,7 @@
                             <div class="w-6 h-6 bg-red-900/50 rounded flex items-center justify-center mr-2">
                                 <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
                                     </path>
                                 </svg>
                             </div>
@@ -555,9 +586,10 @@
                     <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
                         <div class="flex items-center mb-2">
                             <div class="w-6 h-6 bg-orange-900/50 rounded flex items-center justify-center mr-2">
-                                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
                                     </path>
                                 </svg>
                             </div>
@@ -588,11 +620,12 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div class="bg-gray-800/30 p-3 rounded">
                         <strong class="text-white block mb-1">Upgrades</strong>
-                        <p class="text-gray-400">Click existing Compute/DB/Cache instances to upgrade capacity (Tier 1-3).</p>
+                        <p class="text-gray-400">Click existing Compute/DB/Cache instances to upgrade capacity (Tier
+                            1-3).</p>
                     </div>
                     <div class="bg-gray-800/30 p-3 rounded">
                         <strong class="text-white block mb-1">Load Balancing</strong>
-                        <p class="text-gray-400">ALBs use Round Robin to distribute traffic evenly.</p>
+                        <p class="text-gray-400">Load Balancers use Round Robin to distribute traffic evenly.</p>
                     </div>
                     <div class="bg-gray-800/30 p-3 rounded">
                         <strong class="text-white block mb-1">Failure Conditions</strong>
@@ -606,20 +639,21 @@
                 <h3 class="text-lg font-bold text-blue-400 mb-4">ADVANCED SERVICES</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div class="bg-gray-800/30 p-3 rounded border border-orange-900/50">
-                        <strong class="text-orange-400 block mb-1">SQS Queue</strong>
+                        <strong class="text-orange-400 block mb-1">Message Queue</strong>
                         <p class="text-gray-400 text-xs">
-                            Massive buffer holding 200 requests. Place after WAF to smooth DDoS spikes,
+                            Massive buffer holding 200 requests. Place after Firewall to smooth DDoS spikes,
                             or before Compute to prevent overload. Cheap insurance against traffic bursts.
                         </p>
-                        <p class="text-gray-500 text-xs mt-1">Flow: WAF → SQS → ALB or ALB → SQS → Compute</p>
+                        <p class="text-gray-500 text-xs mt-1">Flow: Firewall → Queue → Load Balancer or Load Balancer →
+                            Queue → Compute</p>
                     </div>
                     <div class="bg-gray-800/30 p-3 rounded border border-red-900/50">
-                        <strong class="text-red-400 block mb-1">ElastiCache (Redis)</strong>
+                        <strong class="text-red-400 block mb-1">Memory Cache</strong>
                         <p class="text-gray-400 text-xs">
                             Caching layer with 35-65% hit rate. Cache hits complete instantly without
-                            hitting DB/S3. Upgrade tiers for higher hit rates. Great for reducing DB costs.
+                            hitting DB/Storage. Upgrade tiers for higher hit rates. Great for reducing DB costs.
                         </p>
-                        <p class="text-gray-500 text-xs mt-1">Flow: Compute → Cache → DB/S3</p>
+                        <p class="text-gray-500 text-xs mt-1">Flow: Compute → Cache → DB/Storage</p>
                     </div>
                 </div>
             </div>

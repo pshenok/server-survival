@@ -32,7 +32,7 @@ const CONFIG = {
         },
         compute: {
             name: "Compute", cost: 80, type: 'compute', processingTime: 600, capacity: 4, upkeep: 18,
-            tooltip: { upkeep: "High", desc: "<b>EC2 Instance.</b> Processes requests. <b>Upgradeable (Tiers 1-3).</b>" },
+            tooltip: { upkeep: "High", desc: "<b>Compute Node.</b> Processes requests. <b>Upgradeable (Tiers 1-3).</b>" },
             tiers: [
                 { level: 1, capacity: 4, cost: 0 },
                 { level: 2, capacity: 10, cost: 120 },
@@ -41,7 +41,7 @@ const CONFIG = {
         },
         db: {
             name: "Relational DB", cost: 180, type: 'db', processingTime: 300, capacity: 8, upkeep: 36,
-            tooltip: { upkeep: "Very High", desc: "<b>RDS.</b> Destination for API traffic. <b>Upgradeable (Tiers 1-3).</b>" },
+            tooltip: { upkeep: "Very High", desc: "<b>SQL Database.</b> Destination for API traffic. <b>Upgradeable (Tiers 1-3).</b>" },
             tiers: [
                 { level: 1, capacity: 8, cost: 0 },
                 { level: 2, capacity: 20, cost: 250 },
@@ -53,13 +53,13 @@ const CONFIG = {
             tooltip: { upkeep: "Low", desc: "<b>Storage.</b> Destination for Web traffic." }
         },
         cache: {
-            name: "ElastiCache",
+            name: "Memory Cache",
             cost: 75,
             type: 'cache',
             processingTime: 50,
             capacity: 30,
             upkeep: 10,
-            tooltip: { upkeep: "Medium", desc: "<b>Redis Cache.</b> Caches responses to reduce DB load." },
+            tooltip: { upkeep: "Medium", desc: "<b>Memory Cache.</b> Caches responses to reduce DB load." },
             cacheHitRate: 0.35,
             tiers: [
                 { level: 1, capacity: 30, cacheHitRate: 0.35, cost: 0 },
@@ -68,7 +68,7 @@ const CONFIG = {
             ]
         },
         sqs: {
-            name: "SQS Queue",
+            name: "Message Queue",
             cost: 40,
             type: 'sqs',
             processingTime: 100,
