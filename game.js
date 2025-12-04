@@ -684,9 +684,10 @@ container.addEventListener('mousedown', (e) => {
     const i = getIntersect(e.clientX, e.clientY);
     if (STATE.activeTool === 'select') {
         const i = getIntersect(e.clientX, e.clientY);
-        if (i.type === 'service') { draggedNode = STATE.services.find(s => s.id === i.id); } 
+        if (i.type === 'service') { draggedNode = STATE.services.find(s => s.id === i.id); }
         else if (i.type === 'internet') { draggedNode = STATE.internetNode; }
-        if (draggedNode) { isDraggingNode = true;
+        if (draggedNode) {
+            isDraggingNode = true;
             const hit = getIntersect(e.clientX, e.clientY);
             if (hit.pos) { dragOffset.copy(draggedNode.position).sub(hit.pos); }
             container.style.cursor = 'grabbing';
@@ -713,8 +714,8 @@ container.addEventListener('mousedown', (e) => {
             (STATE.activeTool === 'cache' && i.type === 'service')) {
             const svc = STATE.services.find(s => s.id === i.id);
             if (svc && ((STATE.activeTool === 'lambda' && svc.type === 'compute') ||
-                        (STATE.activeTool === 'db' && svc.type === 'db') ||
-                        (STATE.activeTool === 'cache' && svc.type === 'cache'))) {
+                (STATE.activeTool === 'db' && svc.type === 'db') ||
+                (STATE.activeTool === 'cache' && svc.type === 'cache'))) {
                 svc.upgrade();
                 return;
             }
@@ -763,21 +764,21 @@ container.addEventListener('mousemove', (e) => {
         const dx = e.clientX - lastMouseX;
         const dy = e.clientY - lastMouseY;
 
-    const panX = -dx * (camera.right - camera.left) / window.innerWidth * panSpeed;
-    const panY = dy * (camera.top - camera.bottom) / window.innerHeight * panSpeed;
+        const panX = -dx * (camera.right - camera.left) / window.innerWidth * panSpeed;
+        const panY = dy * (camera.top - camera.bottom) / window.innerHeight * panSpeed;
 
-    if (isIsometric) {
-        camera.position.x += panX;
-        camera.position.z += panY;
-        cameraTarget.x += panX;
-        cameraTarget.z += panY;
-        camera.lookAt(cameraTarget);
-    } else {
-        camera.position.x += panX;
-        camera.position.z += panY;
-        camera.lookAt(camera.position.x, 0, camera.position.z);
-    }
-    camera.updateProjectionMatrix();        lastMouseX = e.clientX;
+        if (isIsometric) {
+            camera.position.x += panX;
+            camera.position.z += panY;
+            cameraTarget.x += panX;
+            cameraTarget.z += panY;
+            camera.lookAt(cameraTarget);
+        } else {
+            camera.position.x += panX;
+            camera.position.z += panY;
+            camera.lookAt(camera.position.x, 0, camera.position.z);
+        }
+        camera.updateProjectionMatrix(); lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         document.getElementById('tooltip').style.display = 'none';
         return;
@@ -810,12 +811,11 @@ container.addEventListener('mousemove', (e) => {
             const fromName = conn.from === 'internet' ? 'Internet' : (from?.config?.name || 'Unknown');
             const toName = conn.to === 'internet' ? 'Internet' : (to?.config?.name || 'Unknown');
 
-            t.style.display = 'block';
-            t.style.left = e.clientX + 15 + 'px';
-            t.style.top = e.clientY + 15 + 'px';
-            t.innerHTML = `<strong class="text-orange-400">Remove Link</strong><br>
-            <span class="text-gray-300">${fromName}</span> → <span class="text-gray-300">${toName}</span><br>
-            <span class="text-red-400 text-xs">Click to remove</span>`;
+            showTooltip(e.clientX + 15, e.clientY + 15,
+                `<strong class="text-orange-400">Remove Link</strong><br>
+                <span class="text-gray-300">${fromName}</span> → <span class="text-gray-300">${toName}</span><br>
+                <span class="text-red-400 text-xs">Click to remove</span>`
+            );
         } else {
             t.style.display = 'none';
         }
@@ -826,16 +826,25 @@ container.addEventListener('mousemove', (e) => {
     if (i.type === 'service') {
         const s = STATE.services.find(s => s.id === i.id);
         if (s) {
-            t.style.display = 'block'; t.style.left = e.clientX + 15 + 'px'; t.style.top = e.clientY + 15 + 'px';
-
             const load = s.processing.length / s.config.capacity;
             let loadColor = load > 0.8 ? 'text-red-400' : (load > 0.4 ? 'text-yellow-400' : 'text-green-400');
 
-            // Service-specific tooltips
+            // Base tooltip content with static info
+            let content = `<strong class="text-blue-300">${s.config.name}</strong>`;
+            if (s.tier) content += ` <span class="text-xs text-yellow-400">T${s.tier}</span>`;
+
+            // Add static description and upkeep if available
+            if (s.config.tooltip) {
+                content += `<br><span class="text-xs text-gray-400">${s.config.tooltip.desc}</span>`;
+                content += `<br><span class="text-xs text-gray-500">Upkeep: <span class="text-gray-300">${s.config.tooltip.upkeep}</span></span>`;
+            }
+
+            content += `<div class="mt-1 border-t border-gray-700 pt-1">`;
+
+            // Service-specific dynamic stats
             if (s.type === 'cache') {
                 const hitRate = Math.round((s.config.cacheHitRate || 0.35) * 100);
-                t.innerHTML = `<strong class="text-red-400">${s.config.name}</strong> <span class="text-xs text-yellow-400">T${s.tier || 1}</span><br>
-                Queue: <span class="${loadColor}">${s.queue.length}</span><br>
+                content += `Queue: <span class="${loadColor}">${s.queue.length}</span><br>
                 Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span><br>
                 Hit Rate: <span class="text-green-400">${hitRate}%</span>`;
             } else if (s.type === 'sqs') {
@@ -843,20 +852,14 @@ container.addEventListener('mousemove', (e) => {
                 const fillPercent = Math.round((s.queue.length / maxQ) * 100);
                 const status = fillPercent > 80 ? 'Critical' : (fillPercent > 50 ? 'Busy' : 'Healthy');
                 const statusColor = fillPercent > 80 ? 'text-red-400' : (fillPercent > 50 ? 'text-yellow-400' : 'text-green-400');
-                t.innerHTML = `<strong class="text-orange-400">${s.config.name}</strong><br>
-                Buffered: <span class="${loadColor}">${s.queue.length}/${maxQ}</span><br>
+                content += `Buffered: <span class="${loadColor}">${s.queue.length}/${maxQ}</span><br>
                 Processing: ${s.processing.length}/${s.config.capacity}<br>
                 Status: <span class="${statusColor}">${status}</span>`;
             } else {
-                t.innerHTML = `<strong class="text-blue-300">${s.config.name}</strong> <span class="text-xs text-yellow-400">T${s.tier || 1}</span><br>
-                Queue: <span class="${loadColor}">${s.queue.length}</span><br>
+                content += `Queue: <span class="${loadColor}">${s.queue.length}</span><br>
                 Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span>`;
             }
-
-            // Reset previous highlights
-            STATE.services.forEach(svc => {
-                if (svc.mesh.material.emissive) svc.mesh.material.emissive.setHex(0x000000);
-            });
+            content += `</div>`;
 
             // Show upgrade option for upgradeable services
             if ((STATE.activeTool === 'lambda' && s.type === 'compute') ||
@@ -866,13 +869,19 @@ container.addEventListener('mousemove', (e) => {
                 if (s.tier < tiers.length) {
                     cursor = 'pointer';
                     const nextCost = tiers[s.tier].cost;
-                    t.innerHTML += `<br><span class="text-green-300 text-xs font-bold">Upgrade: $${nextCost}</span>`;
-
+                    content += `<div class="mt-1 pt-1 border-t border-gray-700"><span class="text-green-300 text-xs font-bold">Upgrade: $${nextCost}</span></div>`;
                     if (s.mesh.material.emissive) s.mesh.material.emissive.setHex(0x333333);
                 } else {
-                    t.innerHTML += `<br><span class="text-gray-500 text-xs">Max Tier</span>`;
+                    content += `<div class="mt-1 pt-1 border-t border-gray-700"><span class="text-gray-500 text-xs">Max Tier</span></div>`;
                 }
             }
+
+            showTooltip(e.clientX + 15, e.clientY + 15, content);
+
+            // Reset previous highlights
+            STATE.services.forEach(svc => {
+                if (svc !== s && svc.mesh.material.emissive) svc.mesh.material.emissive.setHex(0x000000);
+            });
         }
     } else {
         t.style.display = 'none';
@@ -884,6 +893,48 @@ container.addEventListener('mousemove', (e) => {
 
     container.style.cursor = cursor;
 });
+
+// Helper function for showing tooltips
+function showTooltip(x, y, html) {
+    const t = document.getElementById('tooltip');
+    t.style.display = 'block';
+    t.style.left = x + 'px';
+    t.style.top = y + 'px';
+    t.innerHTML = html;
+}
+
+// Setup UI tooltips
+function setupUITooltips() {
+    const tools = ['waf', 'sqs', 'alb', 'lambda', 'db', 'cache', 's3'];
+    tools.forEach(toolId => {
+        const btn = document.getElementById(`tool-${toolId}`);
+        if (!btn) return;
+
+        // Map tool ID to config service key
+        const serviceKey = toolId === 'lambda' ? 'compute' : toolId;
+        const config = CONFIG.services[serviceKey];
+
+        if (config && config.tooltip) {
+            btn.addEventListener('mousemove', (e) => {
+                const content = `
+                    <strong class="text-blue-300">${config.name}</strong> <span class="text-green-400">$${config.cost}</span><br>
+                    <span class="text-xs text-gray-400">${config.tooltip.desc}</span><br>
+                    <div class="mt-1 pt-1 border-t border-gray-700 flex justify-between text-xs">
+                        <span class="text-gray-500">Upkeep: <span class="text-gray-300">${config.tooltip.upkeep}</span></span>
+                    </div>
+                `;
+                showTooltip(e.clientX + 15, e.clientY - 100, content); // Show above the button
+            });
+
+            btn.addEventListener('mouseleave', () => {
+                document.getElementById('tooltip').style.display = 'none';
+            });
+        }
+    });
+}
+
+// Call setup
+setupUITooltips();
 
 container.addEventListener('mouseup', (e) => {
     if (e.button === 2 || e.button === 1) {
