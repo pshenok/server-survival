@@ -54,6 +54,9 @@ function updateFraudSpike(dt) {
 }
 
 function showFraudWarning() {
+    const existing = document.getElementById('fraud-warning');
+    if (existing) existing.remove();
+
     // Visual warning
     const warning = document.createElement('div');
     warning.id = 'fraud-warning';
@@ -71,6 +74,9 @@ function showFraudWarning() {
 }
 
 function startFraudSpike() {
+    const existing = document.getElementById('fraud-spike-indicator');
+    if (existing) existing.remove();
+
     STATE.fraudSpikeActive = true;
 
     // Store normal distribution
@@ -991,7 +997,11 @@ function animate(time) {
     STATE.animationId = requestAnimationFrame(animate);
     if (!STATE.isRunning) return;
 
-    const dt = ((time - STATE.lastTime) / 1000) * STATE.timeScale;
+    // Limit dt to prevent huge jumps when tab loses focus
+    // (requestAnimationFrame pauses when tab is inactive)
+    const rawDt = (time - STATE.lastTime) / 1000;
+    const clampedDt = Math.min(rawDt, 0.1); // Max 100ms per frame
+    const dt = clampedDt * STATE.timeScale;
     STATE.lastTime = time;
     STATE.elapsedGameTime += dt;
 
