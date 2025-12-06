@@ -269,7 +269,10 @@ function resetGame(mode = 'survival') {
     // Reset UI
     document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('btn-pause').classList.add('active');
-    document.getElementById('btn-play').classList.add('pulse-green');
+    // Only add pulse-green if tutorial is not active
+    if (!window.tutorial?.isActive) {
+        document.getElementById('btn-play').classList.add('pulse-green');
+    }
 
     // Update UI displays
     updateScoreUI();
@@ -482,6 +485,13 @@ window.closeFAQ = () => {
 window.startGame = () => {
     document.getElementById('main-menu-modal').classList.add('hidden');
     resetGame();
+
+    // Start tutorial for new players in survival mode
+    if (window.tutorial && !window.tutorial.isCompleted()) {
+        setTimeout(() => {
+            window.tutorial.start();
+        }, 500);
+    }
 };
 
 window.startSandbox = () => {
@@ -495,6 +505,11 @@ function createService(type, pos) {
     STATE.money -= CONFIG.services[type].cost;
     STATE.services.push(new Service(type, pos));
     STATE.sound.playPlace();
+
+    // Notify tutorial
+    if (window.tutorial?.isActive) {
+        window.tutorial.onAction('place', { type });
+    }
 }
 
 function restoreService(serviceData, pos) {
@@ -540,6 +555,15 @@ function createConnection(fromId, toId) {
     connectionGroup.add(line);
     STATE.connections.push({ from: fromId, to: toId, mesh: line });
     STATE.sound.playConnect();
+
+    // Notify tutorial
+    if (window.tutorial?.isActive) {
+        window.tutorial.onAction('connect', {
+            from: fromId,
+            fromType: t1,
+            toType: t2
+        });
+    }
 }
 
 function deleteConnection(fromId, toId) {
@@ -642,10 +666,18 @@ window.setTimeScale = (s) => {
 
     if (s === 0) {
         document.getElementById('btn-pause').classList.add('active');
-        document.getElementById('btn-play').classList.add('pulse-green');
+        // Only add pulse-green if tutorial is not active
+        if (!window.tutorial?.isActive) {
+            document.getElementById('btn-play').classList.add('pulse-green');
+        }
     } else if (s === 1) {
         document.getElementById('btn-play').classList.add('active');
         document.getElementById('btn-play').classList.remove('pulse-green');
+
+        // Notify tutorial when game starts
+        if (window.tutorial?.isActive) {
+            window.tutorial.onAction('start_game');
+        }
     } else if (s === 3) {
         document.getElementById('btn-fast').classList.add('active');
         document.getElementById('btn-play').classList.remove('pulse-green');
@@ -1212,6 +1244,11 @@ function openMainMenu() {
     STATE.previousTimeScale = STATE.timeScale;
     setTimeScale(0);
 
+    // Hide tutorial while menu is open
+    if (window.tutorial?.isActive) {
+        window.tutorial.hide();
+    }
+
     // Show resume button if game is active
     const resumeBtn = document.getElementById('resume-btn');
     if (resumeBtn) {
@@ -1238,6 +1275,11 @@ window.resumeGame = () => {
     // Hide main menu, keep game paused
     document.getElementById('main-menu-modal').classList.add('hidden');
     STATE.sound.playGameBGM();
+
+    // Restore tutorial if active
+    if (window.tutorial?.isActive) {
+        window.tutorial.show();
+    }
 };
 
 // ==================== SAVE/LOAD FUNCTIONS ====================

@@ -185,3 +185,74 @@ body {
         opacity: 0;
     }
 }
+
+/* Tutorial Styles */
+#tutorial-popup {
+    transition: right 0.4s ease-out, bottom 0.4s ease-out, left 0.4s ease-out, top 0.4s ease-out, transform 0.4s ease-out;
+}
+
+#tutorial-popup.tutorial-enter {
+    animation: tutorialFadeIn 0.5s ease-out;
+}
+
+@keyframes tutorialFadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+#tutorial-popup.tutorial-step-change {
+    animation: tutorialStepChange 0.3s ease-out;
+}
+
+@keyframes tutorialStepChange {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(0.97);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+#tutorial-highlight {
+    animation: tutorialHighlightPulse 1.5s infinite;
+}
+
+@keyframes tutorialHighlightPulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(6, 182, 212, 0.5), 0 0 30px rgba(6, 182, 212, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(6, 182, 212, 0.8), 0 0 60px rgba(6, 182, 212, 0.5);
+    }
+}
+
+.tutorial-tool-highlight {
+    animation: toolHighlightPulse 1.2s infinite !important;
+    position: relative;
+    z-index: 100;
+}
+
+@keyframes toolHighlightPulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(6, 182, 212, 0.6), inset 0 0 8px rgba(6, 182, 212, 0.2);
+        border-color: rgba(6, 182, 212, 0.8) !important;
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(6, 182, 212, 1), 0 0 40px rgba(6, 182, 212, 0.5), inset 0 0 12px rgba(6, 182, 212, 0.3);
+        border-color: rgba(6, 182, 212, 1) !important;
+        transform: scale(1.05);
+    }
+}
