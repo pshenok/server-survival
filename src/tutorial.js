@@ -1,6 +1,3 @@
-// Tutorial System for Server Survival
-// Guides new players through building their first infrastructure
-
 const TUTORIAL_STORAGE_KEY = 'serverSurvivalTutorialComplete';
 
 const TUTORIAL_STEPS = [
@@ -128,8 +125,6 @@ class Tutorial {
         this.currentStep = 0;
         this.isActive = false;
         this.completedActions = new Set();
-
-        // DOM elements
         this.modal = document.getElementById('tutorial-modal');
         this.popup = document.getElementById('tutorial-popup');
         this.backdrop = document.getElementById('tutorial-backdrop');
@@ -144,7 +139,6 @@ class Tutorial {
         this.nextBtn = document.getElementById('tutorial-next');
         this.skipBtn = document.getElementById('tutorial-skip');
         this.progressEl = document.getElementById('tutorial-progress');
-
         this.setupEventListeners();
     }
 
@@ -176,16 +170,9 @@ class Tutorial {
         this.modal.classList.remove('hidden');
         this.totalStepsEl.textContent = TUTORIAL_STEPS.length;
         this.renderProgress();
-
-        // Add entrance animation for first step
         this.popup.classList.add('tutorial-enter');
-        setTimeout(() => {
-            this.popup.classList.remove('tutorial-enter');
-        }, 500);
-
+        setTimeout(() => this.popup.classList.remove('tutorial-enter'), 500);
         this.showStep();
-
-        // Remove play button pulse during tutorial
         document.getElementById('btn-play')?.classList.remove('pulse-green');
 
         return true;
@@ -195,13 +182,11 @@ class Tutorial {
         const step = TUTORIAL_STEPS[this.currentStep];
         if (!step) return;
 
-        // Update content
         this.titleEl.textContent = step.title;
         this.textEl.innerHTML = step.text;
         this.iconEl.textContent = step.icon;
         this.stepNumEl.textContent = this.currentStep + 1;
 
-        // Show/hide hint
         if (step.hint) {
             this.hintEl.classList.remove('hidden');
             this.hintTextEl.textContent = step.hint;
@@ -209,7 +194,6 @@ class Tutorial {
             this.hintEl.classList.add('hidden');
         }
 
-        // Show/hide next button based on action type
         if (step.action === 'next' || step.action === 'finish') {
             this.nextBtn.classList.remove('hidden');
             this.nextBtn.textContent = step.action === 'finish' ? 'Start Playing!' : 'Next';
@@ -217,29 +201,16 @@ class Tutorial {
             this.nextBtn.classList.add('hidden');
         }
 
-        // Clear previous highlights
         this.clearHighlights();
-
-        // Highlight target element
-        if (step.highlight) {
-            this.highlightElement(step.highlight);
-        }
-
-        // Position popup
+        if (step.highlight) this.highlightElement(step.highlight);
         this.positionPopup(step);
-
-        // Update progress
         this.updateProgress();
     }
 
     highlightElement(elementId) {
         const el = document.getElementById(elementId);
         if (!el) return;
-
-        // Add highlight class to element
         el.classList.add('tutorial-tool-highlight');
-
-        // Position the highlight ring
         const rect = el.getBoundingClientRect();
         this.highlight.style.left = `${rect.left - 4}px`;
         this.highlight.style.top = `${rect.top - 4}px`;
@@ -249,30 +220,23 @@ class Tutorial {
     }
 
     clearHighlights() {
-        // Remove highlight class from all elements
-        document.querySelectorAll('.tutorial-tool-highlight').forEach(el => {
-            el.classList.remove('tutorial-tool-highlight');
-        });
+        document.querySelectorAll('.tutorial-tool-highlight').forEach(el => el.classList.remove('tutorial-tool-highlight'));
         this.highlight.classList.add('hidden');
     }
 
     positionPopup(step) {
-        const popup = this.popup;
-
-        // First step (welcome) - center on screen
         if (step.id === 'welcome') {
-            popup.style.right = 'auto';
-            popup.style.bottom = 'auto';
-            popup.style.left = '50%';
-            popup.style.top = '50%';
-            popup.style.transform = 'translate(-50%, -50%)';
+            this.popup.style.right = 'auto';
+            this.popup.style.bottom = 'auto';
+            this.popup.style.left = '50%';
+            this.popup.style.top = '50%';
+            this.popup.style.transform = 'translate(-50%, -50%)';
         } else {
-            // All other steps - position above the bottom toolbar
-            popup.style.transform = '';
-            popup.style.left = 'auto';
-            popup.style.top = 'auto';
-            popup.style.right = '20px';
-            popup.style.bottom = '140px';
+            this.popup.style.transform = '';
+            this.popup.style.left = 'auto';
+            this.popup.style.top = 'auto';
+            this.popup.style.right = '20px';
+            this.popup.style.bottom = '140px';
         }
     }
 
@@ -319,18 +283,13 @@ class Tutorial {
         if (this.currentStep >= TUTORIAL_STEPS.length) {
             this.complete();
         } else {
-            // Add step change animation
             this.popup.classList.add('tutorial-step-change');
-            setTimeout(() => {
-                this.popup.classList.remove('tutorial-step-change');
-            }, 300);
-
+            setTimeout(() => this.popup.classList.remove('tutorial-step-change'), 300);
             this.showStep();
             new Audio('assets/sounds/click-5.mp3').play();
         }
     }
 
-    // Called when player completes an action
     onAction(actionType, data = {}) {
         if (!this.isActive) return;
 
@@ -394,11 +353,7 @@ class Tutorial {
         this.clearHighlights();
         this.modal.classList.add('hidden');
         this.markCompleted();
-
-        // Play success sound
-        if (STATE?.sound) {
-            STATE.sound.playSuccess();
-        }
+        STATE?.sound?.playSuccess();
     }
 
     hide() {
@@ -414,10 +369,7 @@ class Tutorial {
     }
 }
 
-// Create global tutorial instance
 window.tutorial = new Tutorial();
-
-// Helper function to reset tutorial (for testing)
 window.resetTutorial = () => {
     window.tutorial.reset();
     console.log('Tutorial reset. Start a new Survival game to see the tutorial.');
