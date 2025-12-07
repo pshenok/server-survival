@@ -10,6 +10,15 @@ const STATE = {
         maliciousBlocked: 0
     },
 
+    failures: {
+        STATIC: 0,
+        READ: 0,
+        WRITE: 0,
+        UPLOAD: 0,
+        SEARCH: 0,
+        MALICIOUS: 0
+    },
+
     activeTool: 'select',
     selectedNodeId: null,
     services: [],

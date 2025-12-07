@@ -233,10 +233,15 @@ function resetGame(mode = 'survival') {
     STATE.requests = [];
     STATE.connections = [];
     STATE.score = { total: 0, storage: 0, database: 0, maliciousBlocked: 0 };
+    STATE.failures = { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0 };
     STATE.isRunning = true;
     STATE.lastTime = performance.now();
     STATE.timeScale = 0;
     STATE.spawnTimer = 0;
+
+    // Hide failures panel on reset
+    const failuresPanel = document.getElementById('failures-panel');
+    if (failuresPanel) failuresPanel.classList.add('hidden');
 
     // Initialize balance overhaul state
     STATE.elapsedGameTime = 0;
@@ -408,6 +413,7 @@ function updateScore(req, outcome) {
         STATE.sound.playFraudBlocked();
     } else if (req.type === TRAFFIC_TYPES.MALICIOUS && outcome === 'MALICIOUS_PASSED') {
         STATE.reputation += points.MALICIOUS_PASSED_REPUTATION;
+        STATE.failures.MALICIOUS++;
         console.warn(`MALICIOUS PASSED: ${points.MALICIOUS_PASSED_REPUTATION} Rep. (Critical Failure)`);
     } else if (outcome === 'COMPLETED') {
         let reward = typeConfig.reward;
@@ -428,6 +434,9 @@ function updateScore(req, outcome) {
     } else if (outcome === 'FAILED') {
         STATE.reputation += points.FAIL_REPUTATION;
         STATE.score.total -= (typeConfig.score || 5) / 2;
+        if (STATE.failures[req.type] !== undefined) {
+            STATE.failures[req.type]++;
+        }
     }
 
     updateScoreUI();
@@ -1115,7 +1124,80 @@ function animate(time) {
 
     STATE.reputation = Math.min(100, STATE.reputation);
     document.getElementById('rep-bar').style.width = `${Math.max(0, STATE.reputation)}%`;
+    document.getElementById('rep-display').textContent = `${Math.round(Math.max(0, STATE.reputation))}%`;
     document.getElementById('rps-display').innerText = `${STATE.currentRPS.toFixed(1)} req/s`;
+
+    // Update elapsed time
+    const elapsedEl = document.getElementById('elapsed-time');
+    if (elapsedEl) {
+        const totalSec = Math.floor(STATE.elapsedGameTime);
+        const mins = Math.floor(totalSec / 60);
+        const secs = totalSec % 60;
+        elapsedEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Update next RPS milestone (survival mode only)
+    const rpsNextEl = document.getElementById('rps-next');
+    const rpsCountdownEl = document.getElementById('rps-countdown');
+    const rpsMilestoneRow = document.getElementById('rps-milestone-row');
+    
+    if (STATE.gameMode === 'survival' && rpsMilestoneRow) {
+        rpsMilestoneRow.style.display = 'flex';
+        
+        // Calculate next integer RPS milestone
+        const currentRPS = STATE.currentRPS;
+        const nextMilestone = Math.ceil(currentRPS + 0.01); // Next whole number RPS
+        
+        // Find time when we'll reach that milestone by solving: nextMilestone = base + log(1 + t/30) * 1.8
+        // t = 30 * (exp((nextMilestone - base) / 1.8) - 1)
+        const base = CONFIG.survival.baseRPS;
+        const targetTime = 30 * (Math.exp((nextMilestone - base) / 1.8) - 1);
+        const timeRemaining = Math.max(0, targetTime - STATE.elapsedGameTime);
+        
+        if (rpsNextEl) {
+            rpsNextEl.textContent = `${nextMilestone.toFixed(1)} rps`;
+        }
+        if (rpsCountdownEl) {
+            const mins = Math.floor(timeRemaining / 60);
+            const secs = Math.floor(timeRemaining % 60);
+            rpsCountdownEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    } else if (rpsMilestoneRow) {
+        rpsMilestoneRow.style.display = 'none';
+    }
+
+    // Update failures panel with table format
+    const totalFailures = Object.values(STATE.failures).reduce((a, b) => a + b, 0);
+    const failuresPanel = document.getElementById('failures-panel');
+    const points = CONFIG.survival.SCORE_POINTS;
+    if (totalFailures > 0 && failuresPanel) {
+        failuresPanel.classList.remove('hidden');
+        document.getElementById('failures-total').textContent = `${totalFailures} total`;
+        
+        // Update counts
+        document.getElementById('fail-malicious').textContent = STATE.failures.MALICIOUS;
+        document.getElementById('fail-static').textContent = STATE.failures.STATIC;
+        document.getElementById('fail-read').textContent = STATE.failures.READ;
+        document.getElementById('fail-write').textContent = STATE.failures.WRITE;
+        document.getElementById('fail-upload').textContent = STATE.failures.UPLOAD;
+        document.getElementById('fail-search').textContent = STATE.failures.SEARCH;
+        
+        // Update reputation loss (malicious = -8, others = -2)
+        document.getElementById('fail-malicious-rep').textContent = STATE.failures.MALICIOUS * Math.abs(points.MALICIOUS_PASSED_REPUTATION);
+        document.getElementById('fail-static-rep').textContent = STATE.failures.STATIC * Math.abs(points.FAIL_REPUTATION);
+        document.getElementById('fail-read-rep').textContent = STATE.failures.READ * Math.abs(points.FAIL_REPUTATION);
+        document.getElementById('fail-write-rep').textContent = STATE.failures.WRITE * Math.abs(points.FAIL_REPUTATION);
+        document.getElementById('fail-upload-rep').textContent = STATE.failures.UPLOAD * Math.abs(points.FAIL_REPUTATION);
+        document.getElementById('fail-search-rep').textContent = STATE.failures.SEARCH * Math.abs(points.FAIL_REPUTATION);
+        
+        // Hide rows with 0 failures
+        document.getElementById('fail-row-malicious').style.display = STATE.failures.MALICIOUS > 0 ? '' : 'none';
+        document.getElementById('fail-row-static').style.display = STATE.failures.STATIC > 0 ? '' : 'none';
+        document.getElementById('fail-row-read').style.display = STATE.failures.READ > 0 ? '' : 'none';
+        document.getElementById('fail-row-write').style.display = STATE.failures.WRITE > 0 ? '' : 'none';
+        document.getElementById('fail-row-upload').style.display = STATE.failures.UPLOAD > 0 ? '' : 'none';
+        document.getElementById('fail-row-search').style.display = STATE.failures.SEARCH > 0 ? '' : 'none';
+    }
 
     if (STATE.internetNode.ring) {
         if (STATE.selectedNodeId === 'internet') {

@@ -32,16 +32,31 @@
                     <span class="text-gray-500">Upkeep Cost</span>
                     <span id="upkeep-display" class="text-red-400 font-mono">-$0.00/s</span>
                 </div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-gray-500">Elapsed Time</span>
+                    <span id="elapsed-time" class="text-gray-400 font-mono">00:00</span>
+                </div>
                 <div class="flex justify-between items-center">
                     <span class="text-gray-400 text-sm">REPUTATION</span>
-                    <div class="w-32 h-3 bg-gray-800 rounded-full overflow-hidden relative">
-                        <div id="rep-bar" class="h-full bg-yellow-500 transition-all duration-500" style="width: 100%">
+                    <div class="flex items-center gap-2">
+                        <div class="w-24 h-3 bg-gray-800 rounded-full overflow-hidden relative">
+                            <div id="rep-bar" class="h-full bg-yellow-500 transition-all duration-500" style="width: 100%">
+                            </div>
                         </div>
+                        <span id="rep-display" class="text-yellow-400 font-mono text-sm w-10 text-right">100%</span>
                     </div>
                 </div>
                 <div class="flex justify-between items-center pt-1">
                     <span class="text-gray-400 text-sm">LOAD (RPS)</span>
                     <span id="rps-display" class="text-blue-300 font-mono text-sm">0.0 req/s</span>
+                </div>
+                <div class="flex justify-between items-center text-xs" id="rps-milestone-row">
+                    <span class="text-gray-500">Next RPS Milestone</span>
+                    <div class="flex items-center gap-2 font-mono">
+                        <span id="rps-next" class="text-blue-400">0.0 rps</span>
+                        <span class="text-gray-600">in</span>
+                        <span id="rps-countdown" class="text-cyan-400">00:00</span>
+                    </div>
                 </div>
                 <div class="flex justify-between items-center pt-1">
                     <span class="text-gray-400 text-sm">TRAFFIC</span>
@@ -54,6 +69,56 @@
                         <span class="text-red-400" id="mix-malicious" title="Malicious">⚠️</span>
                     </div>
                 </div>
+
+                <!-- Failures Table -->
+                <div id="failures-panel" class="mt-2 pt-2 border-t border-gray-700/50 hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-500 text-xs uppercase">Failures</span>
+                        <span id="failures-total" class="text-red-400 font-mono text-xs">0 total</span>
+                    </div>
+                    <table class="w-full text-[10px] font-mono">
+                        <thead>
+                            <tr class="text-gray-500">
+                                <th class="text-left font-normal">Type</th>
+                                <th class="text-right font-normal">Count</th>
+                                <th class="text-right font-normal">Rep Loss</th>
+                            </tr>
+                        </thead>
+                        <tbody id="failures-tbody">
+                            <tr class="text-purple-400" id="fail-row-malicious">
+                                <td>🛡️ Fraud Leak</td>
+                                <td class="text-right" id="fail-malicious">0</td>
+                                <td class="text-right text-red-400" id="fail-malicious-rep">0</td>
+                            </tr>
+                            <tr class="text-green-400" id="fail-row-static">
+                                <td>ST Static</td>
+                                <td class="text-right" id="fail-static">0</td>
+                                <td class="text-right text-red-400" id="fail-static-rep">0</td>
+                            </tr>
+                            <tr class="text-blue-400" id="fail-row-read">
+                                <td>RD Read</td>
+                                <td class="text-right" id="fail-read">0</td>
+                                <td class="text-right text-red-400" id="fail-read-rep">0</td>
+                            </tr>
+                            <tr class="text-orange-400" id="fail-row-write">
+                                <td>WR Write</td>
+                                <td class="text-right" id="fail-write">0</td>
+                                <td class="text-right text-red-400" id="fail-write-rep">0</td>
+                            </tr>
+                            <tr class="text-yellow-400" id="fail-row-upload">
+                                <td>UP Upload</td>
+                                <td class="text-right" id="fail-upload">0</td>
+                                <td class="text-right text-red-400" id="fail-upload-rep">0</td>
+                            </tr>
+                            <tr class="text-cyan-400" id="fail-row-search">
+                                <td>SR Search</td>
+                                <td class="text-right" id="fail-search">0</td>
+                                <td class="text-right text-red-400" id="fail-search-rep">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
                 <div class="flex justify-between items-center pt-3 border-t border-gray-700 mt-2">
                     <span class="text-gray-300 font-bold text-lg">TOTAL SCORE</span>
                     <span id="total-score-display" class="text-white font-mono text-2xl font-bold">0</span>
