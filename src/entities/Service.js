@@ -320,14 +320,12 @@ class Service {
             };
         }
 
-        // SQS queue fill visualization
         if (this.type === 'sqs' && this.queueFill) {
             const maxQ = this.config.maxQueueSize || 200;
             const fillPercent = this.queue.length / maxQ;
             this.queueFill.scale.x = fillPercent;
             this.queueFill.position.x = (fillPercent - 1) * 1.9;
 
-            // Color based on fill level
             if (fillPercent > 0.8) {
                 this.queueFill.material.color.setHex(0xff0000);
             } else if (fillPercent > 0.5) {
@@ -366,8 +364,8 @@ class Service {
     static restore(serviceData, pos) {
         const service = new Service(serviceData.type, pos);
         service.id = serviceData.id;
+        service.mesh.userData.id = serviceData.id;
 
-        // Restore tier and upgrade-related properties
         if (serviceData.tier && serviceData.tier > 1) {
             const tiers = CONFIG.services[serviceData.type]?.tiers;
             if (tiers) {
@@ -379,7 +377,7 @@ class Service {
                         service.config = { ...service.config, cacheHitRate: tierData.cacheHitRate };
                     }
                 }
-                // Add visual tier rings
+                
                 for (let t = 2; t <= service.tier; t++) {
                     let ringSize, ringColor;
                     if (service.type === 'db') {
