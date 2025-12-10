@@ -18,8 +18,8 @@ const CONFIG = {
     db: 0xdc2626,
     waf: 0xa855f7,
     s3: 0x10b981,
-    line: 0x475569,
-    lineActive: 0x38bdf8,
+    lineActive: 0x00FFFF,
+    line: 0x00FF85,
     requestFail: 0xef4444,
     cache: 0xdc382d, // Redis red
     sqs: 0xff9900, // AWS orange
