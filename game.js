@@ -2855,6 +2855,27 @@ window.loadGameState = () => {
         STATE.isRunning = saveData.isRunning || false;
         STATE.gameStartTime = performance.now();
 
+        STATE.finances = saveData.finances || STATE.finances || {
+            income: {
+              byType: { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0 },
+              countByType: { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0, blocked: 0 },
+              requests: 0,
+              blocked: 0,
+              total: 0,
+            },
+            expenses: {
+              services: 0,
+              upkeep: 0,
+              repairs: 0,
+              autoRepair: 0,
+              byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
+              countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
+            },
+          };
+
+          // Optional: refresh UI immediately
+        updateFinancesDisplay();
+  
         STATE.gameMode = saveData.gameMode || "survival";
         STATE.sandboxBudget = saveData.sandboxBudget || 2000;
         STATE.upkeepEnabled = saveData.upkeepEnabled !== false;

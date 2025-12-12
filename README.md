@@ -145,6 +145,12 @@ A fully customizable testing environment for experimenting with any architecture
 2.  Open `index.html` in your modern web browser.
 3.  Start building your cloud empire!
 
+or
+
+1.  Go to https://serversurvival.ansofts.it.
+2.  Click on "GO TO THE GAME".
+3.  Start building you cloud infrastructure.
+
 ## Community
 
 Join our Discord server to discuss strategies and share your high scores:
