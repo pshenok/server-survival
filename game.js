@@ -2217,9 +2217,14 @@ function animate(time) {
     // Apply traffic burst multiplier from random events
     const effectiveRPS =
         STATE.currentRPS * (STATE.intervention?.trafficBurstMultiplier || 1.0);
-    if (effectiveRPS > 0 && STATE.spawnTimer > 1 / effectiveRPS) {
-        STATE.spawnTimer = 0;
-        spawnRequest();
+    if (effectiveRPS > 0) {
+        const spawnInterval = 1 / effectiveRPS;
+        // Spawn multiple requests if timeScale causes large dt jumps
+        // This ensures correct spawn rate even when fast forwarding
+        while (STATE.spawnTimer >= spawnInterval) {
+            STATE.spawnTimer -= spawnInterval;
+            spawnRequest();
+        }
         // Only ramp up in survival mode - use logarithmic growth
         if (STATE.gameMode === "survival") {
             const gameTime = STATE.elapsedGameTime;
