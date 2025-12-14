@@ -18,8 +18,9 @@ const CONFIG = {
     db: 0xdc2626,
     waf: 0xa855f7,
     s3: 0x10b981,
-    lineActive: 0x00FFFF,
-    line: 0x00FF85,
+    webserver: 0x06b6d4, // Cyan color for WebServer
+    lineActive: 0x00ffff,
+    line: 0x00ff85,
     requestFail: 0xef4444,
     cache: 0xdc382d, // Redis red
     sqs: 0xff9900, // AWS orange
@@ -106,6 +107,23 @@ const CONFIG = {
         desc: "<b>Firewall.</b> The first line of defense. Blocks Malicious traffic.",
       },
     },
+    webserver: {
+      name: "Web Server",
+      cost: 45,
+      type: "webserver",
+      processingTime: 100,
+      capacity: 15,
+      upkeep: 7,
+      tooltip: {
+        upkeep: "Medium",
+        desc: "<b>Web Server.</b> Middle tier in 3-tier architecture. Routes STATIC/UPLOAD to S3 and READ/WRITE/SEARCH to Compute. Essential for proper web application design. <b>Upgradeable (Tiers 1-3).</b>",
+      },
+      tiers: [
+        { level: 1, capacity: 15, cost: 0 },
+        { level: 2, capacity: 25, cost: 90 },
+        { level: 3, capacity: 40, cost: 140 },
+      ],
+    },
     alb: {
       name: "Load Balancer",
       cost: 50,
@@ -115,7 +133,7 @@ const CONFIG = {
       upkeep: 6,
       tooltip: {
         upkeep: "Medium",
-        desc: "<b>Load Balancer.</b> Distributes traffic to multiple Compute instances.",
+        desc: "<b>Load Balancer.</b> Distributes traffic to WebServer in 3-tier architecture. Can connect directly to Compute for legacy setups.",
       },
     },
     compute: {
@@ -197,7 +215,7 @@ const CONFIG = {
     },
   },
   survival: {
-    startBudget: 340,
+    startBudget: 440,
     baseRPS: 1.0,
     rampUp: 0.025,
     maxRPS: Infinity,
@@ -359,6 +377,20 @@ const CONFIG = {
       UPLOAD: 5,
       SEARCH: 10,
       MALICIOUS: 20,
+    },
+  },
+  networkTopology: {
+    strict: true, // Enforce strict topology
+    bidirectional: true, // Enable return paths
+    healthChecks: {
+      enabled: true,
+      interval: 2000,
+      timeout: 5000,
+    },
+    loadBalancing: {
+      algorithm: "weighted_least_connections",
+      healthWeight: 0.7,
+      loadWeight: 0.3,
     },
   },
 };

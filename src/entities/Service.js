@@ -8,6 +8,10 @@ class Service {
     this.processing = [];
     this.connections = [];
 
+    // Load balancer health tracking
+    this.backendHealth = {}; // Track health of connected backend services
+    this.lastHealthCheck = 0; // Timestamp of last health check
+
     let geo, mat;
     const materialProps = { roughness: 0.2 };
 
@@ -16,6 +20,13 @@ class Service {
         geo = new THREE.BoxGeometry(3, 2, 0.5);
         mat = new THREE.MeshStandardMaterial({
           color: CONFIG.colors.waf,
+          ...materialProps,
+        });
+        break;
+      case "webserver":
+        geo = new THREE.BoxGeometry(2.5, 2, 2.5);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.webserver,
           ...materialProps,
         });
         break;
@@ -67,6 +78,7 @@ class Service {
     this.mesh.position.copy(pos);
 
     if (type === "waf") this.mesh.position.y += 1;
+    else if (type === "webserver") this.mesh.position.y += 1;
     else if (type === "alb") this.mesh.position.y += 0.75;
     else if (type === "compute") this.mesh.position.y += 1.5;
     else if (type === "s3") this.mesh.position.y += 0.75;
@@ -119,7 +131,7 @@ class Service {
   }
 
   upgrade() {
-    if (!["compute", "db", "cache"].includes(this.type)) return;
+    if (!["compute", "db", "cache", "webserver"].includes(this.type)) return;
     const tiers = CONFIG.services[this.type].tiers;
     if (this.tier >= tiers.length) return;
 
@@ -148,6 +160,9 @@ class Service {
     } else if (this.type === "cache") {
       ringSize = 1.5;
       ringColor = 0xdc382d; // Redis red
+    } else if (this.type === "webserver") {
+      ringSize = 1.4;
+      ringColor = 0x06b6d4; // Cyan
     } else {
       ringSize = 1.3;
       ringColor = 0xffff00;
@@ -157,14 +172,52 @@ class Service {
     const ringMat = new THREE.MeshBasicMaterial({ color: ringColor });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = Math.PI / 2;
-    // Tier rings
-    ring.position.y = -this.mesh.position.y + (this.tier === 2 ? 0.5 : 1.0);
+
+    // Fix ring positioning for different service types
+    // Each service type has a different mesh.position.y, so we need to account for that
+    let baseYOffset;
+    if (this.type === "webserver") {
+      baseYOffset = 1.0; // webserver mesh.y = 1
+    } else if (this.type === "compute") {
+      baseYOffset = 1.5; // compute mesh.y = 1.5
+    } else if (this.type === "db") {
+      baseYOffset = 1.0; // db mesh.y = 1
+    } else if (this.type === "cache") {
+      baseYOffset = 0.75; // cache mesh.y = 0.75
+    } else {
+      baseYOffset = 1.0; // default
+    }
+
+    // Position ring relative to the mesh base, not world position
+    ring.position.y = -baseYOffset + (this.tier === 2 ? 0.5 : 1.0);
+
+    console.log(`[DEBUG] Creating ring for ${this.type} tier ${this.tier}:`, {
+      meshY: this.mesh.position.y,
+      baseYOffset,
+      ringPositionY: ring.position.y,
+      ringSize,
+      ringColor: `0x${ringColor.toString(16)}`,
+    });
+
     this.mesh.add(ring);
     this.tierRings.push(ring);
   }
 
   processQueue() {
     const effectiveCapacity = this.getEffectiveCapacity();
+
+    // Perform health checks for load balancers
+    if (this.type === "alb" && CONFIG.networkTopology.healthChecks.enabled) {
+      const now = Date.now();
+      if (
+        now - this.lastHealthCheck >
+        CONFIG.networkTopology.healthChecks.interval
+      ) {
+        this.lastHealthCheck = now;
+        this.performHealthChecks();
+      }
+    }
+
     while (
       this.processing.length < effectiveCapacity &&
       this.queue.length > 0
@@ -179,6 +232,97 @@ class Service {
 
       this.processing.push({ req: req, timer: 0 });
     }
+  }
+
+  // Perform health checks on backend services
+  performHealthChecks() {
+    const backendTypes = ["webserver", "compute", "cache", "db", "s3"];
+
+    backendTypes.forEach((backendType) => {
+      const backend = this.findConnectedService(backendType);
+      if (backend) {
+        // Simple health check - if backend is unhealthy, mark it
+        if (backend.health < 50) {
+          this.backendHealth[backend.id] = false;
+        } else {
+          this.backendHealth[backend.id] = true;
+        }
+      }
+    });
+  }
+
+  // Weighted least-connections algorithm for load balancers
+  selectBackend(candidates) {
+    if (!CONFIG.networkTopology.loadBalancing || this.type !== "alb") {
+      // Fallback to round-robin if not configured
+      const selected = candidates[this.rrIndex++ % candidates.length];
+      console.log(
+        `[ALB] Round-robin selected: ${selected.id} (type: ${selected.type})`
+      );
+      return selected;
+    }
+
+    const healthWeight = CONFIG.networkTopology.loadBalancing.healthWeight;
+    const loadWeight = CONFIG.networkTopology.loadBalancing.loadWeight;
+
+    // Calculate scores for each candidate
+    const scores = candidates.map((backend, index) => {
+      // Check if backend is healthy (default to true if not tracked)
+      const isHealthy = this.backendHealth[backend.id] !== false;
+      const health = isHealthy ? 1 : 0;
+
+      // Get accurate load calculation
+      const load = backend.totalLoad;
+
+      // Normalize load (0 = empty, 1 = full)
+      const normalizedLoad = Math.min(1, load / backend.config.capacity);
+
+      // Calculate weighted score
+      const healthScore = health * healthWeight;
+      const loadScore = (1 - normalizedLoad) * loadWeight;
+
+      // Add small random factor to break ties consistently but with some variation
+      const tieBreaker = Math.random() * 0.01;
+
+      return {
+        backend,
+        score: healthScore + loadScore + tieBreaker,
+        health,
+        load,
+        normalizedLoad,
+        index,
+      };
+    });
+
+    // Filter out unhealthy backends if any are healthy
+    const healthyBackends = scores.filter((s) => s.health > 0);
+    const candidatesToConsider =
+      healthyBackends.length > 0 ? healthyBackends : scores;
+
+    // Sort by score (highest first)
+    candidatesToConsider.sort((a, b) => {
+      // Primary sort by score
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      // Secondary sort by load (prefer less loaded)
+      if (a.normalizedLoad !== b.normalizedLoad) {
+        return a.normalizedLoad - b.normalizedLoad;
+      }
+      // Tertiary sort by original index (for consistency)
+      return a.index - b.index;
+    });
+
+    const selected = candidatesToConsider[0].backend;
+    console.log(
+      `[ALB] Weighted selection: ${
+        selected.id
+      } (score: ${candidatesToConsider[0].score.toFixed(
+        3
+      )}, load: ${candidatesToConsider[0].normalizedLoad.toFixed(3)})`
+    );
+
+    return selected;
   }
 
   findConnectedService(serviceType) {
@@ -340,7 +484,138 @@ class Service {
           continue;
         }
 
-        if (this.type === "compute") {
+        if (this.type === "webserver") {
+          // WebServer handles 3-tier architecture routing
+          const reqType = job.req.type;
+          const destType = job.req.destination;
+
+          if (destType === "blocked") {
+            failRequest(job.req);
+            continue;
+          }
+
+          // Route STATIC requests to S3
+          if (
+            reqType === TRAFFIC_TYPES.STATIC ||
+            reqType === TRAFFIC_TYPES.UPLOAD
+          ) {
+            const s3Target = this.findConnectedService("s3");
+            if (s3Target) {
+              job.req.flyTo(s3Target);
+            } else {
+              failRequest(job.req);
+            }
+            continue;
+          }
+
+          // Route READ/WRITE/SEARCH requests to Compute or ALB
+          if (
+            reqType === TRAFFIC_TYPES.READ ||
+            reqType === TRAFFIC_TYPES.WRITE ||
+            reqType === TRAFFIC_TYPES.SEARCH
+          ) {
+            // Check for cache first for cacheable requests
+            if (job.req.isCacheable) {
+              const cacheTarget = this.findConnectedService("cache");
+              if (cacheTarget) {
+                job.req.flyTo(cacheTarget);
+                continue;
+              }
+            }
+
+            // Try Compute first, then ALB as fallback
+            const computeTarget = this.findConnectedService("compute");
+            const albTarget = this.findConnectedService("alb");
+
+            if (computeTarget) {
+              job.req.flyTo(computeTarget);
+            } else if (albTarget) {
+              job.req.flyTo(albTarget);
+            } else {
+              failRequest(job.req);
+            }
+            continue;
+          }
+
+          // Default fallback
+          failRequest(job.req);
+        } else if (this.type === "alb") {
+          // ALB should forward to WebServer in 3-tier architecture
+          // If WebServer is connected, use it; otherwise fall back to direct connections
+
+          // DEBUG: Log all connected services
+          const connectedServices = this.connections
+            .map((id) => STATE.services.find((s) => s.id === id))
+            .filter((s) => s);
+          console.log(
+            `[ALB DEBUG] Connected services: ${connectedServices
+              .map((s) => `${s.type}(${s.id})`)
+              .join(", ")}`
+          );
+
+          // Find ALL connected webservers, not just the first one
+          const webservers = this.connections
+            .map((id) => STATE.services.find((s) => s.id === id))
+            .filter((s) => s && s.type === "webserver");
+
+          console.log(
+            `[ALB DEBUG] Found ${webservers.length} webservers: ${webservers
+              .map((s) => s.id)
+              .join(", ")}`
+          );
+
+          // Check if we're in 3-tier mode (WebServer connected) or direct mode
+          if (webservers.length > 0) {
+            // 3-tier architecture: distribute across multiple WebServers
+            const target = this.selectBackend(webservers);
+            if (target) {
+              console.log(
+                `[ALB] 3-tier mode: Selected WebServer: ${target.id} from ${webservers.length} available`
+              );
+              job.req.flyTo(target);
+            } else {
+              console.log(
+                `[ALB] Error: Failed to select WebServer from ${webservers.length} candidates`
+              );
+              failRequest(job.req);
+            }
+            continue;
+          }
+
+          // Direct connection mode: use load balancing for compute instances
+          const computeCandidates = this.connections
+            .map((id) => STATE.services.find((s) => s.id === id))
+            .filter((s) => s && s.type === "compute"); // Only consider compute instances
+
+          console.log(
+            `[ALB DEBUG] Found ${
+              computeCandidates.length
+            } compute instances: ${computeCandidates
+              .map((s) => s.id)
+              .join(", ")}`
+          );
+
+          if (computeCandidates.length > 0) {
+            // Use weighted least-connections algorithm if enabled
+            const target = this.selectBackend(computeCandidates);
+            if (target) {
+              console.log(
+                `[ALB] Direct mode: Selected compute backend: ${target.id} (type: ${target.type})`
+              );
+              job.req.flyTo(target);
+            } else {
+              console.log(
+                `[ALB] Error: Failed to select backend from ${computeCandidates.length} compute candidates`
+              );
+              failRequest(job.req);
+            }
+          } else {
+            console.log(
+              `[ALB] Error: No compute instances found for direct mode`
+            );
+            failRequest(job.req);
+          }
+        } else if (this.type === "compute") {
           const destType = job.req.destination;
 
           if (destType === "blocked") {
@@ -628,6 +903,9 @@ class Service {
           } else if (service.type === "cache") {
             ringSize = 1.5;
             ringColor = 0xdc382d;
+          } else if (service.type === "webserver") {
+            ringSize = 1.4;
+            ringColor = 0x06b6d4;
           } else {
             ringSize = 1.3;
             ringColor = 0xffff00;
@@ -636,7 +914,35 @@ class Service {
           const ringMat = new THREE.MeshBasicMaterial({ color: ringColor });
           const ring = new THREE.Mesh(ringGeo, ringMat);
           ring.rotation.x = Math.PI / 2;
-          ring.position.y = -service.mesh.position.y + (t === 2 ? 0.5 : 1.0);
+
+          // Fix ring positioning for different service types
+          let baseYOffset;
+          if (service.type === "webserver") {
+            baseYOffset = 1.0; // webserver mesh.y = 1
+          } else if (service.type === "compute") {
+            baseYOffset = 1.5; // compute mesh.y = 1.5
+          } else if (service.type === "db") {
+            baseYOffset = 1.0; // db mesh.y = 1
+          } else if (service.type === "cache") {
+            baseYOffset = 0.75; // cache mesh.y = 0.75
+          } else {
+            baseYOffset = 1.0; // default
+          }
+
+          // Position ring relative to mesh base, not world position
+          ring.position.y = -baseYOffset + (t === 2 ? 0.5 : 1.0);
+
+          console.log(
+            `[DEBUG RESTORE] Creating ring for ${service.type} tier ${t}:`,
+            {
+              meshY: service.mesh.position.y,
+              baseYOffset,
+              ringPositionY: ring.position.y,
+              ringSize,
+              ringColor: `0x${ringColor.toString(16)}`,
+            }
+          );
+
           service.mesh.add(ring);
           service.tierRings.push(ring);
         }

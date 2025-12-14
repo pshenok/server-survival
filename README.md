@@ -30,15 +30,16 @@ Survive as long as possible! Manage your **Budget ($)**, **Reputation (%)**, and
 
 Build your architecture using the toolbar. Each service has a cost, capacity, and upkeep:
 
-| Service      | Cost | Capacity  | Upkeep    | Function                                                           |
-| :----------- | :--- | :-------- | :-------- | :----------------------------------------------------------------- |
-| **WAF**      | $40  | 30        | Low       | **Firewall.** First line of defense. Blocks malicious traffic.     |
-| **SQS**      | $35  | Queue:200 | Low       | **Queue.** Buffers requests during spikes. Prevents drops.         |
-| **ALB**      | $50  | 20        | Medium    | **Load Balancer.** Distributes traffic to multiple instances.      |
-| **Compute**  | $60  | 4         | High      | **EC2 Instance.** Processes requests. **Upgradeable T1→T3.**       |
-| **Cache**    | $60  | 30        | Medium    | **Redis Cache.** Caches responses to reduce DB load.               |
-| **Database** | $150 | 8         | Very High | **RDS.** Destination for READ/WRITE/SEARCH. **Upgradeable T1→T3.** |
-| **S3**       | $25  | 25        | Low       | **Storage.** Destination for STATIC/UPLOAD traffic.                |
+| Service       | Cost | Capacity  | Upkeep    | Function                                                                                   |
+| :------------ | :--- | :-------- | :-------- | :----------------------------------------------------------------------------------------- |
+| **WAF**       | $40  | 30        | Low       | **Firewall.** First line of defense. Blocks malicious traffic.                             |
+| **WebServer** | $45  | 15        | Medium    | **Web Server.** Middle tier in 3-tier architecture. Routes traffic. **Upgradeable T1→T3.** |
+| **SQS**       | $35  | Queue:200 | Low       | **Queue.** Buffers requests during spikes. Prevents drops.                                 |
+| **ALB**       | $50  | 20        | Medium    | **Load Balancer.** Distributes traffic to WebServer in 3-tier architecture.                |
+| **Compute**   | $60  | 4         | High      | **EC2 Instance.** Processes requests. **Upgradeable T1→T3.**                               |
+| **Cache**     | $60  | 30        | Medium    | **Redis Cache.** Caches responses to reduce DB load.                                       |
+| **Database**  | $150 | 8         | Very High | **RDS.** Destination for READ/WRITE/SEARCH. **Upgradeable T1→T3.**                         |
+| **S3**        | $25  | 25        | Low       | **Storage.** Destination for STATIC/UPLOAD traffic.                                        |
 
 ### Scoring & Economy
 
@@ -100,6 +101,7 @@ A fully customizable testing environment for experimenting with any architecture
 
 ### Recent Features (v2.1)
 
+- **3-Tier Architecture** - New WebServer service for proper web application design
 - **Constant Intervention Mechanics** - Game requires active management throughout
 - **Service Health System** - Visual health bars, manual/auto repair options
 - **RPS Milestones** - Traffic surge warnings with multiplier display
@@ -118,19 +120,20 @@ A fully customizable testing environment for experimenting with any architecture
 - **Birds-Eye View:** Press `T` to switch between isometric and top-down view.
 - **Hide HUD:** Press `H` to toggle UI panels.
 - **Connect Tool:** Click two nodes to create a connection (flow direction matters!).
-  - _Valid Flows:_ Internet -> WAF -> ALB -> SQS -> Compute -> Cache -> (DB/S3)
+  - _Valid Flows:_ Internet -> WAF -> ALB -> WebServer -> Compute -> Cache -> (DB/S3)
 - **Delete Tool:** Remove services to recover 50% of the cost.
 - **Time Controls:** Pause, Play (1x), and Fast Forward (3x).
 
 ## Strategy Tips
 
 1.  **Block Attacks First:** Always place a WAF immediately connected to the Internet. Malicious leaks destroy reputation fast (-5 per leak).
-2.  **Watch Service Health:** Damaged services have reduced capacity. Click to repair or enable Auto-Repair.
-3.  **Scale for Traffic Surges:** RPS multiplies at milestones - prepare before ×2.0 at 3 minutes!
-4.  **Balance Income vs Upkeep:** Start lean, scale as income grows. Over-provisioning leads to bankruptcy.
-5.  **Use Cache Wisely:** Reduces database load significantly for READ requests.
-6.  **Buffer with SQS:** Queue helps survive traffic burst events without dropping requests.
-7.  **React to Events:** Watch the event bar - cost spikes mean hold off on purchases, traffic bursts mean ensure capacity.
+2.  **Use 3-Tier Architecture:** Connect ALB to WebServer for proper traffic routing. WebServer handles STATIC/UPLOAD to S3 and READ/WRITE/SEARCH to Compute.
+3.  **Watch Service Health:** Damaged services have reduced capacity. Click to repair or enable Auto-Repair.
+4.  **Scale for Traffic Surges:** RPS multiplies at milestones - prepare before ×2.0 at 3 minutes!
+5.  **Balance Income vs Upkeep:** Start lean, scale as income grows. Over-provisioning leads to bankruptcy.
+6.  **Use Cache Wisely:** Reduces database load significantly for READ requests.
+7.  **Buffer with SQS:** Queue helps survive traffic burst events without dropping requests.
+8.  **React to Events:** Watch the event bar - cost spikes mean hold off on purchases, traffic bursts mean ensure capacity.
 
 ## Tech Stack
 
