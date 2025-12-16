@@ -614,6 +614,16 @@
   <!-- Hover Tooltip -->
   <div id="tooltip" class="tooltip"></div>
 
+  <!-- Upgrade Indicator -->
+  <div id="upgrade-indicator"
+    class="hidden absolute z-30 pointer-events-auto cursor-pointer flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform hover:scale-110">
+    <div class="text-2xl animate-bounce">⬆️</div>
+    <div id="upgrade-cost"
+      class="bg-green-600 text-white text-xs px-2 py-1 rounded font-bold font-mono shadow-lg border border-green-400 mt-1">
+      $100
+    </div>
+  </div>
+
   <!-- Game Canvas -->
   <div id="canvas-container"></div>
 

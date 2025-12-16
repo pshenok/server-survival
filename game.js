@@ -1706,6 +1706,64 @@ container.addEventListener("wheel", (e) => {
     }
 }, { passive: false });
 
+// Upgrade Indicator Logic
+// Upgrade Indicator Logic
+let hoveredUpgradeService = null;
+let hideUpgradeTimer = null;
+const upgradeIndicator = document.getElementById("upgrade-indicator");
+const upgradeCostEl = document.getElementById("upgrade-cost");
+
+if (upgradeIndicator) {
+    upgradeIndicator.addEventListener("click", (e) => {
+        e.stopPropagation(); // Prevent map click
+        if (hoveredUpgradeService) {
+            hoveredUpgradeService.upgrade();
+
+            // Immediate UI update
+            const tiers = CONFIG.services[hoveredUpgradeService.type].tiers;
+            if (hoveredUpgradeService.tier < tiers.length) {
+                const nextCost = tiers[hoveredUpgradeService.tier].cost;
+                upgradeCostEl.textContent = `$${nextCost}`;
+
+                if (STATE.money < nextCost) {
+                    upgradeCostEl.classList.remove("bg-green-600", "border-green-400");
+                    upgradeCostEl.classList.add("bg-red-600", "border-red-400");
+                } else {
+                    upgradeCostEl.classList.remove("bg-red-600", "border-red-400");
+                    upgradeCostEl.classList.add("bg-green-600", "border-green-400");
+                }
+            } else {
+                // Max tier reached - hide immediately
+                hoveredUpgradeService = null;
+                upgradeIndicator.classList.add("hidden");
+                if (hideUpgradeTimer) {
+                    clearTimeout(hideUpgradeTimer);
+                    hideUpgradeTimer = null;
+                }
+            }
+        }
+    });
+
+    // Prevent hiding when hovering the indicator itself
+    upgradeIndicator.addEventListener("mouseenter", () => {
+        if (hideUpgradeTimer) {
+            clearTimeout(hideUpgradeTimer);
+            hideUpgradeTimer = null;
+        }
+    });
+
+    // Start hide timer when leaving indicator
+    upgradeIndicator.addEventListener("mouseleave", () => {
+        if (hoveredUpgradeService) {
+            hideUpgradeTimer = setTimeout(() => {
+                hoveredUpgradeService = null;
+                upgradeIndicator.classList.add("hidden");
+                hideUpgradeTimer = null;
+            }, 300);
+        }
+    });
+}
+
 // Keyboard navigation
 const keysPressed = {};
 
@@ -1999,6 +2057,60 @@ container.addEventListener("mousemove", (e) => {
                 }
             }
 
+            // SHOW UPGRADE INDICATOR (Green Arrow)
+            if (["compute", "db", "cache"].includes(s.type)) {
+                const tiers = CONFIG.services[s.type].tiers;
+                if (s.tier < tiers.length) {
+                    // Clear any pending hide timer since we are hovering a valid service
+                    if (hideUpgradeTimer) {
+                        clearTimeout(hideUpgradeTimer);
+                        hideUpgradeTimer = null;
+                    }
+
+                    hoveredUpgradeService = s;
+                    const nextCost = tiers[s.tier].cost;
+
+                    // Project 3D position to 2D screen
+                    const pos = s.mesh.position.clone();
+                    pos.y += 3; // Offset above service
+                    pos.project(camera);
+
+                    const x = (pos.x * .5 + .5) * container.clientWidth;
+                    const y = (pos.y * -.5 + .5) * container.clientHeight;
+
+                    if (upgradeIndicator && upgradeCostEl) {
+                        upgradeIndicator.style.left = `${x}px`;
+                        upgradeIndicator.style.top = `${y}px`;
+                        upgradeIndicator.classList.remove("hidden");
+                        upgradeCostEl.textContent = `$${nextCost}`;
+
+                        // Color code cost
+                        if (STATE.money < nextCost) {
+                            upgradeCostEl.classList.remove("bg-green-600", "border-green-400");
+                            upgradeCostEl.classList.add("bg-red-600", "border-red-400");
+                        } else {
+                            upgradeCostEl.classList.remove("bg-red-600", "border-red-400");
+                            upgradeCostEl.classList.add("bg-green-600", "border-green-400");
+                        }
+                    }
+                } else {
+                    // Max tier
+                    if (hoveredUpgradeService === s) {
+                        hoveredUpgradeService = null;
+                        if (upgradeIndicator) upgradeIndicator.classList.add("hidden");
+                    }
+                }
+            } else {
+                // Not an upgradeable service or different type - trigger hide
+                if (hoveredUpgradeService && !hideUpgradeTimer) {
+                    hideUpgradeTimer = setTimeout(() => {
+                        hoveredUpgradeService = null;
+                        if (upgradeIndicator) upgradeIndicator.classList.add("hidden");
+                        hideUpgradeTimer = null;
+                    }, 300);
+                }
+            }
+
             showTooltip(e.clientX + 15, e.clientY + 15, content);
 
             // Reset previous highlights
@@ -2014,6 +2126,15 @@ container.addEventListener("mousemove", (e) => {
             if (svc.mesh.material.emissive)
                 svc.mesh.material.emissive.setHex(0x000000);
         });
+
+        // Hide upgrade indicator if visible (with delay)
+        if (hoveredUpgradeService && !hideUpgradeTimer) {
+            hideUpgradeTimer = setTimeout(() => {
+                hoveredUpgradeService = null;
+                if (upgradeIndicator) upgradeIndicator.classList.add("hidden");
+                hideUpgradeTimer = null;
+            }, 300);
+        }
     }
 
     container.style.cursor = cursor;
