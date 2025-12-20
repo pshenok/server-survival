@@ -1622,7 +1622,12 @@ function deleteObject(id) {
     const toRemove = STATE.connections.filter(
         (c) => c.from === id || c.to === id
     );
-    toRemove.forEach((c) => connectionGroup.remove(c.mesh));
+    // Bug #6 fix: Properly dispose geometry and materials to prevent memory leak
+    toRemove.forEach((c) => {
+        connectionGroup.remove(c.mesh);
+        c.mesh.geometry.dispose();
+        c.mesh.material.dispose();
+    });
     STATE.connections = STATE.connections.filter((c) => !toRemove.includes(c));
 
     svc.destroy();
@@ -1811,9 +1816,10 @@ container.addEventListener("mousedown", (e) => {
         const i = getIntersect(e.clientX, e.clientY);
         if (i.type === "service") {
             const svc = STATE.services.find((s) => s.id === i.id);
-            // Check if service needs repair (double-click logic could be added)
-            if (svc && svc.health < 80 && CONFIG.survival.degradation?.enabled) {
-                // Repair on click when damaged
+            // Bug #9 fix: Use criticalHealth from config for consistency
+            const criticalHealth = CONFIG.survival.degradation?.criticalHealth || 40;
+            if (svc && svc.health < criticalHealth && CONFIG.survival.degradation?.enabled) {
+                // Repair on click when damaged below critical threshold
                 if (svc.repair()) {
                     addInterventionWarning(
                         `🔧 ${svc.type.toUpperCase()} repaired!`,
@@ -3018,6 +3024,48 @@ window.loadGameState = () => {
         STATE.gameStarted = saveData.gameStarted || true;
         STATE.previousTimeScale = saveData.previousTimeScale || 1;
 
+        // Bug #8 fix: Initialize intervention state for survival mode mechanics
+        if (STATE.gameMode === "survival") {
+            STATE.intervention = {
+                trafficShiftTimer: 0,
+                trafficShiftActive: false,
+                currentShift: null,
+                originalTrafficDist: null,
+                randomEventTimer: 0,
+                activeEvent: null,
+                eventEndTime: 0,
+                currentMilestoneIndex: 0,
+                rpsMultiplier: 1.0,
+                recentEvents: [],
+                warnings: [],
+                costMultiplier: 1.0,
+                trafficBurstMultiplier: 1.0,
+            };
+            STATE.maliciousSpikeTimer = 0;
+            STATE.maliciousSpikeActive = false;
+            STATE.normalTrafficDist = null;
+            STATE.autoRepairEnabled = false;
+        }
+
+        // Initialize finances tracking
+        STATE.finances = {
+            income: {
+                byType: { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0 },
+                countByType: { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0, blocked: 0 },
+                requests: 0,
+                blocked: 0,
+                total: 0,
+            },
+            expenses: {
+                services: 0,
+                upkeep: 0,
+                repairs: 0,
+                autoRepair: 0,
+                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
+                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
+            },
+        };
+
         restoreServices(saveData.services);
 
         restoreConnections(
@@ -3109,8 +3157,9 @@ function restoreServices(savedServices) {
 }
 
 function restoreConnections(savedConnections, internetConnections) {
-    internetConnections.forEach((connData) => {
-        createConnection(connData.from, connData.to);
+    // Bug #5 fix: internetConnections is an array of service IDs (strings), not objects
+    internetConnections.forEach((serviceId) => {
+        createConnection("internet", serviceId);
     });
 
     savedConnections.forEach((connData) => {
