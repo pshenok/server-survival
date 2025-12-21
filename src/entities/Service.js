@@ -139,7 +139,7 @@ class Service {
     }
 
     STATE.money -= nextTier.cost;
-    // Bug #7 fix: Track upgrade costs in finances
+    // Track upgrade costs in finances
     if (STATE.finances) {
       STATE.finances.expenses.services += nextTier.cost;
       STATE.finances.expenses.byService[this.type] =

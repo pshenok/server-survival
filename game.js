@@ -1622,7 +1622,7 @@ function deleteObject(id) {
     const toRemove = STATE.connections.filter(
         (c) => c.from === id || c.to === id
     );
-    // Bug #6 fix: Properly dispose geometry and materials to prevent memory leak
+    // Properly dispose geometry and materials to prevent memory leak
     toRemove.forEach((c) => {
         connectionGroup.remove(c.mesh);
         c.mesh.geometry.dispose();
@@ -1816,7 +1816,7 @@ container.addEventListener("mousedown", (e) => {
         const i = getIntersect(e.clientX, e.clientY);
         if (i.type === "service") {
             const svc = STATE.services.find((s) => s.id === i.id);
-            // Bug #9 fix: Use criticalHealth from config for consistency
+            // Use criticalHealth from config for consistency
             const criticalHealth = CONFIG.survival.degradation?.criticalHealth || 40;
             if (svc && svc.health < criticalHealth && CONFIG.survival.degradation?.enabled) {
                 // Repair on click when damaged below critical threshold
@@ -3024,7 +3024,7 @@ window.loadGameState = () => {
         STATE.gameStarted = saveData.gameStarted || true;
         STATE.previousTimeScale = saveData.previousTimeScale || 1;
 
-        // Bug #8 fix: Initialize intervention state for survival mode mechanics
+        // Initialize intervention state for survival mode mechanics
         if (STATE.gameMode === "survival") {
             STATE.intervention = {
                 trafficShiftTimer: 0,
@@ -3157,7 +3157,7 @@ function restoreServices(savedServices) {
 }
 
 function restoreConnections(savedConnections, internetConnections) {
-    // Bug #5 fix: internetConnections is an array of service IDs (strings), not objects
+    // internetConnections is an array of service IDs (strings), not objects
     internetConnections.forEach((serviceId) => {
         createConnection("internet", serviceId);
     });

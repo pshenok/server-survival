@@ -254,11 +254,10 @@ const CONFIG = {
       repairCostPercent: 0.15, // 15% of service cost to repair
       autoRepairEnabled: false, // Auto-repair toggle (user can enable)
       autoRepairCostPercent: 0.1, // 10% additional upkeep when auto-repair enabled
-      autoRepairRate: 2, // Health points per second when idle (Bug #4 fix)
+      autoRepairRate: 2, // Health points per second when idle
     },
 
     // Traffic pattern shifts - periodic changes to traffic distribution
-    // Bug #1 & #2 fix: renamed trafficShifts -> trafficShift, patterns -> shifts
     trafficShift: {
       enabled: true,
       interval: 40, // Faster shifts - every 40 seconds
@@ -317,7 +316,7 @@ const CONFIG = {
       enabled: true,
       minInterval: 15, // Events can happen very rapidly
       maxInterval: 45, // Frequent events keep players engaged
-      checkInterval: 30, // Bug #3 fix: How often to check for triggering events
+      checkInterval: 30, // How often to check for triggering events
       types: ["COST_SPIKE", "CAPACITY_DROP", "TRAFFIC_BURST", "SERVICE_OUTAGE"],
       events: [
         {
