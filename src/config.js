@@ -210,7 +210,7 @@ const CONFIG = {
     },
   },
   survival: {
-    startBudget: 500,
+    startBudget: 420,
     baseRPS: 1.0,
     rampUp: 0.025,
     maxRPS: Infinity,
