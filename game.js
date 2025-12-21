@@ -1256,9 +1256,24 @@ function spawnRequest() {
         const entryNodes = conns.map((id) =>
             STATE.services.find((s) => s.id === id)
         );
-        const wafEntry = entryNodes.find((s) => s?.type === "waf");
-        const target =
-            wafEntry || entryNodes[Math.floor(Math.random() * entryNodes.length)];
+
+        // Traffic Routing Logic
+        let target;
+
+        // 1. Prefer CDN for STATIC traffic
+        if (type === "STATIC") {
+            target = entryNodes.find(s => s?.type === "cdn");
+        }
+
+        // 2. Fallback to WAF (Security Best Practice)
+        if (!target) {
+            target = entryNodes.find((s) => s?.type === "waf");
+        }
+
+        // 3. Last Resort: Random entry point (Reckless)
+        if (!target) {
+            target = entryNodes[Math.floor(Math.random() * entryNodes.length)];
+        }
 
         if (target) req.flyTo(target);
         else failRequest(req);
@@ -1299,7 +1314,7 @@ function updateScore(req, outcome) {
             reward *= 1 + points.CACHE_HIT_BONUS;
         }
 
-        if (typeConfig.destination === "s3") {
+        if (typeConfig.destination === "s3" || typeConfig.destination === "cdn") {
             STATE.score.storage += score;
         } else if (typeConfig.destination === "db") {
             STATE.score.database += score;
@@ -1489,6 +1504,8 @@ function createConnection(fromId, toId) {
     else if (t1 === "compute" && t2 === "cache") valid = true;
     else if (t1 === "cache" && (t2 === "db" || t2 === "s3")) valid = true;
     else if (t1 === "compute" && (t2 === "db" || t2 === "s3")) valid = true;
+    else if (t1 === "internet" && t2 === "cdn") valid = true;
+    else if (t1 === "cdn" && t2 === "s3") valid = true;
 
     if (!valid) {
         new Audio("assets/sounds/click-9.mp3").play();
@@ -1841,7 +1858,7 @@ container.addEventListener("mousedown", (e) => {
             new Audio("assets/sounds/click-5.mp3").play();
         }
     } else if (
-        ["waf", "alb", "lambda", "db", "s3", "sqs", "cache"].includes(
+        ["waf", "alb", "lambda", "db", "s3", "sqs", "cache", "cdn"].includes(
             STATE.activeTool
         )
     ) {
@@ -1871,8 +1888,13 @@ container.addEventListener("mousedown", (e) => {
                 s3: "s3",
                 sqs: "sqs",
                 cache: "cache",
+                cdn: "cdn",
             };
-            createService(typeMap[STATE.activeTool], snapToGrid(i.pos));
+
+            const serviceType = typeMap[STATE.activeTool];
+            if (serviceType) {
+                createService(serviceType, snapToGrid(i.pos));
+            }
         }
     }
 });

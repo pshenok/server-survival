@@ -61,6 +61,14 @@ class Service {
           ...materialProps,
         });
         break;
+      case "cdn":
+        geo = new THREE.SphereGeometry(1.5, 16, 16);
+        mat = new THREE.MeshStandardMaterial({
+          color: 0x4ade80, // Greenish for static
+          ...materialProps,
+          wireframe: true,
+        });
+        break;
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
@@ -72,6 +80,7 @@ class Service {
     else if (type === "s3") this.mesh.position.y += 0.75;
     else if (type === "cache") this.mesh.position.y += 0.75;
     else if (type === "sqs") this.mesh.position.y += 0.4;
+    else if (type === "cdn") this.mesh.position.y += 1.5;
     else this.mesh.position.y += 1;
 
     this.mesh.castShadow = true;
@@ -271,7 +280,7 @@ class Service {
         }
 
         if (this.type === "s3") {
-          if (job.req.destination === "s3") {
+          if (job.req.destination === "s3" || job.req.destination === "cdn") {
             finishRequest(job.req);
           } else {
             failRequest(job.req);
@@ -298,6 +307,38 @@ class Service {
           if (target) {
             job.req.flyTo(target);
           } else {
+            failRequest(job.req);
+          }
+          continue;
+        }
+
+        // CDN processing logic - High cache hit rate for static content
+        if (this.type === "cdn") {
+          if (job.req.type === "STATIC") {
+            const hitRate = this.config.cacheHitRate || 0.95;
+
+            // CDN Cache Hit
+            if (Math.random() < hitRate) {
+              job.req.cached = true;
+              STATE.sound.playSuccess();
+              this.flashCacheHit();
+              finishRequest(job.req);
+              continue;
+            }
+          }
+
+          // Cache Miss - Forward to Origin (S3 or whatever is connected)
+          // We look for any connected service that isn't Internet
+          const connectedServices = this.connections
+            .map((id) => STATE.services.find((s) => s.id === id))
+            .filter((s) => s && s.type !== "internet");
+
+          if (connectedServices.length > 0) {
+            // Simple round robin or just pick first
+            const target = connectedServices[0];
+            job.req.flyTo(target);
+          } else {
+            // Configuring Miss but no origin = Fail
             failRequest(job.req);
           }
           continue;

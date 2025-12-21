@@ -33,7 +33,7 @@ const CONFIG = {
       score: 3,
       cacheable: true,
       cacheHitRate: 0.9,
-      destination: "s3",
+      destination: "cdn", // Prefer CDN, fallback to s3 logic in game
       processingWeight: 0.5,
     },
     READ: {
@@ -164,6 +164,19 @@ const CONFIG = {
         desc: "<b>Storage.</b> Destination for STATIC/UPLOAD traffic.",
       },
     },
+    cdn: {
+      name: "CDN",
+      cost: 60,
+      type: "cdn",
+      processingTime: 30,
+      capacity: 50,
+      upkeep: 5,
+      tooltip: {
+        upkeep: "Low",
+        desc: "<b>Content Delivery Network.</b> Caches STATIC content at the edge. High cache hit rate.",
+      },
+      cacheHitRate: 0.95,
+    },
     cache: {
       name: "Memory Cache",
       cost: 60,
@@ -197,7 +210,7 @@ const CONFIG = {
     },
   },
   survival: {
-    startBudget: 340,
+    startBudget: 500,
     baseRPS: 1.0,
     rampUp: 0.025,
     maxRPS: Infinity,

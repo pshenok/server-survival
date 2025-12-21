@@ -15,17 +15,17 @@ const TUTORIAL_STEPS = [
         id: 'traffic-types',
         title: 'HTTP Traffic Types',
         text: '<div class="space-y-2 text-left text-sm">' +
-              '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span><span class="text-green-400 font-bold w-16">STATIC</span><span class="text-gray-300">GET request • Images, CSS, JS files → <span class="text-emerald-400">Storage</span></span></div>' +
-              '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span><span class="text-blue-400 font-bold w-16">READ</span><span class="text-gray-300">GET request • Fetch user data, API calls → <span class="text-red-400">Database</span></span></div>' +
-              '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-orange-400 inline-block"></span><span class="text-orange-400 font-bold w-16">WRITE</span><span class="text-gray-300">POST/PUT • Create/update records → <span class="text-red-400">Database</span></span></div>' +
-              '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span><span class="text-yellow-400 font-bold w-16">UPLOAD</span><span class="text-gray-300">POST+file • User uploads, media → <span class="text-emerald-400">Storage</span></span></div>' +
-              '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span><span class="text-cyan-400 font-bold w-16">SEARCH</span><span class="text-gray-300">GET+query • Full-text search, filters → <span class="text-red-400">Database</span></span></div>' +
-              '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span><span class="text-red-400 font-bold w-16">ATTACK</span><span class="text-gray-300">DDoS, SQL injection, bots → <span class="text-purple-400">Block with Firewall!</span></span></div>' +
-              '</div>' +
-              '<div class="mt-3 pt-2 border-t border-gray-700 text-xs text-gray-400">' +
-              '<div class="flex justify-between"><span>Cache reduces DB/Storage load:</span><span>STATIC 90% • READ 40% • SEARCH 15%</span></div>' +
-              '<div class="flex justify-between"><span>Heavy processing (slower):</span><span>UPLOAD 2× • SEARCH 2.5×</span></div>' +
-              '</div>',
+            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span><span class="text-green-400 font-bold w-16">STATIC</span><span class="text-gray-300">GET request • Images, CSS, JS files → <span class="text-emerald-400">Storage</span></span></div>' +
+            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span><span class="text-blue-400 font-bold w-16">READ</span><span class="text-gray-300">GET request • Fetch user data, API calls → <span class="text-red-400">Database</span></span></div>' +
+            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-orange-400 inline-block"></span><span class="text-orange-400 font-bold w-16">WRITE</span><span class="text-gray-300">POST/PUT • Create/update records → <span class="text-red-400">Database</span></span></div>' +
+            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span><span class="text-yellow-400 font-bold w-16">UPLOAD</span><span class="text-gray-300">POST+file • User uploads, media → <span class="text-emerald-400">Storage</span></span></div>' +
+            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span><span class="text-cyan-400 font-bold w-16">SEARCH</span><span class="text-gray-300">GET+query • Full-text search, filters → <span class="text-red-400">Database</span></span></div>' +
+            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span><span class="text-red-400 font-bold w-16">ATTACK</span><span class="text-gray-300">DDoS, SQL injection, bots → <span class="text-purple-400">Block with Firewall!</span></span></div>' +
+            '</div>' +
+            '<div class="mt-3 pt-2 border-t border-gray-700 text-xs text-gray-400">' +
+            '<div class="flex justify-between"><span>Cache reduces DB/Storage load:</span><span>STATIC 90% • READ 40% • SEARCH 15%</span></div>' +
+            '<div class="flex justify-between"><span>Heavy processing (slower):</span><span>UPLOAD 2× • SEARCH 2.5×</span></div>' +
+            '</div>',
         icon: '🌐',
         highlight: null,
         action: 'next',
@@ -96,6 +96,33 @@ const TUTORIAL_STEPS = [
         hint: 'STATIC = images, CSS, JS files (90% cache hit rate). UPLOAD = file uploads (heavy, never cached).'
     },
     {
+        id: 'place-cdn',
+        title: 'Deploy CDN',
+        text: '<span class="text-green-400 font-bold">CDN</span> (Content Delivery Network) speeds up <span class="text-green-400">STATIC</span> content delivery. It sits between the Internet and Storage.',
+        icon: '🌍',
+        highlight: 'tool-cdn',
+        action: 'place_cdn',
+        hint: 'CDNs have a very high cache hit rate (95%), meaning most requests never need to touch your Storage servers!'
+    },
+    {
+        id: 'connect-internet-cdn',
+        title: 'Connect Internet to CDN',
+        text: 'Connect the <span class="text-cyan-400 font-bold">Internet</span> to your <span class="text-green-400 font-bold">CDN</span>. This allows users to hit the edge cache first.',
+        icon: '🔗',
+        highlight: 'tool-connect',
+        action: 'connect_internet_cdn',
+        hint: 'Traffic flow: Internet → CDN. If cache miss → Storage.'
+    },
+    {
+        id: 'connect-cdn-s3',
+        title: 'Connect CDN to Storage',
+        text: 'Connect the <span class="text-green-400 font-bold">CDN</span> to <span class="text-emerald-400 font-bold">File Storage</span>. This allows the CDN to fetch content on cache misses.',
+        icon: '🔗',
+        highlight: 'tool-connect',
+        action: 'connect_cdn_s3',
+        hint: 'Only cache misses (5%) will go to Storage. This saves money and capacity!'
+    },
+    {
         id: 'place-db',
         title: 'Deploy SQL Database',
         text: '<span class="text-red-400 font-bold">SQL Database</span> handles <span class="text-blue-400">READ</span>, <span class="text-orange-400">WRITE</span>, and <span class="text-cyan-400">SEARCH</span> traffic. APIs need database storage.',
@@ -135,11 +162,11 @@ const TUTORIAL_STEPS = [
         id: 'complete',
         title: 'Tutorial Complete!',
         text: '<span class="text-green-400">Congratulations!</span> You now know the basics. Remember:<br><br>' +
-              '• <span class="text-red-400">Red</span> MALICIOUS → Block with Firewall<br>' +
-              '• <span class="text-green-400">Green</span> STATIC / <span class="text-yellow-400">Yellow</span> UPLOAD → Route to Storage<br>' +
-              '• <span class="text-blue-400">Blue</span> READ / <span class="text-orange-400">Orange</span> WRITE / <span class="text-cyan-400">Cyan</span> SEARCH → Route to SQL DB<br>' +
-              '• Cache helps STATIC (90%), READ (40%), SEARCH (15%)<br><br>' +
-              'Good luck, Architect!',
+            '• <span class="text-red-400">Red</span> MALICIOUS → Block with Firewall<br>' +
+            '• <span class="text-green-400">Green</span> STATIC / <span class="text-yellow-400">Yellow</span> UPLOAD → Route to Storage<br>' +
+            '• <span class="text-blue-400">Blue</span> READ / <span class="text-orange-400">Orange</span> WRITE / <span class="text-cyan-400">Cyan</span> SEARCH → Route to SQL DB<br>' +
+            '• Cache helps STATIC (90%), READ (40%), SEARCH (15%)<br><br>' +
+            'Good luck, Architect!',
         icon: '🎉',
         highlight: null,
         action: 'finish',
@@ -352,6 +379,15 @@ class Tutorial {
                 break;
             case 'connect_compute_db':
                 actionMatches = actionType === 'connect' && data.fromType === 'compute' && data.toType === 'db';
+                break;
+            case 'place_cdn':
+                actionMatches = actionType === 'place' && data.type === 'cdn';
+                break;
+            case 'connect_internet_cdn':
+                actionMatches = actionType === 'connect' && data.from === 'internet' && data.toType === 'cdn';
+                break;
+            case 'connect_cdn_s3':
+                actionMatches = actionType === 'connect' && data.fromType === 'cdn' && data.toType === 's3';
                 break;
             case 'start_game':
                 actionMatches = actionType === 'start_game';
