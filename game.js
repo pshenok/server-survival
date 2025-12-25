@@ -9,11 +9,11 @@ function formatTime(totalSeconds) {
     const secs = Math.floor(totalSeconds % 60);
 
     if (hours > 0) {
-        return `${hours}h ${mins}m ${secs}s`;
+        return i18n.t('time_h', { h: hours, m: mins, s: secs });
     } else if (mins > 0) {
-        return `${mins}m ${secs}s`;
+        return i18n.t('time_m', { m: mins, s: secs });
     } else {
-        return `${secs}s`;
+        return i18n.t('time_s', { s: secs });
     }
 }
 
@@ -39,7 +39,7 @@ function calculateTargetRPS(gameTimeSeconds) {
                     STATE.intervention.currentMilestoneIndex = i + 1;
                     // Add warning when milestone is reached
                     addInterventionWarning(
-                        `⚡ RPS SURGE! Traffic ×${multiplier.toFixed(1)}`,
+                        i18n.t('rps_surge_warning', { multiplier: multiplier.toFixed(1) }),
                         "danger",
                         5000
                     );
@@ -126,8 +126,8 @@ function showMaliciousWarning() {
     warning.className =
         "fixed top-1/3 left-1/2 transform -translate-x-1/2 text-center z-50 pointer-events-none";
     warning.innerHTML = `
-        <div class="text-red-500 text-2xl font-bold animate-pulse">⚠️ DDoS INCOMING ⚠️</div>
-        <div class="text-red-300 text-sm">Attack spike in 5 seconds!</div>
+        <div class="text-red-500 text-2xl font-bold animate-pulse">${i18n.t('ddos_incoming')}</div>
+        <div class="text-red-300 text-sm">${i18n.t('attack_spike')}</div>
     `;
     document.body.appendChild(warning);
 
@@ -166,7 +166,7 @@ function startMaliciousSpike() {
         "fixed top-4 left-1/2 transform -translate-x-1/2 z-40 pointer-events-none";
     indicator.innerHTML = `
         <div class="bg-red-900/80 border-2 border-red-500 rounded-lg px-4 py-2 animate-pulse">
-            <span class="text-red-400 font-bold">🔥 DDoS ATTACK ACTIVE 🔥</span>
+            <span class="text-red-400 font-bold">${i18n.t('ddos_active')}</span>
         </div>
     `;
     document.body.appendChild(indicator);
@@ -306,7 +306,10 @@ function startTrafficShift() {
     STATE.trafficDistribution = newDist;
 
     addInterventionWarning(
-        `📊 ${shift.name} - ${shift.type} traffic surging!`,
+        i18n.t('traffic_surging', { 
+            name: i18n.t('shift_' + shift.name.toLowerCase().replace(' ', '_')), 
+            type: i18n.t('traffic_' + shift.type.toLowerCase()) 
+        }),
         "warning",
         5000
     );
@@ -370,7 +373,7 @@ function triggerRandomEvent() {
     switch (eventType) {
         case "COST_SPIKE":
             addInterventionWarning(
-                "💰 CLOUD COST SPIKE! Upkeep doubled for 30s",
+                i18n.t('cost_spike_warning'),
                 "danger",
                 8000
             );
@@ -379,7 +382,7 @@ function triggerRandomEvent() {
 
         case "CAPACITY_DROP":
             addInterventionWarning(
-                "⚡ RESOURCE THROTTLING! Capacity reduced for 30s",
+                i18n.t('capacity_drop_warning'),
                 "danger",
                 8000
             );
@@ -390,7 +393,7 @@ function triggerRandomEvent() {
 
         case "TRAFFIC_BURST":
             addInterventionWarning(
-                "🚀 TRAFFIC BURST! 3× requests for 30s",
+                i18n.t('traffic_burst_warning'),
                 "warning",
                 8000
             );
@@ -406,7 +409,7 @@ function triggerRandomEvent() {
                 target.mesh.material.opacity = 0.3;
                 target.mesh.material.transparent = true;
                 addInterventionWarning(
-                    `🔧 ${target.type.toUpperCase()} OUTAGE! Service offline for 30s`,
+                    i18n.t('service_outage_warning', { type: i18n.t(target.type) }),
                     "danger",
                     8000
                 );
@@ -455,7 +458,7 @@ function endRandomEvent() {
     hideActiveEventBar();
 
     STATE.intervention.activeEvent = null;
-    addInterventionWarning("✅ Event ended", "info", 2000);
+    addInterventionWarning(i18n.t('event_ended'), "info", 2000);
     STATE.sound?.playSuccess();
 }
 
@@ -467,20 +470,20 @@ function showActiveEventBar(eventType) {
     if (!bar) return;
 
     const eventConfig = {
-        COST_SPIKE: { icon: "💰", text: "COST SPIKE ACTIVE", color: "bg-red-600" },
+        COST_SPIKE: { icon: "💰", text: i18n.t('cost_spike_active'), color: "bg-red-600" },
         CAPACITY_DROP: {
             icon: "⚡",
-            text: "CAPACITY REDUCED",
+            text: i18n.t('capacity_reduced'),
             color: "bg-orange-600",
         },
         TRAFFIC_BURST: {
             icon: "🚀",
-            text: "TRAFFIC BURST",
+            text: i18n.t('traffic_burst'),
             color: "bg-yellow-600",
         },
         SERVICE_OUTAGE: {
             icon: "🔧",
-            text: "SERVICE OUTAGE",
+            text: i18n.t('service_outage_active'),
             color: "bg-purple-600",
         },
     };
@@ -530,7 +533,7 @@ function updateServiceHealthIndicators() {
 
     if (criticalServices.length === 0) {
         healthContainer.innerHTML =
-            '<div class="text-green-400 text-xs">All services healthy</div>';
+            `<div class="text-green-400 text-xs">${i18n.t('all_services_healthy')}</div>`;
         return;
     }
 
@@ -538,8 +541,8 @@ function updateServiceHealthIndicators() {
         .map(
             (s) => `
         <div class="flex justify-between items-center text-xs mb-1">
-            <span class="text-red-400">${s.type.toUpperCase()}</span>
-            <span class="text-red-300">${Math.round(s.health)}% HP</span>
+            <span class="text-red-400">${i18n.t(s.type).toUpperCase()}</span>
+            <span class="text-red-300">${i18n.t('hp_display', { hp: Math.round(s.health) })}</span>
         </div>
     `
         )
@@ -576,12 +579,9 @@ function updateRepairCostTable() {
 
             return `
             <div class="grid grid-cols-3 gap-1 text-gray-300">
-                <span class="${healthColor}">${s.type
-                    .substring(0, 6)
-                    .toUpperCase()}</span>
+                <span class="${healthColor}">${i18n.t(s.type).substring(0, 10).toUpperCase()}</span>
                 <span class="text-center text-yellow-400">$${repairCost}</span>
-                <span class="text-right text-orange-400" title="$${s.config.cost
-                } × 10%">$${autoRepairCost}</span>
+                <span class="text-right text-orange-400" title="${i18n.t('repair_formula_hint', { cost: '$' + s.config.cost })}">$${autoRepairCost}</span>
             </div>
         `;
         })
@@ -597,42 +597,42 @@ function updateFinancesDisplay() {
     const incomeTypes = [
         {
             key: "STATIC",
-            label: "Static",
+            label: i18n.t('income_static'),
             color: "text-blue-400",
             rate: CONFIG.trafficTypes.STATIC.reward,
         },
         {
             key: "READ",
-            label: "DB Read",
+            label: i18n.t('income_read'),
             color: "text-green-400",
             rate: CONFIG.trafficTypes.READ.reward,
         },
         {
             key: "WRITE",
-            label: "DB Write",
+            label: i18n.t('income_write'),
             color: "text-yellow-400",
             rate: CONFIG.trafficTypes.WRITE.reward,
         },
         {
             key: "UPLOAD",
-            label: "Upload",
+            label: i18n.t('income_upload'),
             color: "text-purple-400",
             rate: CONFIG.trafficTypes.UPLOAD.reward,
         },
         {
             key: "SEARCH",
-            label: "Search",
+            label: i18n.t('income_search'),
             color: "text-cyan-400",
             rate: CONFIG.trafficTypes.SEARCH.reward,
         },
-        { key: "blocked", label: "Blocked", color: "text-red-400", rate: 0.5 },
+        { key: "blocked", label: i18n.t('income_blocked'), color: "text-red-400", rate: 0.5 },
     ];
 
     // Update income details with per-request rate and count
     const incomeDetails = document.getElementById("income-details");
     if (incomeDetails) {
         let incomeHtml =
-            '<div class="grid grid-cols-4 gap-1 text-gray-500 mb-1 text-[10px]"><span>Type</span><span class="text-center">Count</span><span class="text-center">/req</span><span class="text-right">Total</span></div>';
+            `<div class="grid grid-cols-4 gap-1 text-gray-500 mb-1 text-[10px]"><span>${i18n.t('type')}</span><span class="text-center">${i18n.t('count')}</span><span class="text-center">${i18n.t('per_request')}</span><span class="text-right">${i18n.t('total')}</span></div>`;
         let hasIncome = false;
         incomeTypes.forEach((t) => {
             const value =
@@ -650,7 +650,7 @@ function updateFinancesDisplay() {
             }
         });
         if (!hasIncome) {
-            incomeHtml = '<div class="text-gray-600 italic">No income yet</div>';
+            incomeHtml = `<div class="text-gray-600 italic">${i18n.t('no_income')}</div>`;
         }
         incomeDetails.innerHTML = incomeHtml;
     }
@@ -664,43 +664,43 @@ function updateFinancesDisplay() {
     const serviceTypes = [
         {
             key: "waf",
-            label: "WAF",
+            label: i18n.t('firewall'),
             color: "text-red-400",
             cost: CONFIG.services.waf.cost,
         },
         {
             key: "alb",
-            label: "ALB",
+            label: i18n.t('load_balancer'),
             color: "text-blue-400",
             cost: CONFIG.services.alb.cost,
         },
         {
             key: "compute",
-            label: "Compute",
+            label: i18n.t('compute'),
             color: "text-green-400",
             cost: CONFIG.services.compute.cost,
         },
         {
             key: "db",
-            label: "Database",
+            label: i18n.t('relational_db'),
             color: "text-yellow-400",
             cost: CONFIG.services.db.cost,
         },
         {
             key: "s3",
-            label: "S3",
+            label: i18n.t('file_storage'),
             color: "text-purple-400",
             cost: CONFIG.services.s3.cost,
         },
         {
             key: "cache",
-            label: "Cache",
+            label: i18n.t('memory_cache'),
             color: "text-orange-400",
             cost: CONFIG.services.cache.cost,
         },
         {
             key: "sqs",
-            label: "SQS",
+            label: i18n.t('message_queue'),
             color: "text-cyan-400",
             cost: CONFIG.services.sqs.cost,
         },
@@ -733,19 +733,19 @@ function updateFinancesDisplay() {
         // Add header if we have service expenses
         if (hasServiceExpenses) {
             expenseHtml =
-                '<div class="grid grid-cols-5 gap-1 text-gray-500 mb-1 text-[10px]"><span>Service</span><span class="text-center">#</span><span class="text-center">Cost</span><span class="text-center">Repair</span><span class="text-right">Spent</span></div>' +
+                `<div class="grid grid-cols-5 gap-1 text-gray-500 mb-1 text-[10px]"><span>${i18n.t('service')}</span><span class="text-center">#</span><span class="text-center">${i18n.t('buy_cost')}</span><span class="text-center">${i18n.t('repair')}</span><span class="text-right">${i18n.t('total')}</span></div>` +
                 expenseHtml;
         }
 
         // Auto-repair overhead (if enabled)
         if (f.expenses.autoRepair > 0) {
-            expenseHtml += `<div class="flex justify-between mt-1 pt-1 border-t border-gray-700"><span class="text-orange-400">Auto-Repair</span><span class="text-gray-300">$${Math.floor(
+            expenseHtml += `<div class="flex justify-between mt-1 pt-1 border-t border-gray-700"><span class="text-orange-400">${i18n.t('auto_repair')}</span><span class="text-gray-300">$${Math.floor(
                 f.expenses.autoRepair
             )}</span></div>`;
         }
 
         if (!expenseHtml) {
-            expenseHtml = '<div class="text-gray-600 italic">No expenses yet</div>';
+            expenseHtml = `<div class="text-gray-600 italic">${i18n.t('no_expenses')}</div>`;
         }
         expenseDetails.innerHTML = expenseHtml;
     }
@@ -979,7 +979,7 @@ function resetGame(mode = "survival") {
     // Reset auto-repair toggle UI
     const autoRepairBtn = document.getElementById("auto-repair-toggle");
     if (autoRepairBtn) {
-        autoRepairBtn.textContent = "Auto-Repair: OFF";
+        autoRepairBtn.textContent = i18n.t('upkeep_off');
         autoRepairBtn.classList.remove("text-green-400");
         autoRepairBtn.classList.add("text-gray-400");
     }
@@ -1055,8 +1055,8 @@ function resetGame(mode = "survival") {
             const upkeepBtn = document.getElementById("upkeep-toggle");
             if (upkeepBtn) {
                 upkeepBtn.textContent = STATE.upkeepEnabled
-                    ? "Upkeep: ON"
-                    : "Upkeep: OFF";
+                    ? i18n.t('upkeep_on_label')
+                    : i18n.t('upkeep_off_label');
                 upkeepBtn.classList.toggle("bg-red-900/50", STATE.upkeepEnabled);
                 upkeepBtn.classList.toggle("bg-green-900/50", !STATE.upkeepEnabled);
             }
@@ -1084,15 +1084,15 @@ function toggleAutoRepair() {
     const btn = document.getElementById("auto-repair-toggle");
     if (btn) {
         if (STATE.autoRepairEnabled) {
-            btn.textContent = "Auto-Repair: ON";
+            btn.textContent = i18n.t('upkeep_on');
             btn.classList.remove("text-gray-400");
             btn.classList.add("text-green-400");
-            addInterventionWarning("Auto-repair enabled (+10% upkeep)", "info", 2000);
+            addInterventionWarning(i18n.t('auto_repair_hint'), "info", 2000);
         } else {
-            btn.textContent = "Auto-Repair: OFF";
+            btn.textContent = i18n.t('upkeep_off');
             btn.classList.remove("text-green-400");
             btn.classList.add("text-gray-400");
-            addInterventionWarning("Auto-repair disabled", "info", 2000);
+            addInterventionWarning(i18n.t('event_ended'), "info", 2000);
         }
     }
     updateRepairCostTable();
@@ -1189,7 +1189,7 @@ function retryWithSameArchitecture() {
         }
     });
 
-    addInterventionWarning("🔄 Architecture restored! Try again!", "info", 3000);
+    addInterventionWarning(i18n.t('arch_restored'), "info", 3000);
     STATE.sound?.playPlace();
 }
 
@@ -1509,9 +1509,7 @@ function createConnection(fromId, toId) {
 
     if (!valid) {
         new Audio("assets/sounds/click-9.mp3").play();
-        console.error(
-            "Invalid connection topology: WAF/ALB from Internet -> WAF -> ALB -> Compute -> (RDS/S3)"
-        );
+        console.error(i18n.t('invalid_topology_detailed'));
         return;
     }
 
@@ -1822,7 +1820,7 @@ container.addEventListener("mousedown", (e) => {
                 // Repair on click when damaged below critical threshold
                 if (svc.repair()) {
                     addInterventionWarning(
-                        `🔧 ${svc.type.toUpperCase()} repaired!`,
+                        i18n.t('repaired_msg', { type: i18n.t(svc.type) }),
                         "info",
                         2000
                     );
@@ -1988,16 +1986,16 @@ container.addEventListener("mousemove", (e) => {
                     ? STATE.internetNode
                     : STATE.services.find((s) => s.id === conn.to);
             const fromName =
-                conn.from === "internet" ? "Internet" : from?.config?.name || "Unknown";
+                conn.from === "internet" ? i18n.t('internet') : from?.config?.name || i18n.t('unknown');
             const toName =
-                conn.to === "internet" ? "Internet" : to?.config?.name || "Unknown";
+                conn.to === "internet" ? i18n.t('internet') : to?.config?.name || i18n.t('unknown');
 
             showTooltip(
                 e.clientX + 15,
                 e.clientY + 15,
-                `<strong class="text-orange-400">Remove Link</strong><br>
+                `<strong class="text-orange-400">${i18n.t('remove_link')}</strong><br>
                 <span class="text-gray-300">${fromName}</span> → <span class="text-gray-300">${toName}</span><br>
-                <span class="text-red-400 text-xs">Click to remove</span>`
+                <span class="text-red-400 text-xs">${i18n.t('click_to_remove')}</span>`
             );
         } else {
             t.style.display = "none";
@@ -2018,7 +2016,7 @@ container.addEventListener("mousemove", (e) => {
                         : "text-green-400";
 
             // Base tooltip content with static info
-            let content = `<strong class="text-blue-300">${s.config.name}</strong>`;
+            let content = `<strong class="text-blue-300">${i18n.t(s.type)}</strong>`;
             if (s.tier)
                 content += ` <span class="text-xs text-yellow-400">T${s.tier}</span>`;
 
@@ -2035,8 +2033,8 @@ container.addEventListener("mousemove", (e) => {
 
             // Add static description and upkeep if available
             if (s.config.tooltip) {
-                content += `<br><span class="text-xs text-gray-400">${s.config.tooltip.desc}</span>`;
-                content += `<br><span class="text-xs text-gray-500">Upkeep: <span class="text-gray-300">${s.config.tooltip.upkeep}</span></span>`;
+                content += `<br><span class="text-xs text-gray-400">${i18n.t(s.type + '_desc')}</span>`;
+                content += `<br><span class="text-xs text-gray-500">${i18n.t('upkeep_label')} <span class="text-gray-300">${i18n.t(s.config.tooltip.upkeep.toLowerCase().replace(' ', '_'))}</span></span>`;
             }
 
             content += `<div class="mt-1 border-t border-gray-700 pt-1">`;
@@ -2044,26 +2042,26 @@ container.addEventListener("mousemove", (e) => {
             // Service-specific dynamic stats
             if (s.type === "cache") {
                 const hitRate = Math.round((s.config.cacheHitRate || 0.35) * 100);
-                content += `Queue: <span class="${loadColor}">${s.queue.length}</span><br>
-                Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span><br>
-                Hit Rate: <span class="text-green-400">${hitRate}%</span>`;
+                content += `${i18n.t('queue_label')} <span class="${loadColor}">${s.queue.length}</span><br>
+                ${i18n.t('load_label')} <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span><br>
+                ${i18n.t('hit_rate_label')} <span class="text-green-400">${hitRate}%</span>`;
             } else if (s.type === "sqs") {
                 const maxQ = s.config.maxQueueSize || 200;
                 const fillPercent = Math.round((s.queue.length / maxQ) * 100);
                 const status =
-                    fillPercent > 80 ? "Critical" : fillPercent > 50 ? "Busy" : "Healthy";
+                    fillPercent > 80 ? i18n.t('status_critical') : fillPercent > 50 ? i18n.t('status_busy') : i18n.t('status_healthy');
                 const statusColor =
                     fillPercent > 80
                         ? "text-red-400"
                         : fillPercent > 50
                             ? "text-yellow-400"
                             : "text-green-400";
-                content += `Buffered: <span class="${loadColor}">${s.queue.length}/${maxQ}</span><br>
-                Processing: ${s.processing.length}/${s.config.capacity}<br>
-                Status: <span class="${statusColor}">${status}</span>`;
+                content += `${i18n.t('buffered_label')} <span class="${loadColor}">${s.queue.length}/${maxQ}</span><br>
+                ${i18n.t('processing_label')} ${s.processing.length}/${s.config.capacity}<br>
+                ${i18n.t('status_label')} <span class="${statusColor}">${status}</span>`;
             } else {
-                content += `Queue: <span class="${loadColor}">${s.queue.length}</span><br>
-                Load: <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span>`;
+                content += `${i18n.t('queue_label')} <span class="${loadColor}">${s.queue.length}</span><br>
+                ${i18n.t('load_label')} <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span>`;
             }
             content += `</div>`;
 
@@ -2077,11 +2075,11 @@ container.addEventListener("mousemove", (e) => {
                 if (s.tier < tiers.length) {
                     cursor = "pointer";
                     const nextCost = tiers[s.tier].cost;
-                    content += `<div class="mt-1 pt-1 border-t border-gray-700"><span class="text-green-300 text-xs font-bold">Upgrade: $${nextCost}</span></div>`;
+                    content += `<div class="mt-1 pt-1 border-t border-gray-700"><span class="text-green-300 text-xs font-bold">${i18n.t('upgrade_label')} $${nextCost}</span></div>`;
                     if (s.mesh.material.emissive)
                         s.mesh.material.emissive.setHex(0x333333);
                 } else {
-                    content += `<div class="mt-1 pt-1 border-t border-gray-700"><span class="text-gray-500 text-xs">Max Tier</span></div>`;
+                    content += `<div class="mt-1 pt-1 border-t border-gray-700"><span class="text-gray-500 text-xs">${i18n.t('max_tier')}</span></div>`;
                 }
             }
 
@@ -2191,10 +2189,10 @@ function setupUITooltips() {
         if (config && config.tooltip) {
             btn.addEventListener("mousemove", (e) => {
                 const content = `
-                    <strong class="text-blue-300">${config.name}</strong> <span class="text-green-400">$${config.cost}</span><br>
-                    <span class="text-xs text-gray-400">${config.tooltip.desc}</span><br>
+                    <strong class="text-blue-300">${i18n.t(serviceKey)}</strong> <span class="text-green-400">$${config.cost}</span><br>
+                    <span class="text-xs text-gray-400">${i18n.t(serviceKey + '_desc')}</span><br>
                     <div class="mt-1 pt-1 border-t border-gray-700 flex justify-between text-xs">
-                        <span class="text-gray-500">Upkeep: <span class="text-gray-300">${config.tooltip.upkeep}</span></span>
+                        <span class="text-gray-500">${i18n.t('upkeep_label')} <span class="text-gray-300">${i18n.t(config.tooltip.upkeep.toLowerCase().replace(' ', '_'))}</span></span>
                     </div>
                 `;
                 showTooltip(e.clientX + 15, e.clientY - 100, content); // Show above the button
@@ -2419,7 +2417,7 @@ function animate(time) {
     const upkeepDisplay = document.getElementById("upkeep-display");
     if (upkeepDisplay) {
         if (autoRepairCost > 0) {
-            upkeepDisplay.innerText = `-$${totalUpkeep.toFixed(2)}/s (+repair)`;
+            upkeepDisplay.innerText = `-$${totalUpkeep.toFixed(2)}/s ${i18n.t('plus_repair')}`;
             upkeepDisplay.className = "text-orange-400 font-mono";
         } else if (multiplier > 1.05) {
             upkeepDisplay.innerText = `-$${totalUpkeep.toFixed(
@@ -2470,7 +2468,7 @@ function animate(time) {
     )}%`;
     document.getElementById(
         "rps-display"
-    ).innerText = `${STATE.currentRPS.toFixed(1)} req/s`;
+    ).innerText = `${STATE.currentRPS.toFixed(1)} ${i18n.t('req_per_sec')}`;
 
     // Update elapsed time
     const elapsedEl = document.getElementById("elapsed-time");
@@ -2507,7 +2505,7 @@ function animate(time) {
                 rpsCountdownEl.textContent = formatTime(timeRemaining);
             } else {
                 // All milestones reached
-                rpsNextEl.textContent = "MAX";
+                rpsNextEl.textContent = i18n.t('max');
                 rpsCountdownEl.textContent = "--";
             }
         }
@@ -2526,7 +2524,7 @@ function animate(time) {
         failuresPanel.classList.remove("hidden");
         document.getElementById(
             "failures-total"
-        ).textContent = `${totalFailures} total`;
+        ).textContent = `${totalFailures} ${i18n.t('total')}`;
 
         // Update counts
         document.getElementById("fail-malicious").textContent =
@@ -2584,29 +2582,25 @@ function animate(time) {
         // Determine failure reason and generate tips
         const failureAnalysis = analyzeFailure();
 
-        document.getElementById("modal-title").innerText = "SYSTEM FAILURE";
+        document.getElementById("modal-title").innerText = i18n.t('system_failure');
         document.getElementById("modal-title").classList.add("text-red-500");
         document.getElementById("modal-desc").innerHTML = `
             <div class="text-left space-y-3">
-                <div class="text-center text-2xl font-bold text-yellow-400 mb-2">Final Score: ${STATE.score.total
-            }</div>
-                <div class="text-center text-sm text-gray-400 mb-4">Survived: ${formatTime(
-                STATE.elapsedGameTime || 0
-            )}</div>
+                <div class="text-center text-2xl font-bold text-yellow-400 mb-2">${i18n.t('final_score', { score: STATE.score.total })}</div>
+                <div class="text-center text-sm text-gray-400 mb-4">${i18n.t('survived_time', { time: formatTime(STATE.elapsedGameTime || 0) })}</div>
                 
                 <div class="bg-red-900/30 border border-red-500/50 rounded-lg p-3">
-                    <div class="text-red-400 font-bold text-sm uppercase mb-1">⚠️ Failure Reason</div>
+                    <div class="text-red-400 font-bold text-sm uppercase mb-1">${i18n.t('failure_reason')}</div>
                     <div class="text-white">${failureAnalysis.reason}</div>
                 </div>
                 
                 <div class="bg-blue-900/30 border border-blue-500/50 rounded-lg p-3">
-                    <div class="text-blue-400 font-bold text-sm uppercase mb-1">📊 Analysis</div>
-                    <div class="text-gray-300 text-sm">${failureAnalysis.description
-            }</div>
+                    <div class="text-blue-400 font-bold text-sm uppercase mb-1">${i18n.t('analysis')}</div>
+                    <div class="text-gray-300 text-sm">${failureAnalysis.description}</div>
                 </div>
                 
                 <div class="bg-green-900/30 border border-green-500/50 rounded-lg p-3">
-                    <div class="text-green-400 font-bold text-sm uppercase mb-1">💡 Tips for Next Time</div>
+                    <div class="text-green-400 font-bold text-sm uppercase mb-1">${i18n.t('tips_title')}</div>
                     <ul class="text-gray-300 text-sm list-disc list-inside space-y-1">
                         ${failureAnalysis.tips
                 .map((tip) => `<li>${tip}</li>`)
@@ -2632,7 +2626,7 @@ function analyzeFailure() {
 
     // Determine primary failure reason
     if (STATE.reputation <= 0) {
-        result.reason = "Reputation Collapsed";
+        result.reason = i18n.t('reason_reputation');
 
         // Check what caused reputation loss
         const totalFailures = Object.values(STATE.failures).reduce(
@@ -2642,69 +2636,63 @@ function analyzeFailure() {
         const maliciousFailures = STATE.failures.MALICIOUS || 0;
 
         if (maliciousFailures > totalFailures * 0.3) {
-            result.description = `Too many malicious requests got through (${maliciousFailures} attacks passed). Each unblocked attack costs -5 reputation.`;
-            result.tips.push("Add a WAF (Firewall) as your first line of defense");
-            result.tips.push("Multiple WAFs can handle traffic spikes better");
+            result.description = i18n.t('reason_malicious', { count: maliciousFailures });
+            result.tips.push(i18n.t('tip_waf'));
+            result.tips.push(i18n.t('tip_multiple_waf'));
         } else {
             const worstFailure = Object.entries(STATE.failures)
                 .filter(([k]) => k !== "MALICIOUS")
                 .sort((a, b) => b[1] - a[1])[0];
 
             if (worstFailure && worstFailure[1] > 0) {
-                result.description = `Too many ${worstFailure[0]} requests failed (${worstFailure[1]} failures). Failed requests damage your reputation.`;
+                result.description = i18n.t('reason_failed_type', { 
+                    type: i18n.t('traffic_' + worstFailure[0].toLowerCase()), 
+                    count: worstFailure[1] 
+                });
 
                 if (worstFailure[0] === "STATIC" || worstFailure[0] === "UPLOAD") {
-                    result.tips.push(
-                        "Add more S3 Storage nodes for STATIC/UPLOAD traffic"
-                    );
+                    result.tips.push(i18n.t('tip_s3'));
                 } else {
-                    result.tips.push("Add more Database nodes or upgrade existing ones");
-                    result.tips.push("Use Cache to reduce database load");
+                    result.tips.push(i18n.t('tip_db'));
+                    result.tips.push(i18n.t('tip_cache'));
                 }
             } else {
-                result.description =
-                    "Requests were failing faster than your infrastructure could handle.";
+                result.description = i18n.t('desc_reputation');
             }
         }
 
-        result.tips.push("Add Queue (SQS) to buffer traffic during spikes");
-        result.tips.push("Monitor the health panel and repair damaged services");
+        result.tips.push(i18n.t('tip_sqs'));
+        result.tips.push(i18n.t('tip_repair'));
     } else if (STATE.money <= -1000) {
-        result.reason = "Bankruptcy";
-        result.description = `You ran out of money ($${Math.floor(
-            STATE.money
-        )}). Upkeep costs exceeded your income from processed requests.`;
+        result.reason = i18n.t('reason_bankruptcy');
+        result.description = i18n.t('desc_bankruptcy', { money: Math.floor(STATE.money) });
 
         // Analyze spending
         if (STATE.finances) {
             const upkeepRatio =
                 STATE.finances.expenses.upkeep / (STATE.finances.income.total || 1);
             if (upkeepRatio > 0.8) {
-                result.tips.push("Your upkeep costs were too high relative to income");
-                result.tips.push(
-                    "Start with fewer services and scale up as income grows"
-                );
+                result.tips.push(i18n.t('tip_upkeep_high'));
+                result.tips.push(i18n.t('tip_scale_slow'));
             }
 
             if (STATE.finances.expenses.repairs > STATE.finances.income.total * 0.2) {
-                result.tips.push(
-                    "Repair costs were eating into profits - enable Auto-Repair early"
-                );
+                result.tips.push(i18n.t('tip_auto_repair'));
             }
         }
 
-        result.tips.push("Focus on processing more requests to increase income");
-        result.tips.push("Use Cache to speed up request processing");
-        result.tips.push("Cheaper services (WAF, S3) have lower upkeep");
+        result.tips.push(i18n.t('tip_scale_slow'));
+        result.tips.push(i18n.t('tip_cache'));
+        result.tips.push(i18n.t('tip_s3'));
     }
 
     // Add general tips based on game state
     if (STATE.services.length < 3) {
-        result.tips.push("Build a complete pipeline: WAF → ALB → Compute → DB/S3");
+        result.tips.push(i18n.t('tip_complete_pipeline'));
     }
 
     if (!STATE.services.some((s) => s.type === "cache")) {
-        result.tips.push("Add Cache to improve hit rates and reduce DB load");
+        result.tips.push(i18n.t('tip_add_cache'));
     }
 
     // Limit tips to 4
@@ -2827,7 +2815,7 @@ window.toggleUpkeep = () => {
     STATE.upkeepEnabled = !STATE.upkeepEnabled;
     const btn = document.getElementById("upkeep-toggle");
     if (btn) {
-        btn.textContent = STATE.upkeepEnabled ? "Upkeep: ON" : "Upkeep: OFF";
+        btn.textContent = STATE.upkeepEnabled ? i18n.t('upkeep_on_label') : i18n.t('upkeep_off_label');
         btn.classList.toggle("bg-red-900/50", STATE.upkeepEnabled);
         btn.classList.toggle("bg-green-900/50", !STATE.upkeepEnabled);
     }
@@ -2931,7 +2919,7 @@ window.saveGameState = () => {
         STATE.sound.playPlace(); // Use place sound as feedback
     } catch (error) {
         console.error("Failed to save game:", error);
-        alert("Failed to save game. Please try again.");
+        alert(i18n.t('save_failed'));
     }
 };
 
@@ -2978,7 +2966,7 @@ window.loadGameState = () => {
     try {
         const saveDataStr = localStorage.getItem("serverSurvivalSave");
         if (!saveDataStr) {
-            alert("No saved game found.");
+            alert(i18n.t('no_save_found_msg'));
             return;
         }
 
@@ -3083,7 +3071,7 @@ window.loadGameState = () => {
         )}%`;
         document.getElementById(
             "rps-display"
-        ).innerText = `${STATE.currentRPS.toFixed(1)} req/s`;
+        ).innerText = `${STATE.currentRPS.toFixed(1)} ${i18n.t('req_per_sec')}`;
 
         const sandboxPanel = document.getElementById("sandboxPanel");
         const objectivesPanel = document.getElementById("objectivesPanel");
@@ -3103,8 +3091,8 @@ window.loadGameState = () => {
             const upkeepBtn = document.getElementById("upkeep-toggle");
             if (upkeepBtn) {
                 upkeepBtn.textContent = STATE.upkeepEnabled
-                    ? "Upkeep: ON"
-                    : "Upkeep: OFF";
+                    ? i18n.t('upkeep_on_label')
+                    : i18n.t('upkeep_off_label');
                 upkeepBtn.classList.toggle("bg-red-900/50", STATE.upkeepEnabled);
                 upkeepBtn.classList.toggle("bg-green-900/50", !STATE.upkeepEnabled);
             }
@@ -3122,7 +3110,7 @@ window.loadGameState = () => {
         STATE.sound.playPlace();
     } catch (error) {
         console.error("Failed to load game:", error);
-        alert("Failed to load game. The save file may be corrupted.");
+        alert(i18n.t('load_failed_corrupted'));
     }
 };
 

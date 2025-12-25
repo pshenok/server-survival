@@ -3,175 +3,170 @@ const TUTORIAL_STORAGE_KEY = 'serverSurvivalTutorialComplete';
 const TUTORIAL_STEPS = [
     {
         id: 'welcome',
-        title: 'Welcome, Architect!',
-        text: 'You are in charge of a server infrastructure. Your goal is to route incoming traffic correctly and protect against attacks. Let\'s build your first setup!',
+        title: i18n.t('tut_welcome_title'),
+        text: i18n.t('tut_welcome_text'),
         icon: '👋',
         highlight: null,
         action: 'next',
         position: 'center',
-        hint: 'Traffic will start flowing once you press Play. First, let\'s prepare your defenses!'
+        hint: i18n.t('tut_welcome_hint')
     },
     {
         id: 'traffic-types',
-        title: 'HTTP Traffic Types',
+        title: i18n.t('tut_traffic_types_title'),
         text: '<div class="space-y-2 text-left text-sm">' +
-            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span><span class="text-green-400 font-bold w-16">STATIC</span><span class="text-gray-300">GET request • Images, CSS, JS files → <span class="text-emerald-400">Storage</span></span></div>' +
-            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span><span class="text-blue-400 font-bold w-16">READ</span><span class="text-gray-300">GET request • Fetch user data, API calls → <span class="text-red-400">Database</span></span></div>' +
-            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-orange-400 inline-block"></span><span class="text-orange-400 font-bold w-16">WRITE</span><span class="text-gray-300">POST/PUT • Create/update records → <span class="text-red-400">Database</span></span></div>' +
-            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span><span class="text-yellow-400 font-bold w-16">UPLOAD</span><span class="text-gray-300">POST+file • User uploads, media → <span class="text-emerald-400">Storage</span></span></div>' +
-            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span><span class="text-cyan-400 font-bold w-16">SEARCH</span><span class="text-gray-300">GET+query • Full-text search, filters → <span class="text-red-400">Database</span></span></div>' +
-            '<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span><span class="text-red-400 font-bold w-16">ATTACK</span><span class="text-gray-300">DDoS, SQL injection, bots → <span class="text-purple-400">Block with Firewall!</span></span></div>' +
+            `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span><span class="text-green-400 font-bold w-16">${i18n.t('tut_traffic_types_static')}</span><span class="text-gray-300">${i18n.t('tut_traffic_types_static_desc')}<span class="text-emerald-400">${i18n.t('storage_short')}</span></span></div>` +
+            `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span><span class="text-blue-400 font-bold w-16">${i18n.t('tut_traffic_types_read')}</span><span class="text-gray-300">${i18n.t('tut_traffic_types_read_desc')}<span class="text-red-400">${i18n.t('db_short')}</span></span></div>` +
+            `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-orange-400 inline-block"></span><span class="text-orange-400 font-bold w-16">${i18n.t('tut_traffic_types_write')}</span><span class="text-gray-300">${i18n.t('tut_traffic_types_write_desc')}<span class="text-red-400">${i18n.t('db_short')}</span></span></div>` +
+            `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span><span class="text-yellow-400 font-bold w-16">${i18n.t('tut_traffic_types_upload')}</span><span class="text-gray-300">${i18n.t('tut_traffic_types_upload_desc')}<span class="text-emerald-400">${i18n.t('storage_short')}</span></span></div>` +
+            `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-cyan-400 inline-block"></span><span class="text-cyan-400 font-bold w-16">${i18n.t('tut_traffic_types_search')}</span><span class="text-gray-300">${i18n.t('tut_traffic_types_search_desc')}<span class="text-red-400">${i18n.t('db_short')}</span></span></div>` +
+            `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span><span class="text-red-400 font-bold w-16">${i18n.t('tut_traffic_types_attack')}</span><span class="text-gray-300">${i18n.t('tut_traffic_types_attack_desc')}<span class="text-purple-400">${i18n.t('tut_traffic_types_block_fw')}</span></span></div>` +
             '</div>' +
             '<div class="mt-3 pt-2 border-t border-gray-700 text-xs text-gray-400">' +
-            '<div class="flex justify-between"><span>Cache reduces DB/Storage load:</span><span>STATIC 90% • READ 40% • SEARCH 15%</span></div>' +
-            '<div class="flex justify-between"><span>Heavy processing (slower):</span><span>UPLOAD 2× • SEARCH 2.5×</span></div>' +
+            `<div class="flex justify-between"><span>${i18n.t('tut_traffic_types_cache_hint')}</span><span>${i18n.t('traffic_static')} 90% • ${i18n.t('traffic_read')} 40% • ${i18n.t('traffic_search')} 15%</span></div>` +
+            `<div class="flex justify-between"><span>${i18n.t('tut_traffic_types_heavy_hint')}</span><span>${i18n.t('traffic_upload')} 2× • ${i18n.t('traffic_search')} 2.5×</span></div>` +
             '</div>',
         icon: '🌐',
         highlight: null,
         action: 'next',
         position: 'center',
-        hint: 'Real backends handle these exact request types! Route them to the correct destination to earn rewards.'
+        hint: i18n.t('tut_traffic_types_hint')
     },
     {
         id: 'place-firewall',
-        title: 'Deploy Firewall',
-        text: 'The <span class="text-purple-400 font-bold">Firewall</span> is your first line of defense. It blocks <span class="text-red-400">MALICIOUS</span> traffic (red) that can destroy your reputation. Click the FW button, then click on the grid to place it.',
+        title: i18n.t('tut_place_fw_title'),
+        text: i18n.t('tut_place_fw_text'),
         icon: '🛡️',
         highlight: 'tool-waf',
         action: 'place_waf',
-        hint: 'Place the Firewall close to the Internet node (the cyan box on the left) for easier connection.'
+        hint: i18n.t('tut_place_fw_hint')
     },
     {
         id: 'connect-firewall',
-        title: 'Connect to Internet',
-        text: 'Great! Now connect the <span class="text-cyan-400 font-bold">Internet</span> to your Firewall. Select the <span class="text-blue-400 font-bold">Link</span> tool, click on Internet first, then click on the Firewall.',
+        title: i18n.t('tut_connect_fw_title'),
+        text: i18n.t('tut_connect_fw_text'),
         icon: '🔗',
         highlight: 'tool-connect',
         action: 'connect_internet_waf',
-        hint: 'All traffic enters through the Internet node. Without this connection, no traffic will reach your infrastructure.'
+        hint: i18n.t('tut_connect_fw_hint')
     },
     {
         id: 'place-lb',
-        title: 'Deploy Load Balancer',
-        text: 'The <span class="text-blue-400 font-bold">Load Balancer</span> distributes traffic across multiple servers. This prevents overload and improves reliability.',
+        title: i18n.t('tut_place_lb_title'),
+        text: i18n.t('tut_place_lb_text'),
         icon: '⚖️',
         highlight: 'tool-alb',
         action: 'place_alb',
-        hint: 'Load Balancers use Round Robin to evenly distribute requests.'
+        hint: i18n.t('tut_place_lb_hint')
     },
     {
         id: 'connect-fw-lb',
-        title: 'Connect Firewall to LB',
-        text: 'Connect your Firewall to the Load Balancer. Clean traffic will flow from Firewall → Load Balancer.',
+        title: i18n.t('tut_connect_fw_lb_title'),
+        text: i18n.t('tut_connect_fw_lb_text'),
         icon: '🔗',
         highlight: 'tool-connect',
         action: 'connect_waf_alb',
-        hint: 'Traffic flow: Internet → Firewall (blocks MALICIOUS) → Load Balancer → ...'
+        hint: i18n.t('tut_connect_fw_lb_hint')
     },
     {
         id: 'place-compute',
-        title: 'Deploy Compute Server',
-        text: '<span class="text-orange-400 font-bold">Compute</span> processes all requests. It routes traffic to the correct destination: <span class="text-emerald-400">Storage</span> for STATIC/UPLOAD, <span class="text-red-400">Database</span> for READ/WRITE/SEARCH.',
+        title: i18n.t('tut_place_compute_title'),
+        text: i18n.t('tut_place_compute_text'),
         icon: '⚡',
         highlight: 'tool-lambda',
         action: 'place_compute',
-        hint: 'You can upgrade Compute later to handle more traffic (Tier 1 → 2 → 3). Heavy requests like UPLOAD and SEARCH take longer to process.'
+        hint: i18n.t('tut_place_compute_hint')
     },
     {
         id: 'connect-lb-compute',
-        title: 'Connect LB to Compute',
-        text: 'Connect the Load Balancer to your Compute server.',
+        title: i18n.t('tut_connect_lb_compute_title'),
+        text: i18n.t('tut_connect_lb_compute_text'),
         icon: '🔗',
         highlight: 'tool-connect',
         action: 'connect_alb_compute',
-        hint: 'You can add multiple Compute servers and the Load Balancer will distribute traffic between them.'
+        hint: i18n.t('tut_connect_lb_compute_hint')
     },
     {
         id: 'place-storage',
-        title: 'Deploy File Storage',
-        text: '<span class="text-emerald-400 font-bold">File Storage</span> handles <span class="text-green-400">STATIC</span> (green) and <span class="text-yellow-400">UPLOAD</span> (yellow) traffic. Without it, these requests will fail!',
+        title: i18n.t('tut_place_storage_title'),
+        text: i18n.t('tut_place_storage_text'),
         icon: '📁',
         highlight: 'tool-s3',
         action: 'place_s3',
-        hint: 'STATIC = images, CSS, JS files (90% cache hit rate). UPLOAD = file uploads (heavy, never cached).'
+        hint: i18n.t('tut_place_storage_hint')
     },
     {
         id: 'place-cdn',
-        title: 'Deploy CDN',
-        text: '<span class="text-green-400 font-bold">CDN</span> (Content Delivery Network) speeds up <span class="text-green-400">STATIC</span> content delivery. It sits between the Internet and Storage.',
+        title: i18n.t('tut_place_cdn_title'),
+        text: i18n.t('tut_place_cdn_text'),
         icon: '🌍',
         highlight: 'tool-cdn',
         action: 'place_cdn',
-        hint: 'CDNs have a very high cache hit rate (95%), meaning most requests never need to touch your Storage servers!'
+        hint: i18n.t('tut_place_cdn_hint')
     },
     {
         id: 'connect-internet-cdn',
-        title: 'Connect Internet to CDN',
-        text: 'Connect the <span class="text-cyan-400 font-bold">Internet</span> to your <span class="text-green-400 font-bold">CDN</span>. This allows users to hit the edge cache first.',
+        title: i18n.t('tut_connect_internet_cdn_title'),
+        text: i18n.t('tut_connect_internet_cdn_text'),
         icon: '🔗',
         highlight: 'tool-connect',
         action: 'connect_internet_cdn',
-        hint: 'Traffic flow: Internet → CDN. If cache miss → Storage.'
+        hint: i18n.t('tut_connect_internet_cdn_hint')
     },
     {
         id: 'connect-cdn-s3',
-        title: 'Connect CDN to Storage',
-        text: 'Connect the <span class="text-green-400 font-bold">CDN</span> to <span class="text-emerald-400 font-bold">File Storage</span>. This allows the CDN to fetch content on cache misses.',
+        title: i18n.t('tut_connect_cdn_s3_title'),
+        text: i18n.t('tut_connect_cdn_s3_text'),
         icon: '🔗',
         highlight: 'tool-connect',
         action: 'connect_cdn_s3',
-        hint: 'Only cache misses (5%) will go to Storage. This saves money and capacity!'
+        hint: i18n.t('tut_connect_cdn_s3_hint')
     },
     {
         id: 'place-db',
-        title: 'Deploy SQL Database',
-        text: '<span class="text-red-400 font-bold">SQL Database</span> handles <span class="text-blue-400">READ</span>, <span class="text-orange-400">WRITE</span>, and <span class="text-cyan-400">SEARCH</span> traffic. APIs need database storage.',
+        title: i18n.t('tut_place_db_title'),
+        text: i18n.t('tut_place_db_text'),
         icon: '🗄️',
         highlight: 'tool-db',
         action: 'place_db',
-        hint: 'READ = data fetch (40% cache). WRITE = database updates (never cached). SEARCH = complex queries (15% cache, heavy).'
+        hint: i18n.t('tut_place_db_hint')
     },
     {
         id: 'connect-compute-storage',
-        title: 'Connect to Storage',
-        text: 'Connect <span class="text-orange-400">Compute</span> to <span class="text-emerald-400">File Storage</span>. Use the Link tool.',
+        title: i18n.t('tut_connect_compute_storage_title'),
+        text: i18n.t('tut_connect_compute_storage_text'),
         icon: '🔗',
         highlight: 'tool-connect',
         action: 'connect_compute_s3',
-        hint: 'Compute automatically routes STATIC and UPLOAD traffic to File Storage.'
+        hint: i18n.t('tut_connect_compute_storage_hint')
     },
     {
         id: 'connect-compute-db',
-        title: 'Connect to Database',
-        text: 'Connect <span class="text-orange-400">Compute</span> to <span class="text-red-400">SQL Database</span>.',
+        title: i18n.t('tut_connect_compute_db_title'),
+        text: i18n.t('tut_connect_compute_db_text'),
         icon: '🔗',
         highlight: 'tool-connect',
         action: 'connect_compute_db',
-        hint: 'Compute automatically routes READ, WRITE, and SEARCH traffic to SQL Database.'
+        hint: i18n.t('tut_connect_compute_db_hint')
     },
     {
         id: 'ready',
-        title: 'Infrastructure Ready!',
-        text: 'Your basic infrastructure is complete! Press the <span class="text-green-400 font-bold">Play</span> button to start the simulation. Watch as traffic flows through your system!',
+        title: i18n.t('tut_ready_title'),
+        text: i18n.t('tut_ready_text'),
         icon: '🚀',
         highlight: 'btn-play',
         action: 'start_game',
-        hint: 'Monitor the colored rings around services - green is good, red means overload. Upgrade or add more services as needed!'
+        hint: i18n.t('tut_ready_hint')
     },
     {
         id: 'complete',
-        title: 'Tutorial Complete!',
-        text: '<span class="text-green-400">Congratulations!</span> You now know the basics. Remember:<br><br>' +
-            '• <span class="text-red-400">Red</span> MALICIOUS → Block with Firewall<br>' +
-            '• <span class="text-green-400">Green</span> STATIC / <span class="text-yellow-400">Yellow</span> UPLOAD → Route to Storage<br>' +
-            '• <span class="text-blue-400">Blue</span> READ / <span class="text-orange-400">Orange</span> WRITE / <span class="text-cyan-400">Cyan</span> SEARCH → Route to SQL DB<br>' +
-            '• Cache helps STATIC (90%), READ (40%), SEARCH (15%)<br><br>' +
-            'Good luck, Architect!',
+        title: i18n.t('tut_complete_title'),
+        text: i18n.t('tut_complete_text'),
         icon: '🎉',
         highlight: null,
         action: 'finish',
         position: 'center',
-        hint: 'Don\'t worry if your budget goes negative at first! Just like real infrastructure - you invest upfront, then profit comes from processed traffic. Each completed request earns money!'
+        hint: i18n.t('tut_complete_hint')
     }
 ];
 

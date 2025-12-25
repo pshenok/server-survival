@@ -603,7 +603,7 @@ class Service {
     if (STATE.money < repairCost) {
       flashMoney();
       addInterventionWarning(
-        `❌ Need $${repairCost} to repair`,
+        i18n.t('repair_need_money', { cost: repairCost }),
         "danger",
         2000
       );
