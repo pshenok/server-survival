@@ -182,8 +182,7 @@ class Tutorial {
         this.titleEl = document.getElementById('tutorial-title');
         this.textEl = document.getElementById('tutorial-text');
         this.iconEl = document.getElementById('tutorial-icon');
-        this.stepNumEl = document.getElementById('tutorial-step-num');
-        this.totalStepsEl = document.getElementById('tutorial-total-steps');
+        this.stepContainerEl = document.getElementById('tutorial-step-container');
         this.hintEl = document.getElementById('tutorial-hint');
         this.hintTextEl = document.getElementById('tutorial-hint-text');
         this.nextBtn = document.getElementById('tutorial-next');
@@ -214,7 +213,6 @@ class Tutorial {
         this.currentStep = 0;
         this.completedActions.clear();
         this.modal.classList.remove('hidden');
-        this.totalStepsEl.textContent = TUTORIAL_STEPS.length;
         this.renderProgress();
         this.popup.classList.add('tutorial-enter');
         setTimeout(() => this.popup.classList.remove('tutorial-enter'), 500);
@@ -231,7 +229,13 @@ class Tutorial {
         this.titleEl.textContent = step.title;
         this.textEl.innerHTML = step.text;
         this.iconEl.textContent = step.icon;
-        this.stepNumEl.textContent = this.currentStep + 1;
+        
+        if (this.stepContainerEl) {
+            this.stepContainerEl.textContent = i18n.t('step_x_of_y', {
+                step: this.currentStep + 1,
+                total: TUTORIAL_STEPS.length
+            });
+        }
 
         if (step.hint) {
             this.hintEl.classList.remove('hidden');
