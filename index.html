@@ -263,10 +263,12 @@
     <div
       class="absolute top-4 left-1/2 transform -translate-x-1/2 glass-panel rounded-xl p-2 pointer-events-auto flex gap-2">
       <!-- Language Switcher -->
-      <div class="flex items-center bg-gray-800 rounded-lg px-2 border border-gray-600 mr-1">
-        <button onclick="i18n.setLocale('en')" class="text-[10px] font-bold px-1 hover:text-white transition-colors" id="lang-en">EN</button>
-        <span class="text-gray-600 text-[10px]">|</span>
-        <button onclick="i18n.setLocale('zh')" class="text-[10px] font-bold px-1 hover:text-white transition-colors" id="lang-zh">ZH</button>
+      <div class="flex items-center bg-gray-800 rounded-lg px-1 border border-gray-600 mr-1">
+        <select onchange="i18n.setLocale(this.value)" id="lang-select"
+          class="bg-transparent text-[10px] font-bold text-gray-400 hover:text-white transition-colors cursor-pointer outline-none py-1 px-1">
+          <option value="en" class="bg-gray-800 text-white">EN</option>
+          <option value="zh" class="bg-gray-800 text-white">ZH</option>
+        </select>
       </div>
       <button onclick="saveGameState()" id="btn-save"
         class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-green-500 hover:text-green-400 flex items-center justify-center"

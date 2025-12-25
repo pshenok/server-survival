@@ -59,6 +59,12 @@ class I18nManager {
 
         // Update document title
         document.title = this.t('title');
+
+        // Update language select if it exists
+        const langSelect = document.getElementById('lang-select');
+        if (langSelect) {
+            langSelect.value = this.currentLocale;
+        }
     }
 }
 
