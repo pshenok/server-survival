@@ -77,19 +77,21 @@ const STATE = {
         trafficShiftActive: false,
         currentShift: null,
         originalTrafficDist: null,
-        
+
         // Random events state
         randomEventTimer: 0,
         activeEvent: null,
         eventEndTime: 0,
-        
+        pausedEvent: null,
+        remainingTime: 0,
+
         // RPS milestone tracking
         currentMilestoneIndex: 0,
         rpsMultiplier: 1.0,
-        
+
         // Event history for UI
         recentEvents: [],
-        
+
         // Warning state
         warnings: []
     }

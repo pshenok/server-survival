@@ -20,14 +20,13 @@ function formatTime(totalSeconds) {
 // ==================== BALANCE OVERHAUL FUNCTIONS ====================
 
 function calculateTargetRPS(gameTimeSeconds) {
-    // Aggressive growth curve for constant engagement
-    // Combines logarithmic base with linear acceleration
+
     const base = CONFIG.survival.baseRPS;
     const logGrowth = Math.log(1 + gameTimeSeconds / 20) * 2.2;
     const linearBoost = gameTimeSeconds * 0.008; // Adds ~0.5 RPS per minute
     let targetRPS = base + logGrowth + linearBoost;
 
-    // Apply milestone acceleration for faster late-game scaling
+
     if (CONFIG.survival.rpsAcceleration && STATE.intervention) {
         const milestones = CONFIG.survival.rpsAcceleration.milestones;
         let multiplier = 1.0;
@@ -37,7 +36,7 @@ function calculateTargetRPS(gameTimeSeconds) {
                 multiplier = milestones[i].multiplier;
                 if (STATE.intervention.currentMilestoneIndex < i + 1) {
                     STATE.intervention.currentMilestoneIndex = i + 1;
-                    // Add warning when milestone is reached
+
                     addInterventionWarning(
                         i18n.t('rps_surge_warning', { multiplier: multiplier.toFixed(1) }),
                         "danger",
@@ -58,7 +57,6 @@ function getUpkeepMultiplier() {
     if (STATE.gameMode !== "survival") return 1.0;
     if (!CONFIG.survival.upkeepScaling.enabled) return 1.0;
 
-    // Use simulated elapsed time so timeScale affects upkeep ramp
     const gameTime =
         STATE.elapsedGameTime ?? (performance.now() - STATE.gameStartTime) / 1000;
     const progress = Math.min(
@@ -69,10 +67,8 @@ function getUpkeepMultiplier() {
     const base = CONFIG.survival.upkeepScaling.baseMultiplier;
     const max = CONFIG.survival.upkeepScaling.maxMultiplier;
 
-    // Smooth curve from base to max
     let multiplier = base + (max - base) * progress;
 
-    // Apply random event cost spike if active
     if (STATE.intervention?.costMultiplier) {
         multiplier *= STATE.intervention.costMultiplier;
     }
@@ -92,7 +88,6 @@ function updateMaliciousSpike(dt) {
 
     const cycleTime = STATE.maliciousSpikeTimer % interval;
 
-    // Warning phase
     if (
         cycleTime >= interval - warning &&
         cycleTime < interval - warning + dt &&
@@ -101,12 +96,10 @@ function updateMaliciousSpike(dt) {
         showMaliciousWarning();
     }
 
-    // Start spike
     if (cycleTime < dt && STATE.maliciousSpikeTimer > warning) {
         startMaliciousSpike();
     }
 
-    // End spike
     if (
         STATE.maliciousSpikeActive &&
         cycleTime >= duration &&
@@ -120,7 +113,6 @@ function showMaliciousWarning() {
     const existing = document.getElementById("malicious-warning");
     if (existing) existing.remove();
 
-    // Visual warning
     const warning = document.createElement("div");
     warning.id = "malicious-warning";
     warning.className =
@@ -141,9 +133,10 @@ function startMaliciousSpike() {
     const existing = document.getElementById("malicious-spike-indicator");
     if (existing) existing.remove();
 
+    if (STATE.intervention && STATE.intervention.trafficShiftActive) return;
+
     STATE.maliciousSpikeActive = true;
 
-    // Store normal distribution
     STATE.normalTrafficDist = { ...STATE.trafficDistribution };
 
     const maliciousPct = CONFIG.survival.maliciousSpike.maliciousPercent;
@@ -159,7 +152,6 @@ function startMaliciousSpike() {
         MALICIOUS: maliciousPct,
     };
 
-    // Visual indicator
     const indicator = document.createElement("div");
     indicator.id = "malicious-spike-indicator";
     indicator.className =
@@ -171,7 +163,6 @@ function startMaliciousSpike() {
     `;
     document.body.appendChild(indicator);
 
-    // Update mix display
     const maliciousEl = document.getElementById("mix-malicious");
     if (maliciousEl)
         maliciousEl.className = "text-red-500 font-bold animate-pulse";
@@ -286,24 +277,9 @@ function startTrafficShift() {
     // Store original distribution
     STATE.intervention.originalTrafficDist = { ...STATE.trafficDistribution };
 
-    // Apply the shift
-    const newDist = { ...STATE.trafficDistribution };
-    const boostAmount = 0.25; // Boost the specified type by 25%
-
-    // Reduce all others proportionally to make room
-    const totalOthers = Object.entries(newDist)
-        .filter(([key]) => key !== shift.type)
-        .reduce((sum, [, val]) => sum + val, 0);
-
-    Object.keys(newDist).forEach((key) => {
-        if (key === shift.type) {
-            newDist[key] = Math.min(0.6, newDist[key] + boostAmount);
-        } else {
-            newDist[key] *= 1 - boostAmount / totalOthers;
-        }
-    });
-
-    STATE.trafficDistribution = newDist;
+    if (shift.distribution) {
+        STATE.trafficDistribution = { ...shift.distribution };
+    }
 
     addInterventionWarning(
         i18n.t('traffic_surging', { 
@@ -358,13 +334,33 @@ function updateRandomEvents(dt) {
     }
 }
 
-function triggerRandomEvent() {
+window.handleGameState = (timeScale) => {
+    if (timeScale === 0) { // pause state
+        STATE.intervention.pausedEvent = STATE.intervention.activeEvent;
+        STATE.intervention.remainingTime = STATE.intervention.eventEndTime - Date.now();
+        endRandomEvent();
+    } else if (STATE.intervention.pausedEvent) { // not paused state
+        triggerRandomEvent(
+            STATE.intervention.pausedEvent,
+            STATE.intervention.remainingTime
+        );
+        STATE.intervention.pausedEvent = null;
+        STATE.intervention.remainingTime = 0;
+    }
+
+    window.setTimeScale(timeScale);
+}
+
+function triggerRandomEvent(
+    eventType = null,
+    duration = null
+) {
     if (!STATE.intervention || STATE.intervention.activeEvent) return;
 
     const config = CONFIG.survival.randomEvents;
-    const eventType =
-        config.types[Math.floor(Math.random() * config.types.length)];
-    const duration = 30000; // 30 second events
+    if (!eventType)
+        eventType = config.types[Math.floor(Math.random() * config.types.length)];
+    if (!duration) duration = 30000; // 30 seconds
 
     STATE.intervention.activeEvent = eventType;
     STATE.intervention.eventEndTime = Date.now() + duration;
