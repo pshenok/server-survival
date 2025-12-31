@@ -8,6 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 </head>
 
 <body>
@@ -665,48 +666,110 @@
   </div>
 
   <!-- Main Menu Modal -->
-  <div id="main-menu-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-    <div
-      class="relative bg-gray-900/90 p-12 rounded-2xl border border-blue-500/30 shadow-2xl max-w-md w-full text-center">
-      <!-- Menu Mute Button -->
+  <div id="main-menu-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
+    <!-- Mute Button (Dynamic position) -->
+    <div class="absolute top-8 right-8 z-50">
       <button id="menu-mute-btn" onclick="toggleMute()"
-        class="absolute top-4 right-4 text-gray-400 hover:text-white transition p-2 rounded-full pulse-green">
-        <span id="menu-mute-icon" class="text-xl">🔇</span>
+        class="w-12 h-12 flex items-center justify-center rounded-full bg-gray-800/80 border border-green-500/30 text-green-400 hover:bg-green-500 cursor-pointer transition-all duration-300 group shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+        <span id="menu-mute-icon" class="text-xl group-hover:text-black">🔊</span>
       </button>
+    </div>
 
-      <h1
-        class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 mb-2 tracking-tighter filter drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
-        SERVER<br />SURVIVAL
-      </h1>
-
-      <div class="space-y-4">
-        <button id="resume-btn" onclick="resumeGame()"
-          class="hidden w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-blue-400/50">
-          Resume Game
-        </button>
-
-        <button onclick="startGame()"
-          class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-green-400/50">
-          Start Survival
-        </button>
-
-        <button onclick="startSandbox()"
-          class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-purple-400/50">
-          Sandbox Mode
-        </button>
-
-        <button onclick="loadGameState()" id="load-btn"
-          class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-cyan-400/50">
-          Continue Game
-        </button>
-
-        <button onclick="showFAQ()"
-          class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-8 rounded-lg border border-gray-600 transition hover:text-white font-mono uppercase">
-          Manual / FAQ
-        </button>
+    <!-- Terminal Container -->
+    <div
+      class="terminal-panel relative max-w-lg w-full rounded-lg overflow-hidden border border-gray-700 bg-gray-900/95 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-xl m-4">
+      <!-- Terminal Header -->
+      <div class="flex items-center gap-2 p-3 bg-gray-800 border-b border-gray-700">
+        <div class="flex gap-2">
+          <div class="w-3 h-3 rounded-full bg-red-500"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <div class="w-3 h-3 rounded-full bg-green-500"></div>
+        </div>
+        <div class="flex-1 text-center font-share-tech text-gray-400 text-sm tracking-wider">root@server-survival:~
+        </div>
+        <div class="w-12"></div> <!-- Spacer for center alignment -->
       </div>
 
-      <div class="mt-8 text-xs text-gray-500 font-mono"></div>
+      <!-- Terminal Body -->
+      <div class="p-8 md:p-12 font-share-tech">
+        <!-- Logo Area -->
+        <div class="text-center mb-10 relative">
+          <div
+            class="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-blue-500/10 to-transparent pointer-events-none animate-pulse">
+          </div>
+          <h1
+            class="text-6xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-blue-300 to-blue-600 mb-2 tracking-tighter filter drop-shadow-[0_0_15px_rgba(59,130,246,0.5)] glitch-text"
+            data-text="SERVER SURVIVAL">
+            SERVER<br>SURVIVAL
+          </h1>
+          <div class="text-xs text-green-400 font-mono tracking-[0.3em] uppercase opacity-80 mt-2">>> SYSTEM ONLINE_
+          </div>
+        </div>
+
+        <!-- Menu Options -->
+        <div class="space-y-4">
+          <button id="resume-btn" onclick="resumeGame()"
+            class="hidden w-full group relative overflow-hidden bg-gray-800 border border-blue-500/50 text-blue-400 hover:text-white hover:border-blue-400 font-bold py-4 px-6 rounded transition-all duration-200 uppercase tracking-widest text-sm">
+            <div
+              class="absolute inset-0 w-0 bg-blue-600 transition-all duration-[250ms] ease-out group-hover:w-full opacity-20">
+            </div>
+            <span class="relative flex items-center justify-center gap-3">
+              <span>Resume Session</span>
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity">>></span>
+            </span>
+          </button>
+
+          <button onclick="startGame()"
+            class="w-full group relative overflow-hidden bg-gray-800 border border-green-500/50 text-green-400 hover:text-black hover:border-green-400 font-bold py-4 px-6 rounded transition-all duration-200 uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(34,197,94,0.1)] hover:shadow-[0_0_30px_rgba(34,197,94,0.4)]">
+            <div
+              class="absolute inset-0 w-full h-full bg-green-500 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300 ease-out">
+            </div>
+            <span class="relative flex items-center justify-center gap-3 z-10">
+              <span class="group-hover:text-black">Run Protocol: SURVIVAL</span>
+              <span class="group-hover:text-black opacity-0 group-hover:opacity-100 transition-opacity">>></span>
+            </span>
+          </button>
+
+          <button onclick="startSandbox()"
+            class="w-full group relative overflow-hidden bg-gray-800 border border-purple-500/50 text-purple-400 hover:text-white hover:border-purple-400 font-bold py-4 px-6 rounded transition-all duration-200 uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(168,85,247,0.1)] hover:shadow-[0_0_30px_rgba(168,85,247,0.4)]">
+            <div
+              class="absolute inset-0 w-0 bg-purple-600 transition-all duration-[250ms] ease-out group-hover:w-full opacity-70">
+            </div>
+            <span class="relative flex items-center justify-center gap-3 z-10">
+              <span>Sandbox Mode</span>
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity">{}</span>
+            </span>
+          </button>
+
+          <button onclick="loadGameState()" id="load-btn"
+            class="w-full group relative overflow-hidden bg-gray-800 border border-cyan-500/30 text-cyan-400 hover:text-white hover:border-cyan-400 font-bold py-4 px-6 rounded transition-all duration-200 uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(34,211,238,0.1)] hover:shadow-[0_0_30px_rgba(34,211,238,0.4)]">
+            <div
+              class="absolute inset-0 w-0 bg-cyan-600 transition-all duration-[250ms] ease-out group-hover:w-full opacity-70">
+            </div>
+            <span class="relative flex items-center justify-center gap-3 z-10">
+              <span>Load State</span>
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity">[]</span>
+            </span>
+          </button>
+
+          <button onclick="showFAQ()"
+            class="w-full group relative overflow-hidden bg-gray-800 border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 font-bold py-4 px-6 rounded transition-all duration-200 uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+            <div
+              class="absolute inset-0 w-0 bg-gray-600 transition-all duration-[250ms] ease-out group-hover:w-full opacity-50">
+            </div>
+            <span class="relative flex items-center justify-center gap-3 z-10">
+              <span>Manual / FAQ</span>
+              <span class="opacity-0 group-hover:opacity-100 transition-opacity">?</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="mt-8 pt-4 border-t border-gray-800 flex justify-between text-[10px] text-gray-600 font-mono">
+          <span>CPU: <span class="text-green-900 animate-pulse">ONLINE</span></span>
+          <span>NET: <span class="text-green-900 animate-pulse">CONNECTED</span></span>
+          <span>ver: 2.1.0</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -761,254 +824,340 @@
   </div>
 
   <!-- FAQ Modal -->
-  <div id="faq-modal" class="fixed inset-0 bg-black/95 flex items-center justify-center z-50 hidden">
-    <div class="glass-panel p-8 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
-      <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
-        <h2 class="text-2xl font-bold text-white">OPERATOR MANUAL</h2>
-        <button onclick="closeFAQ()" class="text-gray-400 hover:text-white">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
+  <div id="faq-modal" class="fixed inset-0 bg-black/95 flex items-center justify-center z-50 hidden backdrop-blur-sm">
+    <div
+      class="glass-panel rounded-2xl max-w-5xl w-full h-[85vh] flex flex-col border border-gray-700 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden">
+      <!-- Fixed Header -->
+      <div
+        class="flex justify-between items-center p-6 border-b border-gray-700 bg-gray-900/95 backdrop-blur z-10 shrink-0">
+        <h2
+          class="text-3xl font-bold font-share-tech text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 tracking-wider">
+          <span class="text-gray-500 mr-2">></span>OPERATOR MANUAL
+        </h2>
+        <button onclick="closeFAQ()" class="text-gray-400 hover:text-white transition-colors duration-200 group">
+          <div
+            class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 group-hover:border-white transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </div>
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Traffic Types -->
-        <div>
-          <h3 class="text-lg font-bold text-blue-400 mb-4">TRAFFIC TYPES</h3>
-          <div class="space-y-3">
-            <div class="bg-gray-800/50 p-3 rounded border border-green-900/50">
-              <strong class="text-green-400">STATIC (GET)</strong>
-              <p class="text-sm text-gray-400">
-                Images, CSS, JS. Route to
-                <span class="text-emerald-400">Storage</span>. 90% cache hit
-                rate.
-              </p>
+      <!-- Scrollable Content -->
+      <div class="overflow-y-auto p-8 custom-scrollbar space-y-10 bg-gray-900/50">
+
+        <!-- Section 1: Traffic & Services -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Traffic Types -->
+          <div>
+            <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center gap-2 border-b border-gray-800 pb-2">
+              <span class="text-xs bg-blue-900/30 px-2 py-1 rounded border border-blue-900">01</span> TRAFFIC TYPES
+            </h3>
+            <div class="grid grid-cols-1 gap-3">
+              <div
+                class="bg-gray-800/40 p-3 rounded border border-gray-700 hover:bg-gray-800/60 transition-colors group">
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+                    <strong class="text-green-400 font-mono group-hover:text-green-300 transition-colors">STATIC
+                      (GET)</strong>
+                  </div>
+                  <span class="text-xs text-gray-500 font-mono">Image/CSS/JS</span>
+                </div>
+                <div class="text-xs text-gray-400 mt-2 pl-4 border-l border-gray-700 ml-1">
+                  Route to <span class="text-emerald-300">Storage</span>.
+                  <span class="text-green-600">90% cache hit</span>.
+                </div>
+              </div>
+
+              <div
+                class="bg-gray-800/40 p-3 rounded border border-gray-700 hover:bg-gray-800/60 transition-colors group">
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                    <strong class="text-blue-400 font-mono group-hover:text-blue-300 transition-colors">READ
+                      (GET)</strong>
+                  </div>
+                  <span class="text-xs text-gray-500 font-mono">API Fetch</span>
+                </div>
+                <div class="text-xs text-gray-400 mt-2 pl-4 border-l border-gray-700 ml-1">
+                  Route to <span class="text-red-300">SQL DB</span>.
+                  <span class="text-blue-500">40% cache hit</span>.
+                </div>
+              </div>
+
+              <div
+                class="bg-gray-800/40 p-3 rounded border border-gray-700 hover:bg-gray-800/60 transition-colors group">
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]"></span>
+                    <strong class="text-orange-400 font-mono group-hover:text-orange-300 transition-colors">WRITE
+                      (POST)</strong>
+                  </div>
+                  <span class="text-xs text-gray-500 font-mono">DB Insert</span>
+                </div>
+                <div class="text-xs text-gray-400 mt-2 pl-4 border-l border-gray-700 ml-1">
+                  Route to <span class="text-red-300">SQL DB</span>.
+                  <span class="text-gray-500">No cache</span>.
+                </div>
+              </div>
+
+              <div
+                class="bg-gray-800/40 p-3 rounded border border-gray-700 hover:bg-gray-800/60 transition-colors group">
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]"></span>
+                    <strong class="text-yellow-400 font-mono group-hover:text-yellow-300 transition-colors">UPLOAD
+                      (POST)</strong>
+                  </div>
+                  <span class="text-xs text-gray-500 font-mono">File Upload</span>
+                </div>
+                <div class="text-xs text-gray-400 mt-2 pl-4 border-l border-gray-700 ml-1">
+                  Route to <span class="text-emerald-300">Storage</span>.
+                  <span class="text-yellow-600">High CPU</span>.
+                </div>
+              </div>
+
+              <div
+                class="bg-gray-800/40 p-3 rounded border border-gray-700 hover:bg-gray-800/60 transition-colors group">
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]"></span>
+                    <strong class="text-cyan-400 font-mono group-hover:text-cyan-300 transition-colors">SEARCH
+                      (GET)</strong>
+                  </div>
+                  <span class="text-xs text-gray-500 font-mono">Complex Query</span>
+                </div>
+                <div class="text-xs text-gray-400 mt-2 pl-4 border-l border-gray-700 ml-1">
+                  Route to <span class="text-red-300">SQL DB</span>.
+                  <span class="text-cyan-700">High CPU/RAM</span>.
+                </div>
+              </div>
+
+              <div
+                class="bg-gray-800/40 p-3 rounded border border-gray-700 hover:bg-gray-800/60 transition-colors group">
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
+                    <strong class="text-red-500 font-mono group-hover:text-red-400 transition-colors">MALICIOUS</strong>
+                  </div>
+                  <span class="text-xs text-red-900 bg-red-500/10 px-1 rounded font-mono">ATTACK</span>
+                </div>
+                <div class="text-xs text-gray-400 mt-2 pl-4 border-l border-gray-700 ml-1">
+                  Block with <span class="text-purple-300">Firewall</span>.
+                </div>
+              </div>
             </div>
-            <div class="bg-gray-800/50 p-3 rounded border border-blue-900/50">
-              <strong class="text-blue-400">READ (GET)</strong>
-              <p class="text-sm text-gray-400">
-                API data fetch. Route to
-                <span class="text-red-400">SQL DB</span>. 40% cache hit rate.
-              </p>
+          </div>
+
+          <!-- Services List -->
+          <div>
+            <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center gap-2 border-b border-gray-800 pb-2">
+              <span class="text-xs bg-blue-900/30 px-2 py-1 rounded border border-blue-900">02</span> SERVICES CATALOG
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <!-- Services as small cards -->
+              <div class="bg-gray-800/30 p-3 rounded border border-purple-500/20 flex flex-col justify-between">
+                <div class="flex justify-between mb-1">
+                  <span class="text-purple-400 font-bold text-sm">Firewall</span>
+                  <span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">$40</span>
+                </div>
+                <div class="text-[10px] text-gray-400">Blocks Fraud/DDoS attacks</div>
+              </div>
+
+              <div class="bg-gray-800/30 p-3 rounded border border-orange-500/20 flex flex-col justify-between">
+                <div class="flex justify-between mb-1">
+                  <span class="text-orange-500 font-bold text-sm">Msg Queue</span>
+                  <span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">$35</span>
+                </div>
+                <div class="text-[10px] text-gray-400">Buffers 200 requests</div>
+              </div>
+
+              <div class="bg-gray-800/30 p-3 rounded border border-blue-400/20 flex flex-col justify-between">
+                <div class="flex justify-between mb-1">
+                  <span class="text-blue-400 font-bold text-sm">Load Balancer</span>
+                  <span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">$50</span>
+                </div>
+                <div class="text-[10px] text-gray-400">Distributes Traffic</div>
+              </div>
+
+              <div class="bg-gray-800/30 p-3 rounded border border-orange-400/20 flex flex-col justify-between">
+                <div class="flex justify-between mb-1">
+                  <span class="text-orange-400 font-bold text-sm">Compute</span>
+                  <span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">$60</span>
+                </div>
+                <div class="text-[10px] text-gray-400">Processes Requests</div>
+              </div>
+
+              <div class="bg-gray-800/30 p-3 rounded border border-red-400/20 flex flex-col justify-between">
+                <div class="flex justify-between mb-1">
+                  <span class="text-red-400 font-bold text-sm">Relational DB</span>
+                  <span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">$150</span>
+                </div>
+                <div class="text-[10px] text-gray-400">Stores API Data</div>
+              </div>
+
+              <div class="bg-gray-800/30 p-3 rounded border border-red-500/20 flex flex-col justify-between">
+                <div class="flex justify-between mb-1">
+                  <span class="text-red-500 font-bold text-sm">Memory Cache</span>
+                  <span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">$60</span>
+                </div>
+                <div class="text-[10px] text-gray-400">Fast Cache Layer</div>
+              </div>
+
+              <div
+                class="bg-gray-800/30 p-3 rounded border border-emerald-400/20 flex flex-col justify-between col-span-1 sm:col-span-2">
+                <div class="flex justify-between mb-1">
+                  <span class="text-emerald-400 font-bold text-sm">File Storage (S3)</span>
+                  <span class="text-xs bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">$25</span>
+                </div>
+                <div class="text-[10px] text-gray-400">Stores Web Data (Static/Uploads)</div>
+              </div>
             </div>
-            <div class="bg-gray-800/50 p-3 rounded border border-orange-900/50">
-              <strong class="text-orange-400">WRITE (POST/PUT)</strong>
-              <p class="text-sm text-gray-400">
-                Database writes. Route to
-                <span class="text-red-400">SQL DB</span>. Never cached.
-              </p>
-            </div>
-            <div class="bg-gray-800/50 p-3 rounded border border-yellow-900/50">
-              <strong class="text-yellow-400">UPLOAD (POST)</strong>
-              <p class="text-sm text-gray-400">
-                File uploads. Route to
-                <span class="text-emerald-400">Storage</span>. Never cached.
-                Heavy processing.
-              </p>
-            </div>
-            <div class="bg-gray-800/50 p-3 rounded border border-cyan-900/50">
-              <strong class="text-cyan-400">SEARCH (GET)</strong>
-              <p class="text-sm text-gray-400">
-                Complex queries. Route to
-                <span class="text-red-400">SQL DB</span>. 15% cache hit. Heavy
-                processing.
-              </p>
-            </div>
-            <div class="bg-gray-800/50 p-3 rounded border border-red-900/50">
-              <strong class="text-red-400">MALICIOUS</strong>
-              <p class="text-sm text-gray-400">
-                DDoS & attacks. Block with
-                <span class="text-purple-400">Firewall</span>.
-              </p>
+
+            <!-- Advanced Services Sub-section -->
+            <div class="mt-4 pt-4 border-t border-gray-800">
+              <h4 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Advanced Patterns</h4>
+              <div class="grid grid-cols-1 gap-2">
+                <div class="bg-gray-900/40 p-2 rounded border border-gray-700 text-xs text-gray-400">
+                  <strong class="text-orange-400">Queue Flow:</strong> Firewall → Queue → LB → Compute
+                </div>
+                <div class="bg-gray-900/40 p-2 rounded border border-gray-700 text-xs text-gray-400">
+                  <strong class="text-red-400">Cache Flow:</strong> LB → Cache → Database (Read-Through)
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Services -->
+        <!-- Section 2: Tools -->
         <div>
-          <h3 class="text-lg font-bold text-blue-400 mb-4">SERVICES</h3>
-          <ul class="space-y-2 text-sm text-gray-300">
-            <li class="flex justify-between">
-              <span class="text-purple-400 font-bold">Firewall</span>
-              <span>Blocks Fraud ($40)</span>
-            </li>
-            <li class="flex justify-between">
-              <span class="text-orange-500 font-bold">Message Queue</span>
-              <span>Buffers 200 requests ($35)</span>
-            </li>
-            <li class="flex justify-between">
-              <span class="text-blue-400 font-bold">Load Balancer</span>
-              <span>Distributes Traffic ($50)</span>
-            </li>
-            <li class="flex justify-between">
-              <span class="text-orange-400 font-bold">Compute</span>
-              <span>Processes Requests ($60)</span>
-            </li>
-            <li class="flex justify-between">
-              <span class="text-red-400 font-bold">Relational DB</span>
-              <span>Stores API Data ($150)</span>
-            </li>
-            <li class="flex justify-between">
-              <span class="text-red-500 font-bold">Memory Cache</span>
-              <span>Cache layer ($60)</span>
-            </li>
-            <li class="flex justify-between">
-              <span class="text-emerald-400 font-bold">File Storage</span>
-              <span>Stores Web Data ($25)</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- Tools -->
-      <div class="mt-8">
-        <h3 class="text-lg font-bold text-blue-400 mb-4">TOOLS & CONTROLS</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
-            <div class="flex items-center mb-2">
-              <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center mr-2">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center gap-2 border-b border-gray-800 pb-2">
+            <span class="text-xs bg-blue-900/30 px-2 py-1 rounded border border-blue-900">03</span> TOOLS & CONTROLS
+          </h3>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div
+              class="bg-gray-800/20 p-3 rounded border border-gray-700 flex flex-col items-center text-center hover:bg-gray-800/40 transition">
+              <div class="w-8 h-8 bg-blue-600 rounded mb-2 flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122">
                   </path>
                 </svg>
               </div>
-              <strong class="text-white">SELECT</strong>
+              <strong class="text-white text-xs mb-1">SELECT</strong>
+              <span class="text-[10px] text-gray-500 leading-tight">Inspect services</span>
             </div>
-            <p class="text-gray-400">
-              Inspect services to see load and stats. Click Compute/DB to
-              upgrade.
-            </p>
-          </div>
-          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
-            <div class="flex items-center mb-2">
-              <div class="w-6 h-6 bg-gray-700 rounded flex items-center justify-center mr-2">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+            <div
+              class="bg-gray-800/20 p-3 rounded border border-gray-700 flex flex-col items-center text-center hover:bg-gray-800/40 transition">
+              <div class="w-8 h-8 bg-gray-600 rounded mb-2 flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
                   </path>
                 </svg>
               </div>
-              <strong class="text-white">CONNECT</strong>
+              <strong class="text-white text-xs mb-1">CONNECT</strong>
+              <span class="text-[10px] text-gray-500 leading-tight">Link Nodes</span>
             </div>
-            <p class="text-gray-400">
-              Link nodes together. Click
-              <span class="text-green-400">Source</span> then
-              <span class="text-blue-400">Destination</span>.
-            </p>
-          </div>
-          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
-            <div class="flex items-center mb-2">
-              <div class="w-6 h-6 bg-red-900/50 rounded flex items-center justify-center mr-2">
-                <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+            <div
+              class="bg-gray-800/20 p-3 rounded border border-gray-700 flex flex-col items-center text-center hover:bg-gray-800/40 transition">
+              <div class="w-8 h-8 bg-red-900 rounded mb-2 flex items-center justify-center border border-red-700">
+                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
                   </path>
                 </svg>
               </div>
-              <strong class="text-white">DELETE</strong>
+              <strong class="text-white text-xs mb-1">DELETE</strong>
+              <span class="text-[10px] text-gray-500 leading-tight">Refund 50%</span>
             </div>
-            <p class="text-gray-400">Remove services. Refunds 50% of cost.</p>
-          </div>
-          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
-            <div class="flex items-center mb-2">
-              <div class="w-6 h-6 bg-orange-900/50 rounded flex items-center justify-center mr-2">
-                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+            <div
+              class="bg-gray-800/20 p-3 rounded border border-gray-700 flex flex-col items-center text-center hover:bg-gray-800/40 transition">
+              <div class="w-8 h-8 bg-orange-900 rounded mb-2 flex items-center justify-center border border-orange-700">
+                <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
                   </path>
                 </svg>
               </div>
-              <strong class="text-white">UNLINK</strong>
+              <strong class="text-white text-xs mb-1">UNLINK</strong>
+              <span class="text-[10px] text-gray-500 leading-tight">Remove Link</span>
             </div>
-            <p class="text-gray-400">
-              Remove connections between services. Click on a link to delete
-              it.
-            </p>
-          </div>
 
-          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
-            <div class="flex items-center mb-2">
-              <strong class="text-white">HUD</strong>
+            <div
+              class="bg-gray-800/20 p-3 rounded border border-gray-700 flex flex-col items-center text-center hover:bg-gray-800/40 transition">
+              <div
+                class="w-8 h-8 bg-gray-800 rounded mb-2 flex items-center justify-center border border-gray-600 font-mono text-xs text-white">
+                [H]
+              </div>
+              <strong class="text-white text-xs mb-1">TOGGLE HUD</strong>
+              <span class="text-[10px] text-gray-500 leading-tight">Hide/Show UI</span>
             </div>
-            <p class="text-gray-400">Press H for hiding HUD.</p>
-          </div>
 
-          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
-            <div class="flex items-center mb-2">
-              <strong class="text-white">View</strong>
+            <div
+              class="bg-gray-800/20 p-3 rounded border border-gray-700 flex flex-col items-center text-center hover:bg-gray-800/40 transition">
+              <div
+                class="w-8 h-8 bg-gray-800 rounded mb-2 flex items-center justify-center border border-gray-600 font-mono text-xs text-white">
+                [R]
+              </div>
+              <strong class="text-white text-xs mb-1">RESET VIEW</strong>
+              <span class="text-[10px] text-gray-500 leading-tight">Center Cam</span>
             </div>
-            <p class="text-gray-400">Press R for reset view.</p>
           </div>
         </div>
-      </div>
 
-      <!-- Mechanics -->
-      <div class="mt-8">
-        <h3 class="text-lg font-bold text-blue-400 mb-4">MECHANICS</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div class="bg-gray-800/30 p-3 rounded">
-            <strong class="text-white block mb-1">Upgrades</strong>
-            <p class="text-gray-400">
-              Click existing Compute/DB/Cache instances to upgrade capacity
-              (Tier 1-3).
-            </p>
-          </div>
-          <div class="bg-gray-800/30 p-3 rounded">
-            <strong class="text-white block mb-1">Load Balancing</strong>
-            <p class="text-gray-400">
-              Load Balancers use Round Robin to distribute traffic evenly.
-            </p>
-          </div>
-          <div class="bg-gray-800/30 p-3 rounded">
-            <strong class="text-white block mb-1">Failure Conditions</strong>
-            <p class="text-gray-400">
-              Reputation reaches 0% or Money reaches -$1000.
-            </p>
+        <!-- Section 3: Mechanics -->
+        <div>
+          <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center gap-2 border-b border-gray-800 pb-2">
+            <span class="text-xs bg-blue-900/30 px-2 py-1 rounded border border-blue-900">04</span> SYSTEM MECHANICS
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-800/30 p-4 rounded border border-gray-700 relative overflow-hidden">
+              <div class="absolute top-0 right-0 p-2 opacity-10 text-4xl">⬆️</div>
+              <h4 class="text-white font-bold mb-2">Upgrades</h4>
+              <p class="text-sm text-gray-400">Click existing services to upgrade their Tier (1-3). Increases throughput
+                and capacity.</p>
+            </div>
+
+            <div class="bg-gray-800/30 p-4 rounded border border-gray-700 relative overflow-hidden">
+              <div class="absolute top-0 right-0 p-2 opacity-10 text-4xl">⚖️</div>
+              <h4 class="text-white font-bold mb-2">Load Balancing</h4>
+              <p class="text-sm text-gray-400">Load Balancers automatically distribute traffic using Round Robin to all
+                connected healthy nodes.</p>
+            </div>
+
+            <div class="bg-gray-800/30 p-4 rounded border border-gray-700 relative overflow-hidden">
+              <div class="absolute top-0 right-0 p-2 opacity-10 text-4xl">💀</div>
+              <h4 class="text-white font-bold mb-2">Failure States</h4>
+              <p class="text-sm text-gray-400">Game Over if <span class="text-yellow-500">Reputation hits 0%</span> or
+                <span class="text-red-500">Debt exceeds $1000</span>.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Advanced Services -->
-      <div class="mt-8">
-        <h3 class="text-lg font-bold text-blue-400 mb-4">
-          ADVANCED SERVICES
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div class="bg-gray-800/30 p-3 rounded border border-orange-900/50">
-            <strong class="text-orange-400 block mb-1">Message Queue</strong>
-            <p class="text-gray-400 text-xs">
-              Massive buffer holding 200 requests. Place after Firewall to
-              smooth DDoS spikes, or before Compute to prevent overload. Cheap
-              insurance against traffic bursts.
-            </p>
-            <p class="text-gray-500 text-xs mt-1">
-              Flow: Firewall → Queue → Load Balancer or Load Balancer → Queue
-              → Compute
-            </p>
-          </div>
-          <div class="bg-gray-800/30 p-3 rounded border border-red-900/50">
-            <strong class="text-red-400 block mb-1">Memory Cache</strong>
-            <p class="text-gray-400 text-xs">
-              Caching layer with 35-65% hit rate. Cache hits complete
-              instantly without hitting DB/Storage. Upgrade tiers for higher
-              hit rates. Great for reducing DB costs.
-            </p>
-            <p class="text-gray-500 text-xs mt-1">
-              Flow: Compute → Cache → DB/Storage
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-8 text-center">
-        <button onclick="closeFAQ()"
-          class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-8 rounded-lg transition">
-          Close Manual
-        </button>
       </div>
     </div>
+  </div> hit rates. Great for reducing DB costs.
+  </p>
+  <p class="text-gray-500 text-xs mt-1">
+    Flow: Compute → Cache → DB/Storage
+  </p>
+  </div>
+  </div>
+  </div>
+
+  <div class="mt-8 text-center">
+    <button onclick="closeFAQ()"
+      class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-8 rounded-lg transition">
+      Close Manual
+    </button>
+  </div>
+  </div>
   </div>
   <script src="src/config.js"></script>
   <script src="src/state.js"></script>
