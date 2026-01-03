@@ -2197,7 +2197,7 @@ function showTooltip(x, y, html) {
 
 // Setup UI tooltips
 function setupUITooltips() {
-    const tools = ["waf", "sqs", "alb", "lambda", "db", "cache", "s3"];
+    const tools = ["waf", "sqs", "alb", "lambda", "db", "cache", "s3", "cdn"];
     tools.forEach((toolId) => {
         const btn = document.getElementById(`tool-${toolId}`);
         if (!btn) return;
