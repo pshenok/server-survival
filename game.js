@@ -631,8 +631,7 @@ function updateFinancesDisplay() {
             `<div class="grid grid-cols-4 gap-1 text-gray-500 mb-1 text-[10px]"><span>${i18n.t('type')}</span><span class="text-center">${i18n.t('count')}</span><span class="text-center">${i18n.t('per_request')}</span><span class="text-right">${i18n.t('total')}</span></div>`;
         let hasIncome = false;
         incomeTypes.forEach((t) => {
-            const value =
-                t.key === "blocked" ? f.income.blocked : f.income.byType[t.key] || 0;
+            const value = f.income.byType[t.key] || 0;
             const count = f.income.countByType[t.key] || 0;
             if (value > 0 || count > 0) {
                 hasIncome = true;
@@ -740,6 +739,20 @@ function updateFinancesDisplay() {
             )}</span></div>`;
         }
 
+        // Mitigation costs
+        if (f.expenses.mitigation > 0) {
+            expenseHtml += `<div class="flex justify-between mt-1 border-t border-gray-800"><span class="text-blue-300">DDoS Mitigation</span><span class="text-red-300">-$${Math.floor(
+                f.expenses.mitigation
+            )}</span></div>`;
+        }
+
+        // Breach penalties
+        if (f.expenses.breach > 0) {
+            expenseHtml += `<div class="flex justify-between"><span class="text-red-500 font-bold">Security Breach</span><span class="text-red-500 font-bold">-$${Math.floor(
+                f.expenses.breach
+            )}</span></div>`;
+        }
+
         if (!expenseHtml) {
             expenseHtml = `<div class="text-gray-600 italic">${i18n.t('no_expenses')}</div>`;
         }
@@ -751,12 +764,14 @@ function updateFinancesDisplay() {
         f.expenses.services +
         f.expenses.upkeep +
         f.expenses.repairs +
-        f.expenses.autoRepair;
+        f.expenses.autoRepair +
+        (f.expenses.mitigation || 0) +
+        (f.expenses.breach || 0);
     const expenseTotal = document.getElementById("expense-total");
     if (expenseTotal) expenseTotal.textContent = `$${Math.floor(totalExpenses)}`;
 
     // Update net profit
-    const totalIncome = f.income.total || f.income.requests + f.income.blocked;
+    const totalIncome = f.income.total;
     const netProfit = totalIncome - totalExpenses;
     const netProfitEl = document.getElementById("net-profit");
     if (netProfitEl) {
@@ -1283,14 +1298,13 @@ function updateScore(req, outcome) {
     if (outcome === "MALICIOUS_BLOCKED") {
         STATE.score.maliciousBlocked += points.MALICIOUS_BLOCKED_SCORE;
         STATE.score.total += points.MALICIOUS_BLOCKED_SCORE;
-        // Add small reward for blocking attacks
-        const blockReward = 0.5;
-        STATE.money += blockReward;
+        STATE.score.total += points.MALICIOUS_BLOCKED_SCORE;
+
+        // Mitigation cost for blocking attacks
+        const mitigationCost = CONFIG.survival.SCORE_POINTS.MALICIOUS_MITIGATION_COST || 1.0;
+        STATE.money -= mitigationCost;
         if (STATE.finances) {
-            STATE.finances.income.blocked += blockReward;
-            STATE.finances.income.total += blockReward;
-            STATE.finances.income.countByType.blocked =
-                (STATE.finances.income.countByType.blocked || 0) + 1;
+            STATE.finances.expenses.mitigation = (STATE.finances.expenses.mitigation || 0) + mitigationCost;
         }
         STATE.sound.playFraudBlocked();
     } else if (
@@ -1298,7 +1312,16 @@ function updateScore(req, outcome) {
         outcome === "MALICIOUS_PASSED"
     ) {
         STATE.reputation += points.MALICIOUS_PASSED_REPUTATION;
+        STATE.reputation += points.MALICIOUS_PASSED_REPUTATION;
         STATE.failures.MALICIOUS++;
+
+        // Breach penalty
+        const breachPenalty = CONFIG.survival.SCORE_POINTS.MALICIOUS_BREACH_PENALTY || 50.0;
+        STATE.money -= breachPenalty;
+        if (STATE.finances) {
+            STATE.finances.expenses.breach = (STATE.finances.expenses.breach || 0) + breachPenalty;
+        }
+
         console.warn(
             `MALICIOUS PASSED: ${points.MALICIOUS_PASSED_REPUTATION} Rep. (Critical Failure)`
         );
@@ -3045,6 +3068,8 @@ window.loadGameState = () => {
                 upkeep: 0,
                 repairs: 0,
                 autoRepair: 0,
+                mitigation: 0,
+                breach: 0,
                 byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
                 countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
             },

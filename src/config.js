@@ -229,6 +229,8 @@ const CONFIG = {
       MALICIOUS_PASSED_REPUTATION: -5, // Reduced from -8
       MALICIOUS_BLOCKED_SCORE: 10,
       CACHE_HIT_BONUS: 0.2,
+      MALICIOUS_MITIGATION_COST: 1.0, // Cost per blocked attack
+      MALICIOUS_BREACH_PENALTY: 50.0, // Cost per successful attack
     },
 
     upkeepScaling: {
