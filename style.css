@@ -98,6 +98,12 @@ body {
   color: #fff;
 }
 
+/* Custom Select Styles */
+#lang-select option {
+  background-color: #1f2937; /* Tailwind gray-800 */
+  color: white;
+}
+
 /* Neon Green Pulse for Play Button */
 .pulse-green {
   background-color: #39ff14 !important;
