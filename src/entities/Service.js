@@ -356,7 +356,7 @@ class Service {
           const downstreamTypes = ["alb", "compute"];
           const candidates = this.connections
             .map((id) => STATE.services.find((s) => s.id === id))
-            .filter((s) => s && downstreamTypes.includes(s.type));
+            .filter((s) => s && downstreamTypes.includes(s.type) && !s.isDisabled);
 
           if (candidates.length === 0) {
             failRequest(job.req);
