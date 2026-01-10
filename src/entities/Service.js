@@ -412,7 +412,7 @@ class Service {
         } else {
           const candidates = this.connections
             .map((id) => STATE.services.find((s) => s.id === id))
-            .filter((s) => s !== undefined);
+            .filter((s) => s !== undefined && !s.isDisabled); // Skip offline nodes
 
           if (candidates.length > 0) {
             const target = candidates[this.rrIndex % candidates.length];
