@@ -6,11 +6,14 @@ class I18nManager {
         this.currentLocale = localStorage.getItem('game_locale') || 'en';
         this.translations = {
             en: typeof EN_TRANSLATIONS !== 'undefined' ? EN_TRANSLATIONS : {},
-            zh: typeof ZH_TRANSLATIONS !== 'undefined' ? ZH_TRANSLATIONS : {}
+            zh: typeof ZH_TRANSLATIONS !== 'undefined' ? ZH_TRANSLATIONS : {},
+            'pt-BR': typeof PT_BR_TRANSLATIONS !== 'undefined' ? PT_BR_TRANSLATIONS : {}
         };
     }
 
     setLocale(locale) {
+        console.log(locale);
+        console.log(this.translations);
         if (this.translations[locale]) {
             this.currentLocale = locale;
             localStorage.setItem('game_locale', locale);
