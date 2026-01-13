@@ -1,5 +1,5 @@
 const DE_TRANSLATIONS = {
-    "title": "SERVER: Überlebensprotokoll",
+    "title": "SERVER: Survival Protocol",
     "survival": "ÜBERLEBEN",
     "budget": "BUDGET",
     "upkeep_cost": "Wartungskosten",
