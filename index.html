@@ -10,6 +10,7 @@
   <script src="src/locales/en.js"></script>
   <script src="src/locales/zh.js"></script>
   <script src="src/locales/pt-BR.js"></script>
+  <script src="src/locales/de.js"></script>
   <script src="src/i18n.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -270,6 +271,7 @@
           <option value="en" class="bg-gray-800 text-white">EN</option>
           <option value="zh" class="bg-gray-800 text-white">ZH</option>
           <option value="pt-BR" class="bg-gray-800 text-white">PT-BR</option>
+          <option value="de" class="bg-gray-800 text-white">DE</option>
         </select>
       </div>
       <button onclick="saveGameState()" id="btn-save"
@@ -361,58 +363,58 @@
         <div data-i18n="traffic_mix" class="text-xs text-gray-400 mb-1">Traffic Mix (%)</div>
         <!-- STATIC -->
         <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_static" class="w-14 text-xs text-green-400">STATIC</span>
+          <span data-i18n="traffic_static" class="text-xs text-green-400 truncate max-w-[6rem]">STATIC</span>
           <input type="range" id="static-slider" min="0" max="100" value="30"
-            oninput="setTrafficMix('STATIC',this.value)" class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-green-500" />
+            oninput="setTrafficMix('STATIC',this.value)" class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-green-500" />
           <input type="number" id="static-input" value="30" min="0" max="100"
             onchange="setTrafficMix('STATIC',this.value)"
-            class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-green-400 text-xs text-center font-mono" />
+            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-green-400 text-xs text-center font-mono" />
         </div>
         <!-- READ -->
         <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_read" class="w-14 text-xs text-blue-400">READ</span>
+          <span data-i18n="traffic_read" class="text-xs text-blue-400 truncate max-w-[6rem]">READ</span>
           <input type="range" id="read-slider" min="0" max="100" value="20" oninput="setTrafficMix('READ',this.value)"
-            class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-blue-500" />
+            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-blue-500" />
           <input type="number" id="read-input" value="20" min="0" max="100" onchange="setTrafficMix('READ',this.value)"
-            class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-blue-400 text-xs text-center font-mono" />
+            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-blue-400 text-xs text-center font-mono" />
         </div>
         <!-- WRITE -->
         <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_write" class="w-14 text-xs text-orange-400">WRITE</span>
+          <span data-i18n="traffic_write" class="text-xs text-orange-400 truncate max-w-[6rem]">WRITE</span>
           <input type="range" id="write-slider" min="0" max="100" value="15" oninput="setTrafficMix('WRITE',this.value)"
-            class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-orange-500" />
+            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-orange-500" />
           <input type="number" id="write-input" value="15" min="0" max="100"
             onchange="setTrafficMix('WRITE',this.value)"
-            class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-orange-400 text-xs text-center font-mono" />
+            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-orange-400 text-xs text-center font-mono" />
         </div>
         <!-- UPLOAD -->
         <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_upload" class="w-14 text-xs text-yellow-400">UPLOAD</span>
+          <span data-i18n="traffic_upload" class="text-xs text-yellow-400 truncate max-w-[6rem]">UPLOAD</span>
           <input type="range" id="upload-slider" min="0" max="100" value="5"
             oninput="setTrafficMix('UPLOAD',this.value)"
-            class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-yellow-500" />
+            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-yellow-500" />
           <input type="number" id="upload-input" value="5" min="0" max="100"
             onchange="setTrafficMix('UPLOAD',this.value)"
-            class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-yellow-400 text-xs text-center font-mono" />
+            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-yellow-400 text-xs text-center font-mono" />
         </div>
         <!-- SEARCH -->
         <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_search" class="w-14 text-xs text-cyan-400">SEARCH</span>
+          <span data-i18n="traffic_search" class="text-xs text-cyan-400 truncate max-w-[6rem]">SEARCH</span>
           <input type="range" id="search-slider" min="0" max="100" value="10"
-            oninput="setTrafficMix('SEARCH',this.value)" class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-cyan-500" />
+            oninput="setTrafficMix('SEARCH',this.value)" class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-cyan-500" />
           <input type="number" id="search-input" value="10" min="0" max="100"
             onchange="setTrafficMix('SEARCH',this.value)"
-            class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-cyan-400 text-xs text-center font-mono" />
+            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-cyan-400 text-xs text-center font-mono" />
         </div>
         <!-- MALICIOUS -->
         <div class="flex items-center gap-2">
-          <span data-i18n="traffic_attack" class="w-14 text-xs text-red-400">ATTACK</span>
+          <span data-i18n="traffic_attack" class="text-xs text-red-400 truncate max-w-[6rem]">ATTACK</span>
           <input type="range" id="malicious-slider" min="0" max="100" value="20"
             oninput="setTrafficMix('MALICIOUS',this.value)"
-            class="flex-1 h-1.5 bg-gray-700 rounded-lg accent-red-500" />
+            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-red-500" />
           <input type="number" id="malicious-input" value="20" min="0" max="100"
             onchange="setTrafficMix('MALICIOUS',this.value)"
-            class="w-14 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-red-400 text-xs text-center font-mono" />
+            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-red-400 text-xs text-center font-mono" />
         </div>
       </div>
 
