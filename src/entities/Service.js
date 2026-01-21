@@ -7,6 +7,7 @@ class Service {
     this.queue = [];
     this.processing = [];
     this.connections = [];
+    this.incomingCount = 0;
 
     let geo, mat;
     const materialProps = { roughness: 0.2 };
@@ -369,9 +370,8 @@ class Service {
             const target = candidates[this.rrIndex % candidates.length];
             this.rrIndex++;
 
-            // Check if target can accept (has queue space)
             const targetMaxQueue = target.config.maxQueueSize || 20;
-            if (target.queue.length < targetMaxQueue) {
+            if (target.queue.length + target.incomingCount < targetMaxQueue) {
               job.req.flyTo(target);
               sent = true;
               break;
