@@ -2185,6 +2185,16 @@ container.addEventListener("mousemove", (e) => {
     container.style.cursor = cursor;
 });
 
+        // clear failure list
+        document.getElementById('clear-all').addEventListener('click',()=>{
+            STATE.failures.MALICIOUS=0;
+            STATE.failures.STATIC=0;
+            STATE.failures.READ=0;
+            STATE.failures.WRITE=0;
+            STATE.failures.UPLOAD=0;
+            STATE.failures.SEARCH=0;
+        })
+
 // Helper function for showing tooltips
 function showTooltip(x, y, html) {
     const t = document.getElementById("tooltip");
