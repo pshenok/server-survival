@@ -250,6 +250,46 @@ class Service {
       }
     }
 
+    // COMPUTE PULL LOGIC
+    if (this.type === "compute") {
+      // Check if we have space in our queue+processing
+      // We want the UPSTREAM queue (SQS) to do the buffering, not the compute node local queue.
+      // So we only pull if we are running low on work locally.
+      // If we have ANY work in our local queue, we should process that first before pulling more.
+      // We allow a tiny buffer (e.g. 1) so there's no gap in processing.
+      const pullThreshold = 1;
+
+      // Current load logic: count requests in queue and incoming (in flight)
+      const pendingWork = this.queue.length + this.incomingCount;
+
+      if (pendingWork <= pullThreshold) {
+        // Find upstream SQS services
+        const upstreamSQS = STATE.services.filter(s =>
+          s.type === 'sqs' &&
+          s.connections.includes(this.id) &&
+          !s.isDisabled
+        );
+
+        if (upstreamSQS.length > 0) {
+          // Round robin pull
+          if (typeof this.upstreamRR === 'undefined') this.upstreamRR = 0;
+
+          // Try up to the number of upstream sources (don't loop forever)
+          for (let i = 0; i < upstreamSQS.length; i++) {
+            const idx = (this.upstreamRR + i) % upstreamSQS.length;
+            const sqs = upstreamSQS[idx];
+
+            const req = sqs.popRequest();
+            if (req) {
+              req.flyTo(this);
+              this.upstreamRR = (idx + 1) % upstreamSQS.length;
+              break;
+            }
+          }
+        }
+      }
+    }
+
     this.processQueue();
 
     for (let i = this.processing.length - 1; i >= 0; i--) {
@@ -354,15 +394,24 @@ class Service {
         // SQS processing logic
         if (this.type === "sqs") {
           // SQS just forwards requests with backpressure check
-          const downstreamTypes = ["alb", "compute"];
+          // MODIFIED: Filter out compute nodes, they will PULL from us instead
+          const downstreamTypes = ["alb"];
+          // We intentionally excluded "compute" from the automatic push list.
+          // Compute nodes must actively pull from SQS.
+
           const candidates = this.connections
             .map((id) => STATE.services.find((s) => s.id === id))
             .filter((s) => s && downstreamTypes.includes(s.type) && !s.isDisabled);
 
+          // If no candidates (e.g. only connected to compute), we just wait.
+          // The request remains in 'processing' (it was spliced out, so we need to put it back if we don't send it)
           if (candidates.length === 0) {
-            failRequest(job.req);
+            // Put it back so it's not lost, and can be popped by compute
+            this.processing.splice(i, 0, job);
             continue;
           }
+
+
 
           // Round-robin with backpressure check
           let sent = false;
@@ -379,10 +428,10 @@ class Service {
           }
 
           if (!sent) {
-            // All downstream busy - put back in OUR queue
-            this.queue.unshift(job.req);
-            this.processing.splice(i, 1);
-            break; // Don't process more this frame
+            // Downstream busy - keep in processing to retry next frame
+            // Since it was removed at the start of the block, we put it back
+            this.processing.splice(i, 0, job);
+            break;
           }
           continue;
         }
@@ -390,10 +439,12 @@ class Service {
         if (this.type === "compute") {
           const destType = job.req.destination;
 
+
           if (destType === "blocked") {
             failRequest(job.req);
             continue;
           }
+
 
           if (job.req.isCacheable) {
             const cacheTarget = this.findConnectedService("cache");
@@ -620,6 +671,24 @@ class Service {
     this.updateHealthVisual();
     STATE.sound?.playPlace();
     return true;
+  }
+
+  popRequest() {
+    // Try to take from processing list first (these are "ready" or "in-flight" but held back)
+    if (this.processing.length > 0) {
+      // Taking from the start (index 0) which should be the oldest if we push to end?
+      // processing array is likely small for SQS.
+      // NOTE: processing contains {req, timer} objects
+      const job = this.processing.shift();
+      return job.req;
+    }
+
+    // If nothing in processing, check the queue
+    if (this.queue.length > 0) {
+      return this.queue.shift();
+    }
+
+    return null;
   }
 
   getEffectiveCapacity() {

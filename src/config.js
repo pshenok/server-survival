@@ -197,12 +197,12 @@ const CONFIG = {
     },
     sqs: {
       name: "Message Queue",
-      cost: 35,
+      cost: 45, // Increased from 35
       type: "sqs",
-      processingTime: 100,
-      capacity: 10,
+      processingTime: 20, // Reduced from 100 for high throughput
+      capacity: 50, // Increased from 10 to handle bursts
       maxQueueSize: 200,
-      upkeep: 2,
+      upkeep: 3, // Increased from 2
       tooltip: {
         upkeep: "Low",
         desc: "<b>Queue.</b> Buffers requests during spikes. Prevents drops.",
