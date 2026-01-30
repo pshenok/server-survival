@@ -1,2 +1,5 @@
 .DS_Store
 .vs/
+.vercel
+/game_backup.js
+/main.html

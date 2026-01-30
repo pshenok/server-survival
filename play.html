@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Cloud Learning Simulator</title>
+  <title>SERVER: Survival Protocol</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
@@ -30,7 +30,502 @@
 
   <!-- Main UI Container -->
   <div id="ui-container" class="absolute top-0 left-0 w-full h-full pointer-events-none">
-    <!-- UI components will be dynamically loaded here -->
+    <!-- Stats Panel (Top Left) -->
+    <div id="statsPanel" class="absolute top-4 left-4 glass-panel rounded-xl p-5 w-80 pointer-events-auto">
+      <div class="flex justify-between items-end mb-3 border-b border-gray-700 pb-2">
+        <h1 data-i18n="survival" class="text-2xl font-bold text-red-500 tracking-widest animate-pulse">
+          SURVIVAL
+        </h1>
+        <span class="text-xs text-gray-500 font-mono">v2.1</span>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <span data-i18n="budget" class="text-gray-400 text-sm">BUDGET</span>
+          <span id="money-display"
+            class="text-green-400 font-mono text-xl font-bold transition-colors duration-300">$500</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span data-i18n="upkeep_cost" class="text-gray-500">Upkeep Cost</span>
+          <span id="upkeep-display" class="text-red-400 font-mono">-$0.00/s</span>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <span data-i18n="elapsed_time" class="text-gray-500">Elapsed Time</span>
+          <span id="elapsed-time" class="text-gray-400 font-mono">00:00</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span data-i18n="reputation" class="text-gray-400 text-sm">REPUTATION</span>
+          <div class="flex items-center gap-2">
+            <div class="w-24 h-3 bg-gray-800 rounded-full overflow-hidden relative">
+              <div id="rep-bar" class="h-full bg-yellow-500 transition-all duration-500" style="width: 100%"></div>
+            </div>
+            <span id="rep-display" class="text-yellow-400 font-mono text-sm w-10 text-right">100%</span>
+          </div>
+        </div>
+        <div class="flex justify-between items-center pt-1">
+          <span data-i18n="load_rps" class="text-gray-400 text-sm">LOAD (RPS)</span>
+          <span id="rps-display" class="text-blue-300 font-mono text-sm">0.0 req/s</span>
+        </div>
+        <div class="flex justify-between items-center text-xs" id="rps-milestone-row">
+          <span data-i18n="next_rps_surge" class="text-gray-500">Next RPS Surge</span>
+          <div class="flex items-center gap-2 font-mono">
+            <span id="rps-next" class="text-orange-400">×1.0</span>
+          <span data-i18n="in" class="text-gray-600">in</span>
+          <span id="rps-countdown" class="text-cyan-400">0:00</span>
+          </div>
+        </div>
+        <div class="flex justify-between items-center pt-1">
+          <span data-i18n="traffic" class="text-gray-400 text-sm">TRAFFIC</span>
+          <div class="flex gap-1 text-[10px] font-mono">
+            <span class="text-green-400" id="mix-static" data-i18n-title="traffic_static" title="Static GET">ST</span>
+            <span class="text-blue-400" id="mix-read" data-i18n-title="traffic_read" title="Read GET">RD</span>
+            <span class="text-orange-400" id="mix-write" data-i18n-title="traffic_write" title="Write POST">WR</span>
+            <span class="text-yellow-400" id="mix-upload" data-i18n-title="traffic_upload" title="Upload">UP</span>
+            <span class="text-cyan-400" id="mix-search" data-i18n-title="traffic_search" title="Search">SR</span>
+            <span class="text-red-400" id="mix-malicious" data-i18n-title="traffic_malicious" title="Malicious">⚠️</span>
+          </div>
+        </div>
+
+        <!-- Failures Table -->
+        <div id="failures-panel" class="mt-2 pt-2 border-t border-gray-700/50 hidden">
+          <div class="flex justify-between items-center mb-2">
+            <span data-i18n="failures" class="text-gray-500 text-xs uppercase">Failures</span>
+            <span id="failures-total" class="text-red-400 font-mono text-xs">0 <span data-i18n="total">total</span></span>
+          </div>
+          <table class="w-full text-[10px] font-mono">
+            <thead>
+              <tr class="text-gray-500">
+                <th data-i18n="type" class="text-left font-normal">Type</th>
+                <th data-i18n="count" class="text-right font-normal">Count</th>
+                <th data-i18n="rep_loss" class="text-right font-normal">Rep Loss</th>
+              </tr>
+            </thead>
+            <tbody id="failures-tbody">
+              <tr class="text-purple-400" id="fail-row-malicious">
+                <td data-i18n="fraud_leak">🛡️ Fraud Leak</td>
+                <td class="text-right" id="fail-malicious">0</td>
+                <td class="text-right text-red-400" id="fail-malicious-rep">
+                  0
+                </td>
+              </tr>
+              <tr class="text-green-400" id="fail-row-static">
+                <td data-i18n="fail_static">ST Static</td>
+                <td class="text-right" id="fail-static">0</td>
+                <td class="text-right text-red-400" id="fail-static-rep">
+                  0
+                </td>
+              </tr>
+              <tr class="text-blue-400" id="fail-row-read">
+                <td data-i18n="fail_read">RD Read</td>
+                <td class="text-right" id="fail-read">0</td>
+                <td class="text-right text-red-400" id="fail-read-rep">0</td>
+              </tr>
+              <tr class="text-orange-400" id="fail-row-write">
+                <td data-i18n="fail_write">WR Write</td>
+                <td class="text-right" id="fail-write">0</td>
+                <td class="text-right text-red-400" id="fail-write-rep">0</td>
+              </tr>
+              <tr class="text-yellow-400" id="fail-row-upload">
+                <td data-i18n="fail_upload">UP Upload</td>
+                <td class="text-right" id="fail-upload">0</td>
+                <td class="text-right text-red-400" id="fail-upload-rep">
+                  0
+                </td>
+              </tr>
+              <tr class="text-cyan-400" id="fail-row-search">
+                <td data-i18n="fail_search">SR Search</td>
+                <td class="text-right" id="fail-search">0</td>
+                <td class="text-right text-red-400" id="fail-search-rep">
+                  0
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex justify-between items-center pt-3 border-t border-gray-700 mt-2">
+          <span data-i18n="total_score" class="text-gray-300 font-bold text-lg">TOTAL SCORE</span>
+          <span id="total-score-display" class="text-white font-mono text-2xl font-bold">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="absolute top-4 right-4 flex flex-col gap-3 items-end pointer-events-none">
+      <!-- Score Details Panel (Top Right) -->
+      <div id="detailsPanel" class="glass-panel rounded-xl p-4 w-60 pointer-events-auto">
+        <h3 data-i18n="traffic_score_details" class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 border-b border-gray-700 pb-1">
+          Traffic Score Details
+        </h3>
+        <div class="space-y-1 text-sm font-mono">
+          <div class="flex justify-between items-center">
+            <span data-i18n="storage_s3" class="text-gray-500">Storage (S3)</span>
+            <span id="score-storage" class="text-emerald-300">0</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span data-i18n="database_sql" class="text-gray-500">Database (SQL)</span>
+            <span id="score-database" class="text-red-300">0</span>
+          </div>
+          <div class="flex justify-between items-center pt-1 border-t border-gray-800">
+            <span data-i18n="attacks_blocked" class="text-purple-300 font-bold">ATTACKS BLOCKED</span>
+            <span id="score-malicious" class="text-purple-300">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Service Health Panel (Under Score Details) -->
+      <div id="healthPanel" class="glass-panel rounded-xl p-4 w-72 pointer-events-auto transition-all duration-300">
+        <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
+          <h3 data-i18n="service_health" class="text-xs font-bold text-red-400 uppercase tracking-wider">
+            Service Health
+          </h3>
+          <div class="flex items-center gap-2">
+            <button id="auto-repair-toggle" onclick="toggleAutoRepair()"
+              class="px-2 py-0.5 rounded text-xs font-mono bg-gray-700 text-gray-400 hover:bg-gray-600 transition"
+              title="Auto-repair services (+10% upkeep)"
+              data-i18n="auto_repair"
+              data-i18n-title="auto_repair_hint">
+              Auto-Repair: OFF
+            </button>
+            <button onclick="togglePanel('health-panel-content', 'health-panel-icon')"
+              class="w-6 h-6 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded border border-gray-600 text-gray-400 transition">
+              <span id="health-panel-icon" class="text-[10px]">▲</span>
+            </button>
+          </div>
+        </div>
+        <div id="health-panel-content">
+          <div id="service-health-list" class="text-sm font-mono mb-2">
+            <div data-i18n="all_services_healthy" class="text-green-400 text-xs">All services healthy</div>
+          </div>
+          <div id="repair-cost-table" class="text-xs border-t border-gray-700 pt-2 hidden">
+            <div class="grid grid-cols-3 gap-1 text-gray-500 mb-1">
+              <span data-i18n="service">Service</span>
+              <span data-i18n="repair" class="text-center">Repair</span>
+              <span data-i18n="auto_repair_min" class="text-right">Auto Repair/min</span>
+            </div>
+            <div id="repair-cost-rows" class="space-y-0.5"></div>
+          </div>
+          <div class="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-700 space-y-1">
+            <div data-i18n="manual_repair_hint">🔧 Click damaged services to repair manually</div>
+            <div data-i18n="auto_repair_hint">⚡ Auto-Repair: Heals services at 10% of service cost/min</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Finances Panel (Under Service Health) -->
+      <div id="financesPanel" class="glass-panel rounded-xl p-4 w-72 pointer-events-auto transition-all duration-300">
+        <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
+          <h3 data-i18n="finances" class="text-xs font-bold text-green-400 uppercase tracking-wider">
+            Finances
+          </h3>
+          <button onclick="togglePanel('finances-panel-content', 'finances-panel-icon')"
+            class="w-6 h-6 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded border border-gray-600 text-gray-400 transition">
+            <span id="finances-panel-icon" class="text-[10px]">▲</span>
+          </button>
+        </div>
+
+        <div id="finances-panel-content">
+          <!-- Income Section -->
+          <div class="mb-3">
+            <div class="text-xs text-gray-500 mb-1 flex justify-between">
+              <span data-i18n="income_by_type">Income by Request Type</span>
+              <span id="income-total" class="text-green-400 font-bold">$0</span>
+            </div>
+            <div id="income-details" class="space-y-0.5 text-xs pl-2 border-l border-gray-700">
+              <!-- Dynamic rows will be inserted here -->
+            </div>
+          </div>
+
+          <!-- Expenses Section -->
+          <div class="mb-3">
+            <div class="text-xs text-gray-500 mb-1 flex justify-between">
+              <span data-i18n="expenses_breakdown">Expenses Breakdown</span>
+              <span id="expense-total" class="text-red-400 font-bold">$0</span>
+            </div>
+            <div id="expense-details" class="space-y-0.5 text-xs pl-2 border-l border-gray-700">
+              <!-- Dynamic rows will be inserted here -->
+            </div>
+          </div>
+
+          <!-- Net Profit -->
+          <div class="border-t border-gray-700 pt-2 mt-2">
+            <div class="grid grid-cols-2 gap-1 text-xs">
+              <span data-i18n="net_profit" class="text-gray-300 font-bold">Net Profit</span>
+              <span id="net-profit" class="text-right font-bold text-yellow-400">$0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Event Indicator Bar -->
+    <div id="active-event-bar" class="fixed top-0 left-0 right-0 h-8 z-40 hidden">
+      <div class="h-full flex items-center justify-center gap-3 text-white font-bold text-sm event-active-bar">
+        <span id="active-event-icon">⚡</span>
+        <span data-i18n="event_active" id="active-event-text">EVENT ACTIVE</span>
+        <span id="active-event-timer" class="font-mono bg-black/30 px-2 rounded"></span>
+      </div>
+      <div id="active-event-progress" class="absolute bottom-0 left-0 h-1 bg-white/50 transition-all duration-100"
+        style="width: 100%"></div>
+    </div>
+
+    <!-- Intervention Warnings Container (Center Top) -->
+    <div id="intervention-warnings"
+      class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center">
+    </div>
+
+    <!-- Time Control Panel (Top Center) -->
+    <div
+      class="absolute top-4 left-1/2 transform -translate-x-1/2 glass-panel rounded-xl p-2 pointer-events-auto flex gap-2">
+      <!-- Language Switcher -->
+      <div class="flex items-center bg-gray-800 rounded-lg px-1 border border-gray-600 mr-1">
+        <select onchange="i18n.setLocale(this.value)" id="lang-select"
+          class="bg-transparent text-[10px] font-bold text-gray-400 hover:text-white transition-colors cursor-pointer outline-none py-1 px-1">
+          <option value="en" class="bg-gray-800 text-white">EN</option>
+          <option value="zh" class="bg-gray-800 text-white">ZH</option>
+          <option value="pt-BR" class="bg-gray-800 text-white">PT-BR</option>
+          <option value="de" class="bg-gray-800 text-white">DE</option>
+        </select>
+      </div>
+      <button onclick="saveGameState()" id="btn-save"
+        class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-green-500 hover:text-green-400 flex items-center justify-center"
+        data-i18n-title="save_game"
+        title="Save Game">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+        </svg>
+      </button>
+      <button onclick="restartGame()" id="btn-restart"
+        class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-red-500 hover:text-red-400 flex items-center justify-center mr-2"
+        data-i18n-title="restart_game"
+        title="Restart Game">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+          </path>
+        </svg>
+      </button>
+      <div class="w-px bg-gray-700 mx-1"></div>
+      <button onclick="handleGameState(0)" id="btn-pause"
+        class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 flex items-center justify-center">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+        </svg>
+      </button>
+      <button onclick="handleGameState(1)" id="btn-play"
+        class="time-btn active w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 flex items-center justify-center">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </button>
+      <button onclick="handleGameState(3)" id="btn-fast"
+        class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 flex items-center justify-center relative">
+        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Objective Panel (Bottom Left) -->
+    <div id="objectivesPanel" class="absolute bottom-24 left-4 glass-panel rounded-xl p-4 pointer-events-auto max-w-xs">
+      <div class="flex justify-between items-center mb-2">
+        <h3 data-i18n="current_objectives" class="text-xs font-bold text-gray-400 uppercase tracking-wider">
+          Current Objectives
+        </h3>
+        <span data-i18n="live"
+          class="text-[10px] bg-red-900/50 px-2 py-0.5 rounded text-red-400 border border-red-800 animate-pulse">LIVE</span>
+      </div>
+      <ul class="text-xs text-gray-300 space-y-2 font-mono">
+        <li class="flex items-center">
+          <span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span>
+          <span data-i18n="survive_endless">Survive Endless Traffic</span>
+        </li>
+        <li id="goal-storage" class="flex items-center">
+          <span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+          <span data-i18n="route_storage">Route STATIC/UPLOAD → Storage</span>
+        </li>
+        <li id="goal-db" class="flex items-center">
+          <span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+          <span data-i18n="route_db">Route READ/WRITE/SEARCH → Database</span>
+        </li>
+        <li id="goal-waf" class="flex items-center">
+          <span class="w-2 h-2 rounded-full bg-purple-500 mr-2"></span>
+          <span data-i18n="block_malicious">Block MALICIOUS with Firewall</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- UI Overlay: Bottom Toolbar -->
+  <div class="absolute bottom-6 left-0 w-full z-10 pointer-events-none flex justify-center">
+    <div class="glass-panel rounded-2xl p-2 pointer-events-auto overflow-y-auto flex items-center gap-2 shadow-2xl">
+      <!-- Help Button -->
+      <button id="tool-help"
+        class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center mr-2 border border-gray-600"
+        onclick="showFAQ()">
+        <div class="text-xl">?</div>
+        <span data-i18n="help" class="text-[9px] font-bold mt-1 uppercase">Help</span>
+      </button>
+
+      <!-- Mute Button -->
+      <button id="tool-mute"
+        class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-gray-600"
+        onclick="toggleMute()">
+        <div class="text-xl" id="mute-icon">🔊</div>
+        <span data-i18n="sound" class="text-[9px] font-bold mt-1 uppercase">Sound</span>
+      </button>
+
+      <!-- Tools -->
+      <div class="flex gap-1 pr-4 border-r border-gray-700">
+        <button id="tool-select"
+          class="service-btn active bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent"
+          onclick="setTool('select')">
+          <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122">
+            </path>
+          </svg>
+          <span data-i18n="select" class="text-[10px] uppercase">Select</span>
+        </button>
+
+        <button id="tool-connect"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent"
+          onclick="setTool('connect')">
+          <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+            </path>
+          </svg>
+          <span data-i18n="link" class="text-[10px] uppercase">Link</span>
+        </button>
+
+        <button id="tool-delete"
+          class="service-btn bg-red-900/30 text-red-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent hover:bg-red-900/50"
+          onclick="setTool('delete')">
+          <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+            </path>
+          </svg>
+          <span data-i18n="demolish" class="text-[10px] uppercase">Demolish</span>
+        </button>
+
+        <button id="tool-unlink"
+          class="service-btn bg-orange-900/30 text-orange-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent hover:bg-orange-900/50"
+          onclick="setTool('unlink')">
+          <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+          </svg>
+          <span data-i18n="unlink" class="text-[10px] uppercase">Unlink</span>
+        </button>
+      </div>
+
+      <!-- Shop -->
+      <div class="flex gap-2 pl-2">
+        <!-- WAF -->
+        <button id="tool-waf"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('waf')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $40
+          </div>
+          <div class="w-4 h-4 bg-purple-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(168,85,247,0.6)]"></div>
+          <span data-i18n="fw" class="text-[10px] font-bold mt-1">FW</span>
+        </button>
+
+        <!-- SQS -->
+        <button id="tool-sqs"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('sqs')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $40
+          </div>
+          <div class="w-5 h-3 bg-orange-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(255,153,0,0.6)]"></div>
+          <span data-i18n="queue" class="text-[10px] font-bold mt-1">Queue</span>
+        </button>
+
+        <button id="tool-alb"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('alb')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $50
+          </div>
+          <div class="w-4 h-4 bg-blue-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
+          <span data-i18n="lb" class="text-[10px] font-bold mt-1">LB</span>
+        </button>
+
+        <button id="tool-lambda"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('lambda')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $60
+          </div>
+          <div class="w-4 h-4 bg-orange-500 rounded-full mb-1 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></div>
+          <span data-i18n="compute_short" class="text-[10px] font-bold mt-1">Compute</span>
+        </button>
+
+        <button id="tool-db"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('db')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $150
+          </div>
+          <div
+            class="w-4 h-4 bg-red-600 rounded-sm mb-1 shadow-[0_0_10px_rgba(220,38,38,0.6)] border-b-2 border-red-800">
+          </div>
+          <span data-i18n="db_short" class="text-[10px] font-bold mt-1">SQL DB</span>
+        </button>
+
+        <!-- Cache -->
+        <button id="tool-cache"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('cache')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $60
+          </div>
+          <div class="w-4 h-4 bg-red-600 rounded mb-1 shadow-[0_0_10px_rgba(220,56,45,0.6)]"></div>
+          <span data-i18n="cache_short" class="text-[10px] font-bold mt-1">Cache</span>
+        </button>
+
+        <!-- CDN -->
+        <button id="tool-cdn"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('cdn')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $60
+          </div>
+          <div
+            class="w-4 h-4 bg-green-400 rounded-full mb-1 shadow-[0_0_10px_rgba(74,222,128,0.6)] border border-white">
+          </div>
+          <span data-i18n="cdn_short" class="text-[10px] font-bold mt-1">CDN</span>
+        </button>
+
+        <!-- S3 -->
+        <button id="tool-s3"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('s3')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $25
+          </div>
+          <div class="w-4 h-4 bg-emerald-500 rounded-full mb-1 shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
+          <span data-i18n="storage_short" class="text-[10px] font-bold mt-1">Storage</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hover Tooltip -->
+  <div id="tooltip" class="tooltip"></div>
+
+  <!-- Upgrade Indicator -->
+  <div id="upgrade-indicator"
+    class="hidden absolute z-30 pointer-events-auto cursor-pointer flex flex-col items-center transform -translate-x-1/2 -translate-y-full transition-transform hover:scale-110">
+    <div class="text-2xl animate-bounce">⬆️</div>
+    <div id="upgrade-cost"
+      class="bg-green-600 text-white text-xs px-2 py-1 rounded font-bold font-mono shadow-lg border border-green-400 mt-1">
+      $100
+    </div>
   </div>
 
   <!-- Game Canvas -->
@@ -47,15 +542,10 @@
 
       <h1 data-i18n="title"
         class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 mb-2 tracking-tighter filter drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
-        CLOUD LEARNING<br />SIMULATOR
+        SERVER<br />SURVIVAL
       </h1>
 
       <div class="space-y-4">
-        <button onclick="window.location.href='dashboard.html'" 
-          class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-cyan-400/50">
-          🏠 Dashboard
-        </button>
-
         <button id="resume-btn" onclick="resumeGame()" data-i18n="resume_game"
           class="hidden w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-blue-400/50">
           Resume Game
@@ -64,11 +554,6 @@
         <button onclick="startGame()" data-i18n="start_survival"
           class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-green-400/50">
           Start Survival
-        </button>
-
-        <button onclick="startSandbox()" data-i18n="sandbox_mode"
-          class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-purple-400/50">
-          Sandbox Mode
         </button>
 
         <button onclick="loadGameState()" id="load-btn" data-i18n="continue_game"
@@ -120,14 +605,296 @@
           </svg>
         </button>
       </div>
-      <div class="text-center">
-        <p class="text-gray-400">FAQ content would be loaded here...</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Traffic Types -->
+        <div>
+          <h3 data-i18n="traffic_types" class="text-lg font-bold text-blue-400 mb-4">TRAFFIC TYPES</h3>
+          <div class="space-y-3">
+            <div class="bg-gray-800/50 p-3 rounded border border-green-900/50">
+              <strong data-i18n="traffic_static_full" class="text-green-400">STATIC (GET)</strong>
+              <p data-i18n="traffic_static_desc" class="text-sm text-gray-400">
+                Images, CSS, JS. Route to
+                <span class="text-emerald-400">Storage</span>. 90% cache hit
+                rate.
+              </p>
+            </div>
+            <div class="bg-gray-800/50 p-3 rounded border border-blue-900/50">
+              <strong data-i18n="traffic_read_full" class="text-blue-400">READ (GET)</strong>
+              <p data-i18n="traffic_read_desc" class="text-sm text-gray-400">
+                API data fetch. Route to
+                <span class="text-red-400">SQL DB</span>. 40% cache hit rate.
+              </p>
+            </div>
+            <div class="bg-gray-800/50 p-3 rounded border border-orange-900/50">
+              <strong data-i18n="traffic_write_full" class="text-orange-400">WRITE (POST/PUT)</strong>
+              <p data-i18n="traffic_write_desc" class="text-sm text-gray-400">
+                Database writes. Route to
+                <span class="text-red-400">SQL DB</span>. Never cached.
+              </p>
+            </div>
+            <div class="bg-gray-800/50 p-3 rounded border border-yellow-900/50">
+              <strong data-i18n="traffic_upload_full" class="text-yellow-400">UPLOAD (POST)</strong>
+              <p data-i18n="traffic_upload_desc" class="text-sm text-gray-400">
+                File uploads. Route to
+                <span class="text-emerald-400">Storage</span>. Never cached.
+                Heavy processing.
+              </p>
+            </div>
+            <div class="bg-gray-800/50 p-3 rounded border border-cyan-900/50">
+              <strong data-i18n="traffic_search_full" class="text-cyan-400">SEARCH (GET)</strong>
+              <p data-i18n="traffic_search_desc" class="text-sm text-gray-400">
+                Complex queries. Route to
+                <span class="text-red-400">SQL DB</span>. 15% cache hit. Heavy
+                processing.
+              </p>
+            </div>
+            <div class="bg-gray-800/50 p-3 rounded border border-red-900/50">
+              <strong data-i18n="traffic_malicious" class="text-red-400">MALICIOUS</strong>
+              <p data-i18n="traffic_malicious_desc" class="text-sm text-gray-400">
+                DDoS & attacks. Block with
+                <span class="text-purple-400">Firewall</span>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Services -->
+        <div>
+          <h3 data-i18n="services" class="text-lg font-bold text-blue-400 mb-4">SERVICES</h3>
+          <ul class="space-y-2 text-sm text-gray-300">
+            <li class="flex justify-between">
+              <span data-i18n="firewall" class="text-purple-400 font-bold">Firewall</span>
+              <span data-i18n="fw_desc_short">Blocks Fraud ($40)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="message_queue" class="text-orange-500 font-bold">Message Queue</span>
+              <span data-i18n="queue_desc_short">Buffers 200 requests ($35)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="load_balancer" class="text-blue-400 font-bold">Load Balancer</span>
+              <span data-i18n="lb_desc_short">Distributes Traffic ($50)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="compute" class="text-orange-400 font-bold">Compute</span>
+              <span data-i18n="compute_desc_short">Processes Requests ($60)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="relational_db" class="text-red-400 font-bold">Relational DB</span>
+              <span data-i18n="db_desc_short">Stores API Data ($150)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="memory_cache" class="text-red-500 font-bold">Memory Cache</span>
+              <span data-i18n="cache_desc_short">Cache layer ($60)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="file_storage" class="text-emerald-400 font-bold">File Storage</span>
+              <span data-i18n="storage_desc_short">Stores Web Data ($25)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Tools -->
+      <div class="mt-8">
+        <h3 data-i18n="tools_controls" class="text-lg font-bold text-blue-400 mb-4">TOOLS & CONTROLS</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+            <div class="flex items-center mb-2">
+              <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center mr-2">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122">
+                  </path>
+                </svg>
+              </div>
+              <strong data-i18n="select" class="text-white">SELECT</strong>
+            </div>
+            <p data-i18n="tool_select_desc" class="text-gray-400">
+              Inspect services to see load and stats. Click Compute/DB to
+              upgrade.
+            </p>
+          </div>
+          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+            <div class="flex items-center mb-2">
+              <div class="w-6 h-6 bg-gray-700 rounded flex items-center justify-center mr-2">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+                  </path>
+                </svg>
+              </div>
+              <strong data-i18n="link" class="text-white">CONNECT</strong>
+            </div>
+            <p data-i18n="tool_connect_desc" class="text-gray-400">
+              Link nodes together. Click
+              <span class="text-green-400">Source</span> then
+              <span class="text-blue-400">Destination</span>.
+            </p>
+          </div>
+          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+            <div class="flex items-center mb-2">
+              <div class="w-6 h-6 bg-red-900/50 rounded flex items-center justify-center mr-2">
+                <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                  </path>
+                </svg>
+              </div>
+              <strong data-i18n="demolish" class="text-white">DELETE</strong>
+            </div>
+            <p data-i18n="tool_delete_desc" class="text-gray-400">Remove services. Refunds 50% of cost.</p>
+          </div>
+          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+            <div class="flex items-center mb-2">
+              <div class="w-6 h-6 bg-orange-900/50 rounded flex items-center justify-center mr-2">
+                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636">
+                  </path>
+                </svg>
+              </div>
+              <strong data-i18n="tool_unlink" class="text-white">UNLINK</strong>
+            </div>
+            <p data-i18n="tool_unlink_desc" class="text-gray-400">
+              Remove connections between services. Click on a link to delete
+              it.
+            </p>
+          </div>
+
+          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+            <div class="flex items-center mb-2">
+              <strong data-i18n="hud" class="text-white">HUD</strong>
+            </div>
+            <p data-i18n="hud_desc" class="text-gray-400">Press H for hiding HUD.</p>
+          </div>
+
+          <div class="bg-gray-800/30 p-3 rounded border border-gray-700">
+            <div class="flex items-center mb-2">
+              <strong data-i18n="view" class="text-white">View</strong>
+            </div>
+            <p data-i18n="view_desc" class="text-gray-400">Press R for reset view.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mechanics -->
+      <div class="mt-8">
+        <h3 data-i18n="mechanics" class="text-lg font-bold text-blue-400 mb-4">MECHANICS</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div class="bg-gray-800/30 p-3 rounded">
+            <strong data-i18n="mech_upgrades" class="text-white block mb-1">Upgrades</strong>
+            <p data-i18n="mech_upgrades_desc" class="text-gray-400">
+              Click existing Compute/DB/Cache instances to upgrade capacity
+              (Tier 1-3).
+            </p>
+          </div>
+          <div class="bg-gray-800/30 p-3 rounded">
+            <strong data-i18n="mech_lb" class="text-white block mb-1">Load Balancing</strong>
+            <p data-i18n="mech_lb_desc" class="text-gray-400">
+              Load Balancers use Round Robin to distribute traffic evenly.
+            </p>
+          </div>
+          <div class="bg-gray-800/30 p-3 rounded">
+            <strong data-i18n="mech_fail" class="text-white block mb-1">Failure Conditions</strong>
+            <p data-i18n="mech_fail_desc" class="text-gray-400">
+              Reputation reaches 0% or Money reaches -$1000.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Services -->
+      <div class="mt-8">
+        <h3 data-i18n="advanced_services" class="text-lg font-bold text-blue-400 mb-4">
+          ADVANCED SERVICES
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div class="bg-gray-800/30 p-3 rounded border border-orange-900/50">
+            <strong data-i18n="mq_full" class="text-orange-400 block mb-1">Message Queue</strong>
+            <p data-i18n="mq_desc" class="text-gray-400 text-xs">
+              Massive buffer holding 200 requests. Place after Firewall to
+              smooth DDoS spikes, or before Compute to prevent overload. Cheap
+              insurance against traffic bursts.
+            </p>
+            <p data-i18n="mq_flow" class="text-gray-500 text-xs mt-1">
+              Flow: Firewall → Queue → Load Balancer or Load Balancer → Queue
+              → Compute
+            </p>
+          </div>
+          <div class="bg-gray-800/30 p-3 rounded border border-red-900/50">
+            <strong data-i18n="cache_full" class="text-red-400 block mb-1">Memory Cache</strong>
+            <p data-i18n="cache_desc_long" class="text-gray-400 text-xs">
+              Caching layer with 35-65% hit rate. Cache hits complete
+              instantly without hitting DB/Storage. Upgrade tiers for higher
+              hit rates. Great for reducing DB costs.
+            </p>
+            <p data-i18n="cache_flow" class="text-gray-500 text-xs mt-1">
+              Flow: Compute → Cache → DB/Storage
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 text-center">
         <button onclick="closeFAQ()" data-i18n="close_manual"
-          class="mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-8 rounded-lg transition">
+          class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-8 rounded-lg transition">
           Close Manual
         </button>
       </div>
     </div>
+  </div>
+
+  <!-- Tutorial Modal (no backdrop - allows interaction with game) -->
+  <div id="tutorial-modal" class="fixed inset-0 z-[60] pointer-events-none hidden">
+    <!-- Tutorial popup -->
+    <div id="tutorial-popup"
+      class="absolute glass-panel rounded-xl p-6 max-w-xl pointer-events-auto border-2 border-cyan-500/50 shadow-[0_0_30px_rgba(6,182,212,0.3)]">
+      <div class="flex items-center gap-3 mb-4">
+        <div id="tutorial-icon"
+          class="w-12 h-12 rounded-lg flex items-center justify-center text-2xl bg-cyan-900/50 border border-cyan-500/30">
+        </div>
+        <div>
+          <h3 id="tutorial-title" class="text-lg font-bold text-white"></h3>
+          <div id="tutorial-step-container" class="text-xs text-gray-400">
+            Step <span id="tutorial-step-num">1</span> of
+            <span id="tutorial-total-steps">10</span>
+          </div>
+        </div>
+      </div>
+
+      <p id="tutorial-text" class="text-gray-300 text-sm leading-relaxed mb-4"></p>
+
+      <div id="tutorial-hint" class="bg-gray-800/50 rounded-lg p-3 mb-4 border border-gray-700 hidden">
+        <div class="flex items-start gap-2">
+          <span class="text-yellow-400">💡</span>
+          <p id="tutorial-hint-text" class="text-xs text-gray-400"></p>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center">
+        <button id="tutorial-skip" class="text-gray-500 hover:text-gray-300 text-sm transition"
+          data-i18n="skip_tutorial"
+          onclick="window.tutorial?.skip()">
+          Skip Tutorial
+        </button>
+        <div class="flex gap-2">
+          <button id="tutorial-next"
+            data-i18n="next"
+            class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-lg transition hidden">
+            Next
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress dots -->
+      <div id="tutorial-progress" class="flex justify-center gap-1.5 mt-4 pt-3 border-t border-gray-700"></div>
+    </div>
+
+    <!-- Highlight ring for elements -->
+    <div id="tutorial-highlight"
+      class="absolute pointer-events-none border-2 border-cyan-400 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.5)] hidden"
+      style="transition: all 0.3s ease"></div>
   </div>
 
   <!-- Loading Screen -->

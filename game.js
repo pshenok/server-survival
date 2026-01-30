@@ -882,29 +882,15 @@ const panSpeed = 0.1;
 function resetGame(mode = "survival") {
     STATE.sound.init();
     STATE.sound.playGameBGM();
-    STATE.gameMode = mode;
+    
+    // Hard-lock mode to survival (Play mode only)
+    STATE.gameMode = "survival";
 
-    // Set budget based on mode
-    if (mode === "sandbox") {
-        STATE.sandboxBudget = CONFIG.sandbox.defaultBudget;
-        STATE.money = STATE.sandboxBudget;
-        STATE.upkeepEnabled = CONFIG.sandbox.upkeepEnabled;
-        STATE.trafficDistribution = {
-            STATIC: CONFIG.sandbox.trafficDistribution.STATIC / 100,
-            READ: CONFIG.sandbox.trafficDistribution.READ / 100,
-            WRITE: CONFIG.sandbox.trafficDistribution.WRITE / 100,
-            UPLOAD: CONFIG.sandbox.trafficDistribution.UPLOAD / 100,
-            SEARCH: CONFIG.sandbox.trafficDistribution.SEARCH / 100,
-            MALICIOUS: CONFIG.sandbox.trafficDistribution.MALICIOUS / 100,
-        };
-        STATE.burstCount = CONFIG.sandbox.defaultBurstCount;
-        STATE.currentRPS = CONFIG.sandbox.defaultRPS;
-    } else {
-        STATE.money = CONFIG.survival.startBudget;
-        STATE.upkeepEnabled = true;
-        STATE.trafficDistribution = { ...CONFIG.survival.trafficDistribution };
-        STATE.currentRPS = 0.5;
-    }
+    // Set Play mode budget and configuration
+    STATE.money = CONFIG.survival.startBudget;
+    STATE.upkeepEnabled = true;
+    STATE.trafficDistribution = { ...CONFIG.survival.trafficDistribution };
+    STATE.currentRPS = 0.5;
 
     STATE.reputation = 100;
     STATE.requestsProcessed = 0;
@@ -1048,36 +1034,9 @@ function resetGame(mode = "survival") {
     const sandboxPanel = document.getElementById("sandboxPanel");
     const objectivesPanel = document.getElementById("objectivesPanel");
 
-    if (mode === "sandbox") {
-        // Show sandbox panel, hide objectives
-        if (sandboxPanel) {
-            sandboxPanel.classList.remove("hidden");
-            // Sync sandbox UI controls
-            syncInput("budget", STATE.sandboxBudget);
-            syncInput("rps", STATE.currentRPS);
-            syncInput("static", STATE.trafficDistribution.STATIC * 100);
-            syncInput("read", STATE.trafficDistribution.READ * 100);
-            syncInput("write", STATE.trafficDistribution.WRITE * 100);
-            syncInput("upload", STATE.trafficDistribution.UPLOAD * 100);
-            syncInput("search", STATE.trafficDistribution.SEARCH * 100);
-            syncInput("malicious", STATE.trafficDistribution.MALICIOUS * 100);
-            syncInput("burst", STATE.burstCount);
-            // Reset upkeep toggle button
-            const upkeepBtn = document.getElementById("upkeep-toggle");
-            if (upkeepBtn) {
-                upkeepBtn.textContent = STATE.upkeepEnabled
-                    ? i18n.t('upkeep_on_label')
-                    : i18n.t('upkeep_off_label');
-                upkeepBtn.classList.toggle("bg-red-900/50", STATE.upkeepEnabled);
-                upkeepBtn.classList.toggle("bg-green-900/50", !STATE.upkeepEnabled);
-            }
-        }
-        if (objectivesPanel) objectivesPanel.classList.add("hidden");
-    } else {
-        // Show objectives, hide sandbox panel
-        if (sandboxPanel) sandboxPanel.classList.add("hidden");
-        if (objectivesPanel) objectivesPanel.classList.remove("hidden");
-    }
+    // Play mode only - always show objectives panel, hide sandbox panel
+    if (sandboxPanel) sandboxPanel.classList.add("hidden");
+    if (objectivesPanel) objectivesPanel.classList.remove("hidden");
 
     // Ensure loop is running
     if (!STATE.animationId) {
@@ -1087,7 +1046,8 @@ function resetGame(mode = "survival") {
 
 function restartGame() {
     document.getElementById("modal").classList.add("hidden");
-    resetGame(STATE.gameMode);
+    // Force Play mode (survival) - no sandbox
+    resetGame("survival");
 }
 
 function toggleAutoRepair() {
@@ -1469,7 +1429,8 @@ window.startGame = () => {
         window.hideMainMenu();
     }
     
-    resetGame();
+    // Force Play mode (survival) - no sandbox
+    resetGame("survival");
 
     if (window.tutorial) {
         setTimeout(() => {
@@ -1478,16 +1439,7 @@ window.startGame = () => {
     }
 };
 
-window.startSandbox = () => {
-    document.getElementById("main-menu-modal").classList.add("hidden");
-    
-    // Hide navbar during gameplay
-    if (typeof window.hideMainMenu === 'function') {
-        window.hideMainMenu();
-    }
-    
-    resetGame("sandbox");
-};
+// Removed startSandbox - Play mode only
 
 function createService(type, pos) {
     if (STATE.money < CONFIG.services[type].cost) {
@@ -2791,87 +2743,6 @@ function resetCamera() {
     }
 }
 
-// ==================== SANDBOX MODE FUNCTIONS ====================
-
-function syncInput(name, value) {
-    const slider = document.getElementById(`${name}-slider`);
-    const input = document.getElementById(`${name}-input`);
-    if (slider) slider.value = value;
-    if (input) input.value = value;
-}
-
-window.setSandboxBudget = (value) => {
-    const v = Math.max(0, parseInt(value) || 0);
-    STATE.sandboxBudget = v;
-    STATE.money = v;
-    syncInput("budget", v);
-};
-
-window.resetBudget = () => {
-    STATE.money = STATE.sandboxBudget;
-};
-
-window.setSandboxRPS = (value) => {
-    const v = Math.max(0, parseFloat(value) || 0);
-    STATE.currentRPS = v;
-    syncInput("rps", v);
-};
-
-window.setTrafficMix = (type, value) => {
-    const v = Math.max(0, Math.min(100, parseFloat(value) || 0));
-    STATE.trafficDistribution[type] = v / 100;
-    syncInput(type.toLowerCase(), v);
-};
-
-window.setBurstCount = (value) => {
-    const v = Math.max(1, parseInt(value) || 10);
-    STATE.burstCount = v;
-    syncInput("burst", v);
-};
-
-window.spawnBurst = (type) => {
-    for (let i = 0; i < STATE.burstCount; i++) {
-        setTimeout(() => {
-            const req = new Request(type);
-            STATE.requests.push(req);
-            const conns = STATE.internetNode.connections;
-            if (conns.length > 0) {
-                const entryNodes = conns.map((id) =>
-                    STATE.services.find((s) => s.id === id)
-                );
-                const wafEntry = entryNodes.find((s) => s?.type === "waf");
-                const target =
-                    wafEntry || entryNodes[Math.floor(Math.random() * entryNodes.length)];
-                if (target) req.flyTo(target);
-                else failRequest(req);
-            } else {
-                failRequest(req);
-            }
-        }, i * 30);
-    }
-};
-
-window.toggleUpkeep = () => {
-    STATE.upkeepEnabled = !STATE.upkeepEnabled;
-    const btn = document.getElementById("upkeep-toggle");
-    if (btn) {
-        btn.textContent = STATE.upkeepEnabled ? i18n.t('upkeep_on_label') : i18n.t('upkeep_off_label');
-        btn.classList.toggle("bg-red-900/50", STATE.upkeepEnabled);
-        btn.classList.toggle("bg-green-900/50", !STATE.upkeepEnabled);
-    }
-};
-
-window.clearAllServices = () => {
-    STATE.services.forEach((s) => s.destroy());
-    STATE.services = [];
-    STATE.connections.forEach((c) => connectionGroup.remove(c.mesh));
-    STATE.connections = [];
-    STATE.internetNode.connections = [];
-    STATE.requests.forEach((r) => r.destroy());
-    STATE.requests = [];
-    STATE.money = STATE.sandboxBudget;
-};
-
 // ==================== MENU FUNCTIONS ====================
 
 function openMainMenu() {
@@ -3037,8 +2908,7 @@ window.loadGameState = () => {
         STATE.isRunning = saveData.isRunning || false;
         STATE.gameStartTime = performance.now();
 
-        STATE.gameMode = saveData.gameMode || "survival";
-        STATE.sandboxBudget = saveData.sandboxBudget || 2000;
+        STATE.gameMode = "survival"; // Force Play mode
         STATE.upkeepEnabled = saveData.upkeepEnabled !== false;
         STATE.trafficDistribution = { ...saveData.trafficDistribution } || {
             STATIC: 0.3,
@@ -3048,7 +2918,6 @@ window.loadGameState = () => {
             SEARCH: 0.1,
             MALICIOUS: 0.2,
         };
-        STATE.burstCount = saveData.burstCount || 10;
         STATE.gameStarted = saveData.gameStarted || true;
         STATE.previousTimeScale = saveData.previousTimeScale || 1;
 
