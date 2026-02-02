@@ -414,5 +414,8 @@ const EN_TRANSLATIONS = {
     "event_traffic_spike": "Traffic Spike",
     "event_cloud_price_surge": "Cloud Price Surge",
     "event_db_maintenance": "DB Maintenance",
-    "event_dns_issues": "DNS Issues"
+    "event_dns_issues": "DNS Issues",
+    "clear": "Clear",
+    "music": "Music",
+    "sfx": "SFX"
 };

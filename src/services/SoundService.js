@@ -1,7 +1,8 @@
 class SoundService {
     constructor() {
         this.ctx = null;
-        this.muted = true;
+        this.musicMuted = true;
+        this.sfxMuted = true;
         this.masterGain = null;
         this.gameBgm = new Audio('assets/sounds/game-background.mp3');
         this.gameBgm.loop = true;
@@ -17,6 +18,11 @@ class SoundService {
         this.sfxClick = new Audio('assets/sounds/click-9.mp3');
         this.sfxHover.volume = 0.4;
         this.sfxClick.volume = 0.5;
+
+        // Backwards compatibility
+        Object.defineProperty(this, 'muted', {
+            get: () => this.musicMuted && this.sfxMuted
+        });
     }
 
     init() {
@@ -31,12 +37,10 @@ class SoundService {
             if (this.ctx.state === 'suspended') this.ctx.resume();
 
             // Try to play current BGM if set
-            if (this.currentBgm && this.currentBgm.paused && !this.muted) {
+            if (this.currentBgm && this.currentBgm.paused && !this.musicMuted) {
                 this.currentBgm.play().catch(e => console.log("BGM autoplay blocked"));
             }
 
-            // We don't remove the listener immediately because sometimes the first click doesn't fully unlock everything depending on browser
-            // But usually one click is enough. Let's keep it simple.
             if (this.ctx.state === 'running') {
                 window.removeEventListener('click', resumeAudio);
                 window.removeEventListener('keydown', resumeAudio);
@@ -56,7 +60,7 @@ class SoundService {
 
     switchBGM(newBgm) {
         if (this.currentBgm === newBgm) {
-            if (this.currentBgm.paused && !this.muted && this.ctx && this.ctx.state === 'running') {
+            if (this.currentBgm.paused && !this.musicMuted && this.ctx && this.ctx.state === 'running') {
                 this.currentBgm.play().catch(e => { });
             }
             return;
@@ -68,8 +72,7 @@ class SoundService {
         }
 
         this.currentBgm = newBgm;
-        if (!this.muted) {
-            // If context is running, play immediately. Otherwise it will be picked up by resumeAudio
+        if (!this.musicMuted) {
             if (this.ctx && this.ctx.state === 'running') {
                 this.currentBgm.play().catch(e => console.log("Waiting for interaction to play BGM"));
             }
@@ -77,37 +80,61 @@ class SoundService {
     }
 
     playMenuHover() {
-        if (!this.muted) {
+        if (!this.sfxMuted) {
             this.sfxHover.currentTime = 0;
             this.sfxHover.play().catch(() => { });
         }
     }
 
     playMenuClick() {
-        if (!this.muted) {
+        if (!this.sfxMuted) {
             this.sfxClick.currentTime = 0;
             this.sfxClick.play().catch(() => { });
         }
     }
 
-    toggleMute() {
-        this.muted = !this.muted;
-        if (this.masterGain) {
-            this.masterGain.gain.value = this.muted ? 0 : 0.3;
-        }
+    toggleMusic() {
+        this.musicMuted = !this.musicMuted;
 
-        if (this.muted) {
+        if (this.musicMuted) {
             if (this.currentBgm) this.currentBgm.pause();
         } else {
             if (this.currentBgm) this.currentBgm.play().catch(e => { });
         }
 
-        return this.muted;
+        return this.musicMuted;
+    }
+
+    toggleSfx() {
+        this.sfxMuted = !this.sfxMuted;
+        if (this.masterGain) {
+            this.masterGain.gain.value = this.sfxMuted ? 0 : 0.3;
+        }
+
+        return this.sfxMuted;
+    }
+
+    // Legacy toggleMute toggles both
+    toggleMute() {
+        const willMute = !(this.musicMuted && this.sfxMuted);
+        this.musicMuted = willMute;
+        this.sfxMuted = willMute;
+
+        if (this.masterGain) {
+            this.masterGain.gain.value = this.sfxMuted ? 0 : 0.3;
+        }
+
+        if (this.musicMuted) {
+            if (this.currentBgm) this.currentBgm.pause();
+        } else {
+            if (this.currentBgm) this.currentBgm.play().catch(e => { });
+        }
+
+        return willMute;
     }
 
     playTone(freq, type, duration, startTime = 0) {
-        // Also check if audio context is in running state
-        if (!this.ctx || this.muted || this.ctx.state !== 'running') return;
+        if (!this.ctx || this.sfxMuted || this.ctx.state !== 'running') return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 
@@ -142,7 +169,7 @@ class SoundService {
         this.playTone(1200, 'triangle', 0.1, 0.05);
     }
     playGameOver() {
-        if (!this.ctx || this.muted) return;
+        if (!this.ctx || this.sfxMuted) return;
         [440, 415, 392, 370].forEach((f, i) => {
             this.playTone(f, 'triangle', 0.4, i * 0.4);
         });

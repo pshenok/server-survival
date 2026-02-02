@@ -415,5 +415,8 @@ const NE_TRANSLATIONS = {
     "event_traffic_spike": "ट्राफिक छाला",
     "event_cloud_price_surge": "क्लाउड मूल्य छाला",
     "event_db_maintenance": "DB मेन्टेनेन्स",
-    "event_dns_issues": "DNS समस्याहरू"
+    "event_dns_issues": "DNS समस्याहरू",
+    "clear": "मेटाउनुहोस्",
+    "music": "संगीत",
+    "sfx": "ध्वनि प्रभाव"
 };

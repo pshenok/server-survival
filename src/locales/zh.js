@@ -423,5 +423,8 @@ const ZH_TRANSLATIONS = {
     "event_traffic_spike": "流量激增",
     "event_cloud_price_surge": "云服务涨价",
     "event_db_maintenance": "数据库维护",
-    "event_dns_issues": "DNS 问题"
+    "event_dns_issues": "DNS 问题",
+    "clear": "清除",
+    "music": "音乐",
+    "sfx": "音效"
 };
