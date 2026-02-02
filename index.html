@@ -78,7 +78,10 @@
         <div id="failures-panel" class="mt-2 pt-2 border-t border-gray-700/50 hidden">
           <div class="flex justify-between items-center mb-2">
             <span data-i18n="failures" class="text-gray-500 text-xs uppercase">Failures</span>
-            <span id="failures-total" class="text-red-400 font-mono text-xs">0 <span data-i18n="total">total</span></span>
+            <div class="flex items-center gap-2">
+              <span id="failures-total" class="text-red-400 font-mono text-xs">0 <span data-i18n="total">total</span></span>
+              <button id="clear-failures-btn" onclick="clearFailures()" class="text-gray-500 hover:text-gray-300 text-[10px] border border-gray-600 hover:border-gray-400 rounded px-1.5 py-0.5 transition-colors" data-i18n="clear" title="Clear failures list">Clear</button>
+            </div>
           </div>
           <table class="w-full text-[10px] font-mono">
             <thead>
@@ -503,12 +506,20 @@
         <span data-i18n="help" class="text-[9px] font-bold mt-1 uppercase">Help</span>
       </button>
 
-      <!-- Mute Button -->
-      <button id="tool-mute"
+      <!-- Music Toggle -->
+      <button id="tool-music"
         class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-gray-600"
-        onclick="toggleMute()">
-        <div class="text-xl" id="mute-icon">🔊</div>
-        <span data-i18n="sound" class="text-[9px] font-bold mt-1 uppercase">Sound</span>
+        onclick="toggleMusic()">
+        <div class="text-xl" id="music-icon">🎵</div>
+        <span data-i18n="music" class="text-[9px] font-bold mt-1 uppercase">Music</span>
+      </button>
+
+      <!-- SFX Toggle -->
+      <button id="tool-sfx"
+        class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-gray-600"
+        onclick="toggleSfx()">
+        <div class="text-xl" id="sfx-icon">🔊</div>
+        <span data-i18n="sfx" class="text-[9px] font-bold mt-1 uppercase">SFX</span>
       </button>
 
       <!-- Tools -->
@@ -664,6 +675,27 @@
     </div>
   </div>
 
+  <!-- Event Timeline Graph Panel (toggleable) -->
+  <div id="timeline-panel" class="hidden fixed bottom-28 left-1/2 transform -translate-x-1/2 z-20 pointer-events-auto">
+    <div class="glass-panel rounded-xl p-3" style="width: 700px;">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Event Timeline</h3>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 text-[9px] font-mono">
+            <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-blue-400"></span> RPS</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-yellow-400"></span> Rep</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-green-400"></span> Money</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-2 h-1 bg-red-500/60"></span> DDoS</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-2 h-1 bg-orange-500/60"></span> Shift</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-2 h-3 border-l border-dashed border-purple-400"></span> Event</span>
+          </div>
+          <button onclick="toggleTimeline()" class="text-gray-500 hover:text-gray-300 text-sm transition" title="Close timeline">&#10005;</button>
+        </div>
+      </div>
+      <canvas id="timeline-canvas" width="672" height="140" class="rounded" style="width: 672px; height: 140px; background: rgba(0,0,0,0.4);"></canvas>
+    </div>
+  </div>
+
   <!-- Game Canvas -->
   <div id="canvas-container"></div>
 
@@ -697,11 +729,17 @@
   <div id="main-menu-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
     <div
       class="relative bg-gray-900/90 p-12 rounded-2xl border border-blue-500/30 shadow-2xl max-w-md w-full text-center">
-      <!-- Menu Mute Button -->
-      <button id="menu-mute-btn" onclick="toggleMute()"
-        class="absolute top-4 right-4 text-gray-400 hover:text-white transition p-2 rounded-full pulse-green">
-        <span id="menu-mute-icon" class="text-xl">🔇</span>
-      </button>
+      <!-- Menu Sound Buttons -->
+      <div class="absolute top-4 right-4 flex gap-2">
+        <button id="menu-music-btn" onclick="toggleMusic()"
+          class="text-gray-400 hover:text-white transition p-2 rounded-full pulse-green" title="Toggle Music">
+          <span id="menu-music-icon" class="text-xl">🎵</span>
+        </button>
+        <button id="menu-sfx-btn" onclick="toggleSfx()"
+          class="text-gray-400 hover:text-white transition p-2 rounded-full pulse-green" title="Toggle SFX">
+          <span id="menu-sfx-icon" class="text-xl">🔇</span>
+        </button>
+      </div>
 
       <h1
         data-i18n="title"

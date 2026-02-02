@@ -94,5 +94,15 @@ const STATE = {
 
         // Warning state
         warnings: []
+    },
+
+    // Event timeline graph data (read-only observation, does not affect simulation)
+    timeline: {
+        enabled: false,       // Whether the timeline panel is visible
+        dataPoints: [],       // Array of { time, rps, reputation, money, activeEvent, maliciousSpike, trafficShift }
+        events: [],           // Array of { time, type, label } for event markers
+        sampleInterval: 1.0,  // Record one data point per game-second
+        sampleTimer: 0,       // Accumulator for sampling
+        maxDataPoints: 600,   // Keep last 10 minutes of data at 1 sample/sec
     }
 };

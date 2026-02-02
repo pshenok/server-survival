@@ -424,5 +424,8 @@ const PT_BR_TRANSLATIONS = {
     "event_traffic_spike": "Pico de Tráfego",
     "event_cloud_price_surge": "Aumento de Preços na Nuvem",
     "event_db_maintenance": "Manutenção de Banco de Dados",
-    "event_dns_issues": "Problemas de DNS"
+    "event_dns_issues": "Problemas de DNS",
+    "clear": "Limpar",
+    "music": "Música",
+    "sfx": "Efeitos"
 };

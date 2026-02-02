@@ -349,7 +349,11 @@ class Service {
           }
 
           const destType = job.req.destination;
-          const target = this.findConnectedService(destType);
+          let target = this.findConnectedService(destType);
+          // For "cdn" destinations, fall back to s3 if no cdn is connected
+          if (!target && destType === "cdn") {
+            target = this.findConnectedService("s3");
+          }
 
           if (target) {
             job.req.flyTo(target);
@@ -449,12 +453,22 @@ class Service {
           if (job.req.isCacheable) {
             const cacheTarget = this.findConnectedService("cache");
             if (cacheTarget) {
-              job.req.flyTo(cacheTarget);
-              continue;
+              // Only route through cache if the cache can reach the request's destination
+              // For "cdn" destinations, also check if cache can reach "s3" as fallback
+              const canReach = cacheTarget.findConnectedService(destType) ||
+                (destType === "cdn" && cacheTarget.findConnectedService("s3"));
+              if (canReach) {
+                job.req.flyTo(cacheTarget);
+                continue;
+              }
             }
           }
 
-          const directTarget = this.findConnectedService(destType);
+          // Try direct destination first, fall back to s3 for cdn-destined requests
+          let directTarget = this.findConnectedService(destType);
+          if (!directTarget && destType === "cdn") {
+            directTarget = this.findConnectedService("s3");
+          }
           if (directTarget) {
             job.req.flyTo(directTarget);
           } else {

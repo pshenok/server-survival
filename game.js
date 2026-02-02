@@ -42,6 +42,12 @@ function calculateTargetRPS(gameTimeSeconds) {
                         "danger",
                         5000
                     );
+
+                    // Record RPS milestone on timeline
+                    if (STATE.timeline) {
+                        STATE.timeline.events.push({ time: STATE.elapsedGameTime, type: 'RPS_MILESTONE', label: 'RPS ×' + multiplier.toFixed(1) });
+                        if (STATE.timeline.events.length > 200) STATE.timeline.events.shift();
+                    }
                 }
             }
         }
@@ -166,6 +172,12 @@ function startMaliciousSpike() {
     const maliciousEl = document.getElementById("mix-malicious");
     if (maliciousEl)
         maliciousEl.className = "text-red-500 font-bold animate-pulse";
+
+    // Record DDoS spike on timeline
+    if (STATE.timeline) {
+        STATE.timeline.events.push({ time: STATE.elapsedGameTime, type: 'DDOS_SPIKE', label: 'DDoS Spike' });
+        if (STATE.timeline.events.length > 200) STATE.timeline.events.shift();
+    }
 }
 
 function endMaliciousSpike() {
@@ -282,13 +294,20 @@ function startTrafficShift() {
     }
 
     addInterventionWarning(
-        i18n.t('traffic_surging', { 
-            name: i18n.t('shift_' + shift.name.toLowerCase().replace(' ', '_')), 
-            type: i18n.t('traffic_' + shift.type.toLowerCase()) 
+        i18n.t('traffic_surging', {
+            name: i18n.t('shift_' + shift.name.toLowerCase().replace(' ', '_')),
+            type: i18n.t('traffic_' + shift.type.toLowerCase())
         }),
         "warning",
         5000
     );
+
+    // Record traffic shift on timeline
+    if (STATE.timeline) {
+        STATE.timeline.events.push({ time: STATE.elapsedGameTime, type: 'TRAFFIC_SHIFT', label: shift.name });
+        if (STATE.timeline.events.length > 200) STATE.timeline.events.shift();
+    }
+
     STATE.sound?.playTone(500, "sine", 0.2);
 }
 
@@ -415,6 +434,12 @@ function triggerRandomEvent(
 
     // Show active event bar
     showActiveEventBar(eventType);
+
+    // Record event marker on timeline
+    if (STATE.timeline) {
+        STATE.timeline.events.push({ time: STATE.elapsedGameTime, type: eventType, label: eventType.replace('_', ' ') });
+        if (STATE.timeline.events.length > 200) STATE.timeline.events.shift();
+    }
 
     STATE.sound?.playTone(300, "sawtooth", 0.3);
 }
@@ -1441,6 +1466,19 @@ window.closeFAQ = () => {
     }
 };
 
+window.clearFailures = () => {
+    STATE.failures = {
+        STATIC: 0,
+        READ: 0,
+        WRITE: 0,
+        UPLOAD: 0,
+        SEARCH: 0,
+        MALICIOUS: 0,
+    };
+    const failuresPanel = document.getElementById("failures-panel");
+    if (failuresPanel) failuresPanel.classList.add("hidden");
+};
+
 window.togglePanel = (contentId, iconId) => {
     const content = document.getElementById(contentId);
     const icon = document.getElementById(iconId);
@@ -1527,12 +1565,12 @@ function createConnection(fromId, toId) {
     else if (t1 === "cdn" && t2 === "s3") valid = true;
 
     if (!valid) {
-        new Audio("assets/sounds/click-9.mp3").play();
+        STATE.sound.playMenuClick();
         console.error(i18n.t('invalid_topology_detailed'));
         return;
     }
 
-    new Audio("assets/sounds/click-5.mp3").play();
+    STATE.sound.playMenuHover();
 
     from.connections.push(toId);
     const pts = [from.position.clone(), to.position.clone()];
@@ -1671,7 +1709,7 @@ window.setTool = (t) => {
         .querySelectorAll(".service-btn")
         .forEach((b) => b.classList.remove("active"));
     document.getElementById(`tool-${t}`).classList.add("active");
-    new Audio("assets/sounds/click-9.mp3").play();
+    STATE.sound.playMenuClick();
 };
 
 window.setTimeScale = (s) => {
@@ -1700,26 +1738,57 @@ window.setTimeScale = (s) => {
     }
 };
 
-window.toggleMute = () => {
-    const muted = STATE.sound.toggleMute();
-    const icon = document.getElementById("mute-icon");
-    const menuIcon = document.getElementById("menu-mute-icon");
+window.toggleMusic = () => {
+    const muted = STATE.sound.toggleMusic();
+    const icon = document.getElementById("music-icon");
+    const menuIcon = document.getElementById("menu-music-icon");
+
+    const iconText = muted ? "🎵" : "🎶";
+    if (icon) icon.innerText = iconText;
+    if (menuIcon) menuIcon.innerText = iconText;
+
+    const musicBtn = document.getElementById("tool-music");
+    const menuMusicBtn = document.getElementById("menu-music-btn");
+
+    if (muted) {
+        if (musicBtn) {
+            musicBtn.classList.add("bg-red-900");
+            musicBtn.classList.add("pulse-green");
+        }
+        if (menuMusicBtn) menuMusicBtn.classList.add("pulse-green");
+    } else {
+        if (musicBtn) {
+            musicBtn.classList.remove("bg-red-900");
+            musicBtn.classList.remove("pulse-green");
+        }
+        if (menuMusicBtn) menuMusicBtn.classList.remove("pulse-green");
+    }
+};
+
+window.toggleSfx = () => {
+    const muted = STATE.sound.toggleSfx();
+    const icon = document.getElementById("sfx-icon");
+    const menuIcon = document.getElementById("menu-sfx-icon");
 
     const iconText = muted ? "🔇" : "🔊";
     if (icon) icon.innerText = iconText;
     if (menuIcon) menuIcon.innerText = iconText;
 
-    const muteBtn = document.getElementById("tool-mute");
-    const menuMuteBtn = document.getElementById("menu-mute-btn"); // We need to add ID to menu button
+    const sfxBtn = document.getElementById("tool-sfx");
+    const menuSfxBtn = document.getElementById("menu-sfx-btn");
 
     if (muted) {
-        muteBtn.classList.add("bg-red-900");
-        muteBtn.classList.add("pulse-green");
-        if (menuMuteBtn) menuMuteBtn.classList.add("pulse-green");
+        if (sfxBtn) {
+            sfxBtn.classList.add("bg-red-900");
+            sfxBtn.classList.add("pulse-green");
+        }
+        if (menuSfxBtn) menuSfxBtn.classList.add("pulse-green");
     } else {
-        muteBtn.classList.remove("bg-red-900");
-        muteBtn.classList.remove("pulse-green");
-        if (menuMuteBtn) menuMuteBtn.classList.remove("pulse-green");
+        if (sfxBtn) {
+            sfxBtn.classList.remove("bg-red-900");
+            sfxBtn.classList.remove("pulse-green");
+        }
+        if (menuSfxBtn) menuSfxBtn.classList.remove("pulse-green");
     }
 };
 
@@ -1867,7 +1936,7 @@ container.addEventListener("mousedown", (e) => {
         if (conn) {
             deleteConnection(conn.from, conn.to);
         } else {
-            new Audio("assets/sounds/click-9.mp3").play();
+            STATE.sound.playMenuClick();
         }
     } else if (
         STATE.activeTool === "connect" &&
@@ -1878,7 +1947,7 @@ container.addEventListener("mousedown", (e) => {
             STATE.selectedNodeId = null;
         } else {
             STATE.selectedNodeId = i.id;
-            new Audio("assets/sounds/click-5.mp3").play();
+            STATE.sound.playMenuHover();
         }
     } else if (
         ["waf", "alb", "lambda", "db", "s3", "sqs", "cache", "cdn"].includes(
@@ -2581,6 +2650,30 @@ function animate(time) {
             STATE.failures.UPLOAD > 0 ? "" : "none";
         document.getElementById("fail-row-search").style.display =
             STATE.failures.SEARCH > 0 ? "" : "none";
+    }
+
+    // Timeline data sampling (read-only observation, no simulation side effects)
+    if (STATE.timeline && dt > 0) {
+        STATE.timeline.sampleTimer += dt;
+        if (STATE.timeline.sampleTimer >= STATE.timeline.sampleInterval) {
+            STATE.timeline.sampleTimer -= STATE.timeline.sampleInterval;
+            const effectiveRPSForTimeline = STATE.currentRPS * (STATE.intervention?.trafficBurstMultiplier || 1.0);
+            STATE.timeline.dataPoints.push({
+                time: STATE.elapsedGameTime,
+                rps: effectiveRPSForTimeline,
+                reputation: STATE.reputation,
+                money: STATE.money,
+                activeEvent: STATE.intervention?.activeEvent || null,
+                maliciousSpike: STATE.maliciousSpikeActive || false,
+                trafficShift: STATE.intervention?.trafficShiftActive || false,
+            });
+            if (STATE.timeline.dataPoints.length > STATE.timeline.maxDataPoints) {
+                STATE.timeline.dataPoints.shift();
+            }
+        }
+        if (STATE.timeline.enabled) {
+            renderTimelineGraph();
+        }
     }
 
     if (STATE.internetNode.ring) {

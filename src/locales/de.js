@@ -415,5 +415,8 @@ const DE_TRANSLATIONS = {
     "event_traffic_spike": "Traffic-Spitze",
     "event_cloud_price_surge": "Cloud-Preisanstieg",
     "event_db_maintenance": "DB-Wartung",
-    "event_dns_issues": "DNS-Probleme"
+    "event_dns_issues": "DNS-Probleme",
+    "clear": "Löschen",
+    "music": "Musik",
+    "sfx": "SFX"
 };
