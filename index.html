@@ -571,6 +571,17 @@
           <span data-i18n="fw" class="text-[10px] font-bold mt-1">FW</span>
         </button>
 
+        <!-- API Gateway -->
+        <button id="tool-apigw"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('apigw')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $70
+          </div>
+          <div class="w-4 h-4 bg-fuchsia-400 rounded-sm mb-1 shadow-[0_0_10px_rgba(232,121,249,0.6)]" style="transform: rotate(45deg)"></div>
+          <span data-i18n="apigw_short" class="text-[10px] font-bold mt-1">API GW</span>
+        </button>
+
         <!-- SQS -->
         <button id="tool-sqs"
           class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
@@ -612,6 +623,19 @@
             class="w-4 h-4 bg-red-600 rounded-sm mb-1 shadow-[0_0_10px_rgba(220,38,38,0.6)] border-b-2 border-red-800">
           </div>
           <span data-i18n="db_short" class="text-[10px] font-bold mt-1">SQL DB</span>
+        </button>
+
+        <!-- NoSQL DB -->
+        <button id="tool-nosql"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('nosql')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $80
+          </div>
+          <div
+            class="w-4 h-4 bg-violet-600 rounded-full mb-1 shadow-[0_0_10px_rgba(124,58,237,0.6)] border-b-2 border-violet-800">
+          </div>
+          <span data-i18n="nosql_short" class="text-[10px] font-bold mt-1">NoSQL</span>
         </button>
 
         <!-- Cache -->
@@ -1035,6 +1059,28 @@
             </p>
             <p data-i18n="cache_flow" class="text-gray-500 text-xs mt-1">
               Flow: Compute → Cache → DB/Storage
+            </p>
+          </div>
+          <div class="bg-gray-800/30 p-3 rounded border border-fuchsia-900/50">
+            <strong data-i18n="apigw_full" class="text-fuchsia-400 block mb-1">API Gateway</strong>
+            <p data-i18n="apigw_desc_long" class="text-gray-400 text-xs">
+              Rate limits incoming traffic. When requests exceed the rate limit,
+              excess requests are throttled with only -0.2 reputation loss (vs -1.0 for failures).
+              Upgrade tiers to increase rate limit (20/40/80 RPS).
+            </p>
+            <p data-i18n="apigw_flow" class="text-gray-500 text-xs mt-1">
+              Flow: Internet → API GW → ALB or WAF → API GW → ALB
+            </p>
+          </div>
+          <div class="bg-gray-800/30 p-3 rounded border border-violet-900/50">
+            <strong data-i18n="nosql_full" class="text-violet-400 block mb-1">NoSQL Database</strong>
+            <p data-i18n="nosql_desc_long" class="text-gray-400 text-xs">
+              Faster and cheaper than SQL for READ/WRITE traffic (150ms vs 300ms processing).
+              Cannot handle SEARCH queries — keep SQL DB for those.
+              Upgrade tiers for higher capacity (15/30/50).
+            </p>
+            <p data-i18n="nosql_flow" class="text-gray-500 text-xs mt-1">
+              Flow: Compute → NoSQL or Compute → Cache → NoSQL
             </p>
           </div>
         </div>

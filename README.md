@@ -19,25 +19,31 @@ Survive as long as possible! Manage your **Budget ($)**, **Reputation (%)**, and
 
 ### Traffic Types
 
-| Traffic       | Color  | Destination | Reward | Description                            |
-| :------------ | :----- | :---------- | :----- | :------------------------------------- |
-| **STATIC**    | Green  | CDN / Storage | $0.50  | Static file requests (images, CSS, JS) |
-| **READ**      | Blue   | SQL DB      | $0.80  | Database read operations               |
+| Traffic       | Color  | Destination        | Reward | Description                            |
+| :------------ | :----- | :----------------- | :----- | :------------------------------------- |
+| **STATIC**    | Green  | CDN / Storage      | $0.50  | Static file requests (images, CSS, JS) |
+| **READ**      | Blue   | NoSQL / SQL DB     | $0.80  | Database read operations               |
+| **WRITE**     | Orange | NoSQL / SQL DB     | $1.20  | Database write operations              |
+| **UPLOAD**    | Yellow | Storage            | $1.50  | File uploads                           |
+| **SEARCH**    | Cyan   | SQL DB only        | $0.80  | Search queries (NoSQL cannot handle)   |
+| **MALICIOUS** | Red    | Blocked by Firewall| $0     | DDoS attacks — block with Firewall!    |
 
 ### Infrastructure & Services
 
 Build your architecture using the toolbar. Each service has a cost, capacity, and upkeep:
 
-| Service      | Cost | Capacity  | Upkeep    | Function                                                           |
-| :----------- | :--- | :-------- | :-------- | :----------------------------------------------------------------- |
-| **Firewall** | $40  | 30        | Low       | **Security.** First line of defense. Blocks malicious traffic.     |
-| **Queue**    | $40  | Queue:200 | Low       | **Buffer.** Buffers requests during spikes. Prevents drops.        |
-| **Load Balancer**| $50  | 20        | Medium    | **Distribution.** Distributes traffic to multiple instances.      |
-| **Compute**  | $60  | 4         | High      | **Processing.** Processes requests. **Upgradeable T1→T3.**         |
-| **CDN**      | $60  | 50        | Low       | **Delivery.** Caches STATIC content at edge (95% hit rate).        |
-| **Cache**    | $60  | 30        | Medium    | **Caching.** Caches responses to reduce DB load.                   |
-| **SQL DB**   | $150 | 8         | Very High | **Database.** Destination for READ/WRITE/SEARCH. **Upgradeable T1→T3.** |
-| **Storage**  | $25  | 25        | Low       | **File System.** Destination for STATIC/UPLOAD traffic.            |
+| Service          | Cost | Capacity  | Upkeep    | Function                                                              |
+| :--------------- | :--- | :-------- | :-------- | :-------------------------------------------------------------------- |
+| **Firewall**     | $40  | 30        | Low       | **Security.** First line of defense. Blocks malicious traffic.        |
+| **API Gateway**  | $70  | 40        | Medium    | **Rate Limiting.** Throttles excess traffic (soft-fail). **Upgradeable T1→T3.** |
+| **Queue**        | $45  | Queue:200 | Low       | **Buffer.** Buffers requests during spikes. Prevents drops.           |
+| **Load Balancer**| $50  | 20        | Medium    | **Distribution.** Distributes traffic to multiple instances.          |
+| **Compute**      | $60  | 4         | High      | **Processing.** Processes requests. **Upgradeable T1→T3.**            |
+| **CDN**          | $60  | 50        | Low       | **Delivery.** Caches STATIC content at edge (95% hit rate).           |
+| **SQL DB**       | $150 | 8         | Very High | **Database.** Handles READ/WRITE/SEARCH. **Upgradeable T1→T3.**      |
+| **NoSQL DB**     | $80  | 15        | High      | **Fast Database.** Handles READ/WRITE only (no SEARCH). **Upgradeable T1→T3.** |
+| **Cache**        | $60  | 30        | Medium    | **Caching.** Caches responses to reduce DB load. **Upgradeable T1→T3.** |
+| **Storage**      | $25  | 25        | Low       | **File System.** Destination for STATIC/UPLOAD traffic.               |
 
 ### Scoring & Economy
 
@@ -50,6 +56,7 @@ Build your architecture using the toolbar. Each service has a cost, capacity, an
 | Search Query   | +$0.80 | +5    | +0.1       |
 | Attack Blocked | +$0.50 | +10   | -          |
 | Request Failed | -      | -half | -1         |
+| Req. Throttled | -      | -     | -0.2       |
 | Attack Leaked  | -      | -     | -5         |
 
 ### Upkeep & Cost Scaling
@@ -99,6 +106,8 @@ A fully customizable testing environment for experimenting with any architecture
 
 ### Recent Features (v2.1)
 
+- **API Gateway** - Rate limits traffic with soft-fail throttling (-0.2 rep instead of -1.0). Upgradeable (Tiers 1-3: 20/40/80 RPS)
+- **NoSQL Database** - Fast alternative to SQL for READ/WRITE traffic (150ms vs 300ms). Cannot handle SEARCH. Upgradeable (Tiers 1-3)
 - **Constant Intervention Mechanics** - Game requires active management throughout
 - **Service Health System** - Visual health bars, manual/auto repair options
 - **RPS Milestones** - Traffic surge warnings with multiplier display
@@ -119,7 +128,7 @@ A fully customizable testing environment for experimenting with any architecture
 - **Birds-Eye View:** Press `T` to switch between isometric and top-down view.
 - **Hide HUD:** Press `H` to toggle UI panels.
 - **Connect Tool:** Click two nodes to create a connection (flow direction matters!).
-  - _Valid Flows:_ Internet -> (Firewall/CDN) -> Load Balancer -> Queue -> Compute -> Cache -> (SQL DB/Storage)
+  - _Valid Flows:_ Internet -> (Firewall/CDN/API Gateway) -> Load Balancer -> Queue -> Compute -> Cache -> (SQL DB/NoSQL DB/Storage)
 - **Delete Tool:** Remove services to recover 50% of the cost.
 - **Time Controls:** Pause, Play (1x), and Fast Forward (3x).
 
@@ -133,6 +142,8 @@ A fully customizable testing environment for experimenting with any architecture
 6.  **Use Cache Wisely:** Reduces database load significantly for READ requests.
 7.  **Buffer with Queue:** Queue helps survive traffic burst events without dropping requests.
 8.  **React to Events:** Watch the event bar - cost spikes mean hold off on purchases, traffic bursts mean ensure capacity.
+9.  **API Gateway for Graceful Degradation:** Throttled requests only lose -0.2 reputation (vs -1.0 for failures). Great for surviving traffic spikes!
+10. **Split DB Traffic with NoSQL:** Route READ/WRITE to NoSQL (faster, cheaper) and keep SQL DB for SEARCH queries only.
 
 ## Tech Stack
 

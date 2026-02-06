@@ -23,6 +23,8 @@ const CONFIG = {
     requestFail: 0xef4444,
     cache: 0xdc382d, // Redis red
     sqs: 0xff9900, // AWS orange
+    apigw: 0xe879f9, // Pink/magenta for API Gateway
+    nosql: 0x7c3aed, // Violet for NoSQL
   },
   trafficTypes: {
     STATIC: {
@@ -208,6 +210,41 @@ const CONFIG = {
         desc: "<b>Queue.</b> Buffers requests during spikes. Prevents drops.",
       },
     },
+    apigw: {
+      name: "API Gateway",
+      cost: 70,
+      type: "apigw",
+      processingTime: 30,
+      capacity: 40,
+      upkeep: 8,
+      rateLimit: 20,
+      tooltip: {
+        upkeep: "Medium",
+        desc: "<b>API Gateway.</b> Rate limits traffic. Throttled requests lose less reputation than failures.",
+      },
+      tiers: [
+        { level: 1, capacity: 40, rateLimit: 20, cost: 0 },
+        { level: 2, capacity: 60, rateLimit: 40, cost: 120 },
+        { level: 3, capacity: 80, rateLimit: 80, cost: 200 },
+      ],
+    },
+    nosql: {
+      name: "NoSQL DB",
+      cost: 80,
+      type: "nosql",
+      processingTime: 150,
+      capacity: 15,
+      upkeep: 14,
+      tooltip: {
+        upkeep: "High",
+        desc: "<b>NoSQL Database.</b> Fast for READ/WRITE, but cannot handle SEARCH queries. <b>Upgradeable (Tiers 1-3).</b>",
+      },
+      tiers: [
+        { level: 1, capacity: 15, cost: 0 },
+        { level: 2, capacity: 30, cost: 120 },
+        { level: 3, capacity: 50, cost: 200 },
+      ],
+    },
   },
   survival: {
     startBudget: 420,
@@ -231,6 +268,7 @@ const CONFIG = {
       CACHE_HIT_BONUS: 0.2,
       MALICIOUS_MITIGATION_COST: 1.0, // Cost per blocked attack
       MALICIOUS_BREACH_PENALTY: 50.0, // Cost per successful attack
+      THROTTLED_REPUTATION: -0.2, // Soft fail from API Gateway rate limiting
     },
 
     upkeepScaling: {

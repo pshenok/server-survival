@@ -70,6 +70,20 @@ class Service {
           wireframe: true,
         });
         break;
+      case "apigw":
+        geo = new THREE.OctahedronGeometry(1.5, 0);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.apigw,
+          ...materialProps,
+        });
+        break;
+      case "nosql":
+        geo = new THREE.CylinderGeometry(2, 2, 1.5, 16);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.nosql,
+          roughness: 0.3,
+        });
+        break;
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
@@ -82,6 +96,8 @@ class Service {
     else if (type === "cache") this.mesh.position.y += 0.75;
     else if (type === "sqs") this.mesh.position.y += 0.4;
     else if (type === "cdn") this.mesh.position.y += 1.5;
+    else if (type === "apigw") this.mesh.position.y += 1.5;
+    else if (type === "nosql") this.mesh.position.y += 1;
     else this.mesh.position.y += 1;
 
     this.mesh.castShadow = true;
@@ -129,7 +145,7 @@ class Service {
   }
 
   upgrade() {
-    if (!["compute", "db", "cache"].includes(this.type)) return;
+    if (!["compute", "db", "cache", "apigw", "nosql"].includes(this.type)) return;
     const tiers = CONFIG.services[this.type].tiers;
     if (this.tier >= tiers.length) return;
 
@@ -154,6 +170,11 @@ class Service {
       this.config = { ...this.config, cacheHitRate: nextTier.cacheHitRate };
     }
 
+    // Update rateLimit for apigw type
+    if (this.type === "apigw" && nextTier.rateLimit) {
+      this.config = { ...this.config, rateLimit: nextTier.rateLimit };
+    }
+
     STATE.sound.playPlace();
 
     // Visuals
@@ -164,6 +185,12 @@ class Service {
     } else if (this.type === "cache") {
       ringSize = 1.5;
       ringColor = 0xdc382d; // Redis red
+    } else if (this.type === "apigw") {
+      ringSize = 1.5;
+      ringColor = 0xe879f9;
+    } else if (this.type === "nosql") {
+      ringSize = 2.0;
+      ringColor = 0x7c3aed;
     } else {
       ringSize = 1.3;
       ringColor = 0xffff00;
@@ -236,6 +263,15 @@ class Service {
 
       // Update visual appearance based on health
       this.updateHealthVisual();
+    }
+
+    // API Gateway rate counter reset
+    if (this.type === "apigw") {
+      this.rateTimer = (this.rateTimer || 0) + dt;
+      if (this.rateTimer >= 1.0) {
+        this.rateCounter = 0;
+        this.rateTimer -= 1.0;
+      }
     }
 
     if (STATE.upkeepEnabled) {
@@ -326,6 +362,18 @@ class Service {
           continue;
         }
 
+        if (this.type === "nosql") {
+          // NoSQL handles READ and WRITE, but NOT SEARCH
+          if (job.req.type === "SEARCH") {
+            failRequest(job.req);
+          } else if (job.req.destination === "db") {
+            finishRequest(job.req);
+          } else {
+            failRequest(job.req);
+          }
+          continue;
+        }
+
         if (this.type === "s3") {
           if (job.req.destination === "s3" || job.req.destination === "cdn") {
             finishRequest(job.req);
@@ -349,12 +397,23 @@ class Service {
           }
 
           const destType = job.req.destination;
-          const target = this.findConnectedService(destType);
 
-          if (target) {
-            job.req.flyTo(target);
-          } else {
+          // Cache miss routing: prefer NoSQL for READ/WRITE, only SQL for SEARCH
+          if (destType === "db") {
+            if (job.req.type !== "SEARCH") {
+              const nosqlTarget = this.findConnectedService("nosql");
+              if (nosqlTarget) { job.req.flyTo(nosqlTarget); continue; }
+            }
+            const sqlTarget = this.findConnectedService("db");
+            if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
             failRequest(job.req);
+          } else {
+            const target = this.findConnectedService(destType);
+            if (target) {
+              job.req.flyTo(target);
+            } else {
+              failRequest(job.req);
+            }
           }
           continue;
         }
@@ -436,15 +495,39 @@ class Service {
           continue;
         }
 
+        // API Gateway processing logic - rate limiting
+        if (this.type === "apigw") {
+          this.rateCounter = (this.rateCounter || 0) + 1;
+          const rateLimit = this.config.rateLimit || 20;
+
+          if (this.rateCounter > rateLimit) {
+            // Rate limited - soft fail
+            throttleRequest(job.req);
+            continue;
+          }
+
+          // Forward to downstream (ALB, SQS, Compute)
+          const candidates = this.connections
+            .map((id) => STATE.services.find((s) => s.id === id))
+            .filter((s) => s && !s.isDisabled);
+
+          if (candidates.length > 0) {
+            const target = candidates[this.rrIndex % candidates.length];
+            this.rrIndex++;
+            job.req.flyTo(target);
+          } else {
+            failRequest(job.req);
+          }
+          continue;
+        }
+
         if (this.type === "compute") {
           const destType = job.req.destination;
-
 
           if (destType === "blocked") {
             failRequest(job.req);
             continue;
           }
-
 
           if (job.req.isCacheable) {
             const cacheTarget = this.findConnectedService("cache");
@@ -452,6 +535,23 @@ class Service {
               job.req.flyTo(cacheTarget);
               continue;
             }
+          }
+
+          // NoSQL routing: prefer NoSQL for READ/WRITE, only SQL for SEARCH
+          if (destType === "db") {
+            if (job.req.type === "SEARCH") {
+              // SEARCH only works on SQL
+              const sqlTarget = this.findConnectedService("db");
+              if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
+            } else {
+              // READ/WRITE prefer NoSQL (faster, cheaper), fallback to SQL
+              const nosqlTarget = this.findConnectedService("nosql");
+              if (nosqlTarget) { job.req.flyTo(nosqlTarget); continue; }
+              const sqlTarget = this.findConnectedService("db");
+              if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
+            }
+            failRequest(job.req);
+            continue;
           }
 
           const directTarget = this.findConnectedService(destType);
@@ -734,6 +834,12 @@ class Service {
               cacheHitRate: tierData.cacheHitRate,
             };
           }
+          if (tierData.rateLimit) {
+            service.config = {
+              ...service.config,
+              rateLimit: tierData.rateLimit,
+            };
+          }
         }
 
         for (let t = 2; t <= service.tier; t++) {
@@ -744,6 +850,12 @@ class Service {
           } else if (service.type === "cache") {
             ringSize = 1.5;
             ringColor = 0xdc382d;
+          } else if (service.type === "apigw") {
+            ringSize = 1.5;
+            ringColor = 0xe879f9;
+          } else if (service.type === "nosql") {
+            ringSize = 2.0;
+            ringColor = 0x7c3aed;
           } else {
             ringSize = 1.3;
             ringColor = 0xffff00;
