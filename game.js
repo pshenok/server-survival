@@ -1673,7 +1673,10 @@ function deleteObject(id) {
 
     svc.destroy();
     STATE.services = STATE.services.filter((s) => s.id !== id);
-    STATE.money += Math.floor(svc.config.cost / 2);
+    STATE.money += svc.config.cost;
+    STATE.finances.expenses.services -= svc.config.cost
+    STATE.finances.expenses.byService[svc.type] -= svc.config.cost
+    STATE.finances.expenses.countByService[svc.type] -= 1
     STATE.sound.playDelete();
     updateRepairCostTable();
 }
