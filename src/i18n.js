@@ -8,7 +8,8 @@ class I18nManager {
             en: typeof EN_TRANSLATIONS !== 'undefined' ? EN_TRANSLATIONS : {},
             zh: typeof ZH_TRANSLATIONS !== 'undefined' ? ZH_TRANSLATIONS : {},
             'pt-BR': typeof PT_BR_TRANSLATIONS !== 'undefined' ? PT_BR_TRANSLATIONS : {},
-	    de: typeof DE_TRANSLATIONS !== 'undefined' ? DE_TRANSLATIONS : {}
+            de: typeof DE_TRANSLATIONS !== 'undefined' ? DE_TRANSLATIONS : {},
+            fr: typeof FR_TRANSLATIONS !== 'undefined' ? FR_TRANSLATIONS : {}
         };
     }
 
