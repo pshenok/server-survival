@@ -157,7 +157,7 @@ const FR_TRANSLATIONS = {
     "unlink": "Délier",
     "fw": "PF",
     "queue": "File",
-    "lb": "RL",
+    "lb": "RC",
     "compute_short": "Calcul",
     "db_short": "DB SQL",
     "storage_short": "Stockage",
