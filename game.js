@@ -2956,7 +2956,24 @@ window.resumeGame = () => {
 
 // ==================== SAVE/LOAD FUNCTIONS ====================
 
-window.saveGameState = () => {
+// Function to show save modal (triggered from UI)
+window.showSaveModal = () => {
+    const modal = document.getElementById("save-modal");
+    if (modal) {
+        modal.classList.remove("hidden");
+    }
+}
+
+// Function to close save modal (triggered from UI)
+window.closeSaveModal = () => {
+    const modal = document.getElementById("save-modal");
+    if (modal) {
+        modal.classList.add("hidden");
+    }
+}
+
+// Function to save game state to localStorage or download as file (triggered from UI inside save modal)
+window.saveGameState = (saveAs = "browser") => {
     try {
         const saveData = {
             timestamp: Date.now(),
@@ -2980,7 +2997,10 @@ window.saveGameState = () => {
             internetConnections: [...STATE.internetNode.connections],
         };
 
-        localStorage.setItem("serverSurvivalSave", JSON.stringify(saveData));
+        if(saveAs === "file")
+            downloadSaveFile(saveData);
+        else
+            localStorage.setItem("serverSurvivalSave", JSON.stringify(saveData));
 
         const saveBtn = document.getElementById("btn-save");
         const originalColor = saveBtn.classList.contains("hover:border-green-500")
@@ -2994,11 +3014,58 @@ window.saveGameState = () => {
         }, 1000);
 
         STATE.sound.playPlace(); // Use place sound as feedback
+        window.closeSaveModal();
     } catch (error) {
         console.error("Failed to save game:", error);
         alert(i18n.t('save_failed'));
     }
 };
+
+// Function to download save data as a file
+function downloadSaveFile(saveData) {
+
+    const blob = new Blob([JSON.stringify(saveData)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const dateStr = new Date().toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).replace(',', '');
+    a.download = `ServerSurvival-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+}
+
+window.onSaveGameFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) {
+        alert(i18n.t('no_file_selected'));
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            let saveData = JSON.parse(e.target.result);
+            window.loadGameState(saveData);
+
+            STATE.sound.playPlace(); // Use place sound as feedback
+        } catch (error) {
+            console.error("Failed to load game:", error);
+            alert(i18n.t('load_failed'));
+        }
+    };
+    reader.readAsText(file);
+    // Reset the input value to allow uploading the same file again if needed
+    event.target.value = "";
+}
 
 function migrateOldSave(saveData) {
     if (saveData.trafficDistribution) {
@@ -3039,16 +3106,26 @@ function migrateOldSave(saveData) {
     return saveData;
 }
 
-window.loadGameState = () => {
+// Function to load game state from localStorage (triggered from UI) or provided save data (provided from uploaded file)
+window.onClickContinueGame = () => {
+    loadGameState();
+}
+
+function loadGameState(saveData = null) {
     try {
-        const saveDataStr = localStorage.getItem("serverSurvivalSave");
-        if (!saveDataStr) {
-            alert(i18n.t('no_save_found_msg'));
-            return;
+        // If saveData is not provided, attempt to load from localStorage
+        if(!saveData){
+            const saveDataStr = localStorage.getItem("serverSurvivalSave");
+            if (!saveDataStr) {
+                alert(i18n.t('no_save_found_msg'));
+                return;
+            }
+    
+            saveData = JSON.parse(saveDataStr);
+    
         }
 
-        let saveData = JSON.parse(saveDataStr);
-
+        // Migrate old saves if version is missing or 1.0
         if (!saveData.version || saveData.version === "1.0") {
             saveData = migrateOldSave(saveData);
         }
