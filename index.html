@@ -277,7 +277,7 @@
           <option value="fr" class="bg-gray-800 text-white">FR</option>
         </select>
       </div>
-      <button onclick="saveGameState()" id="btn-save"
+      <button onclick="showSaveModal()" id="btn-save"
         class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-green-500 hover:text-green-400 flex items-center justify-center"
         data-i18n-title="save_game"
         title="Save Game">
@@ -755,7 +755,13 @@
           Sandbox Mode
         </button>
 
-        <button onclick="loadGameState()" id="load-btn"
+        <button onclick="document.getElementById('upload-file-input')?.click()" id="upload-btn"
+          data-i18n="upload_game"
+          class="w-full bg-blue-400 hover:bg-blue-300 text-black font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-cyan-400/50">
+          Upload Game
+        </button>
+
+        <button onclick="onClickContinueGame()" id="load-btn"
           data-i18n="continue_game"
           class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-cyan-400/50">
           Continue Game
@@ -765,6 +771,45 @@
           data-i18n="manual_faq"
           class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-8 rounded-lg border border-gray-600 transition hover:text-white font-mono uppercase">
           Manual / FAQ
+        </button>
+
+        <input type="file" id="upload-file-input" accept=".json" class="hidden" onchange="onSaveGameFileUpload(event)" />
+
+      </div>
+
+      <div class="mt-8 text-xs text-gray-500 font-mono"></div>
+    </div>
+  </div>
+
+  <!-- Save Game Modal -->
+  <div id="save-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div
+      class="relative bg-gray-900/90 p-12 rounded-2xl border border-blue-500/30 shadow-2xl max-w-md w-full text-center">
+
+      <h1
+        data-i18n="save_title"
+        class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 mb-2 tracking-tighter filter drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+        Save Game
+      </h1>
+
+      <div class="space-y-4">
+
+        <button onclick="saveGameState('browser')"
+          data-i18n="save_browser"
+          class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-green-400/50">
+          Save in Browser
+        </button>
+
+        <button onclick="saveGameState('file')" id="load-btn"
+          data-i18n="save_download"
+          class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-purple-400/50">
+          Download Save File
+        </button>
+
+        <button onclick="closeSaveModal()"
+          data-i18n="cancel"
+          class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-8 rounded-lg border border-gray-600 transition hover:text-white font-mono uppercase">
+          Cancel
         </button>
       </div>
 
