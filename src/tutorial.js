@@ -73,7 +73,7 @@ const TUTORIAL_STEPS = [
         title: i18n.t('tut_place_compute_title'),
         text: i18n.t('tut_place_compute_text'),
         icon: '⚡',
-        highlight: 'tool-lambda',
+        highlight: 'tool-compute',
         action: 'place_compute',
         hint: i18n.t('tut_place_compute_hint')
     },
