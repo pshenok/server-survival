@@ -1,6 +1,7 @@
 const TUTORIAL_STORAGE_KEY = 'serverSurvivalTutorialComplete';
 
-const TUTORIAL_STEPS = [
+function getTutorialSteps() {
+    return [
     {
         id: 'welcome',
         title: i18n.t('tut_welcome_title'),
@@ -168,7 +169,8 @@ const TUTORIAL_STEPS = [
         position: 'center',
         hint: i18n.t('tut_complete_hint')
     }
-];
+    ];
+}
 
 class Tutorial {
     constructor() {
@@ -223,17 +225,18 @@ class Tutorial {
     }
 
     showStep() {
-        const step = TUTORIAL_STEPS[this.currentStep];
+        const steps = getTutorialSteps();
+        const step = steps[this.currentStep];
         if (!step) return;
 
         this.titleEl.textContent = step.title;
         this.textEl.innerHTML = step.text;
         this.iconEl.textContent = step.icon;
-        
+
         if (this.stepContainerEl) {
             this.stepContainerEl.textContent = i18n.t('step_x_of_y', {
                 step: this.currentStep + 1,
-                total: TUTORIAL_STEPS.length
+                total: steps.length
             });
         }
 
@@ -246,7 +249,7 @@ class Tutorial {
 
         if (step.action === 'next' || step.action === 'finish') {
             this.nextBtn.classList.remove('hidden');
-            this.nextBtn.textContent = step.action === 'finish' ? 'Start Playing!' : 'Next';
+            this.nextBtn.textContent = step.action === 'finish' ? i18n.t('tut_start_playing') : i18n.t('next');
         } else {
             this.nextBtn.classList.add('hidden');
         }
@@ -292,7 +295,7 @@ class Tutorial {
 
     renderProgress() {
         this.progressEl.innerHTML = '';
-        TUTORIAL_STEPS.forEach((_, i) => {
+        getTutorialSteps().forEach((_, i) => {
             const dot = document.createElement('div');
             dot.className = 'w-2 h-2 rounded-full transition-all duration-300';
             if (i < this.currentStep) {
@@ -322,7 +325,7 @@ class Tutorial {
     }
 
     nextStep() {
-        const step = TUTORIAL_STEPS[this.currentStep];
+        const step = getTutorialSteps()[this.currentStep];
 
         if (step.action === 'finish') {
             this.complete();
@@ -330,7 +333,7 @@ class Tutorial {
         }
 
         this.currentStep++;
-        if (this.currentStep >= TUTORIAL_STEPS.length) {
+        if (this.currentStep >= getTutorialSteps().length) {
             this.complete();
         } else {
             this.popup.classList.add('tutorial-step-change');
@@ -343,7 +346,7 @@ class Tutorial {
     onAction(actionType, data = {}) {
         if (!this.isActive) return;
 
-        const step = TUTORIAL_STEPS[this.currentStep];
+        const step = getTutorialSteps()[this.currentStep];
         if (!step) return;
 
         let actionMatches = false;
