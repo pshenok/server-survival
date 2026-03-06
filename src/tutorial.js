@@ -196,6 +196,9 @@ class Tutorial {
     setupEventListeners() {
         this.nextBtn?.addEventListener('click', () => this.nextStep());
         this.skipBtn?.addEventListener('click', () => this.skip());
+        window.addEventListener('localeChanged', () => {
+            if (this.isActive) this.showStep();
+        });
     }
 
     isCompleted() {
