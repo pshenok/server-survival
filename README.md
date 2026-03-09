@@ -157,7 +157,8 @@ A fully customizable testing environment for experimenting with any architecture
 ## Getting Started
 
 1.  Clone the repository.
-2.  Open `index.html` in your modern web browser.
+2.  Run `npm install`
+2.  Type `electron .` in your terminal.
 3.  Start building your cloud empire!
 
 ## Community
