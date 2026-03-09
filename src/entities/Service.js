@@ -34,6 +34,13 @@ class Service {
           ...materialProps,
         });
         break;
+      case "lambda":
+        geo = new THREE.CylinderGeometry(1.0, 1.0, 2.5, 16);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.lambda,
+          ...materialProps,
+        });
+        break;
       case "db":
         geo = new THREE.CylinderGeometry(2, 2, 2, 6);
         mat = new THREE.MeshStandardMaterial({
@@ -92,6 +99,7 @@ class Service {
     if (type === "waf") this.mesh.position.y += 1;
     else if (type === "alb") this.mesh.position.y += 0.75;
     else if (type === "compute") this.mesh.position.y += 1.5;
+    else if (type === "lambda") this.mesh.position.y += 1.3;
     else if (type === "s3") this.mesh.position.y += 0.75;
     else if (type === "cache") this.mesh.position.y += 0.75;
     else if (type === "sqs") this.mesh.position.y += 0.4;
@@ -145,7 +153,7 @@ class Service {
   }
 
   upgrade() {
-    if (!["compute", "db", "cache", "apigw", "nosql"].includes(this.type)) return;
+    if (!["compute", "lambda", "db", "cache", "apigw", "nosql"].includes(this.type)) return;
     const tiers = CONFIG.services[this.type].tiers;
     if (this.tier >= tiers.length) return;
 
@@ -188,6 +196,9 @@ class Service {
     } else if (this.type === "apigw") {
       ringSize = 1.5;
       ringColor = 0xe879f9;
+    } else if (this.type === "lambda") {
+      ringSize = 1.6;
+      ringColor = 0xf59e0b;
     } else if (this.type === "nosql") {
       ringSize = 2.0;
       ringColor = 0x7c3aed;
@@ -286,8 +297,8 @@ class Service {
       }
     }
 
-    // COMPUTE PULL LOGIC
-    if (this.type === "compute") {
+    // COMPUTE / LAMBDA PULL LOGIC
+    if (this.type === "compute" || this.type === "lambda") {
       // Check if we have space in our queue+processing
       // We want the UPSTREAM queue (SQS) to do the buffering, not the compute node local queue.
       // So we only pull if we are running low on work locally.
@@ -332,7 +343,7 @@ class Service {
       let job = this.processing[i];
 
       const processingTime =
-        this.type === "compute"
+        (this.type === "compute" || this.type === "lambda")
           ? this.config.processingTime * job.req.processingWeight
           : this.config.processingTime;
 
@@ -521,7 +532,7 @@ class Service {
           continue;
         }
 
-        if (this.type === "compute") {
+        if (this.type === "compute" || this.type === "lambda") {
           const destType = job.req.destination;
 
           if (destType === "blocked") {

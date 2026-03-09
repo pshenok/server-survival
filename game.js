@@ -676,6 +676,12 @@ function updateFinancesDisplay() {
             cost: CONFIG.services.compute.cost,
         },
         {
+            key: "lambda",
+            label: i18n.t('lambda'),
+            color: "text-amber-400",
+            cost: CONFIG.services.lambda.cost,
+        },
+        {
             key: "db",
             label: i18n.t('relational_db'),
             color: "text-yellow-400",
@@ -969,6 +975,7 @@ function resetGame(mode = "survival") {
                 waf: 0,
                 alb: 0,
                 compute: 0,
+                lambda: 0,
                 db: 0,
                 s3: 0,
                 cache: 0,
@@ -979,6 +986,7 @@ function resetGame(mode = "survival") {
                 waf: 0,
                 alb: 0,
                 compute: 0,
+                lambda: 0,
                 db: 0,
                 s3: 0,
                 cache: 0,
@@ -1534,10 +1542,10 @@ function createConnection(fromId, toId) {
     else if (t1 === "sqs" && t2 === "alb") valid = true;
     else if (t1 === "alb" && t2 === "sqs") valid = true;
     else if (t1 === "sqs" && t2 === "compute") valid = true;
-    else if (t1 === "alb" && t2 === "compute") valid = true;
-    else if (t1 === "compute" && t2 === "cache") valid = true;
+    else if (t1 === "alb" && (t2 === "compute" || t2 === "lambda")) valid = true;
+    else if ((t1 === "compute" || t1 === "lambda") && t2 === "cache") valid = true;
     else if (t1 === "cache" && (t2 === "db" || t2 === "s3")) valid = true;
-    else if (t1 === "compute" && (t2 === "db" || t2 === "s3")) valid = true;
+    else if ((t1 === "compute" || t1 === "lambda") && (t2 === "db" || t2 === "s3")) valid = true;
     else if (t1 === "internet" && t2 === "cdn") valid = true;
     else if (t1 === "cdn" && t2 === "s3") valid = true;
     // API Gateway connections
@@ -1545,9 +1553,9 @@ function createConnection(fromId, toId) {
     else if (t1 === "waf" && t2 === "apigw") valid = true;
     else if (t1 === "apigw" && t2 === "alb") valid = true;
     else if (t1 === "apigw" && t2 === "sqs") valid = true;
-    else if (t1 === "apigw" && t2 === "compute") valid = true;
+    else if (t1 === "apigw" && (t2 === "compute" || t2 === "lambda")) valid = true;
     // NoSQL connections
-    else if (t1 === "compute" && t2 === "nosql") valid = true;
+    else if ((t1 === "compute" || t1 === "lambda") && t2 === "nosql") valid = true;
     else if (t1 === "cache" && t2 === "nosql") valid = true;
 
     if (!valid) {
@@ -1905,13 +1913,13 @@ container.addEventListener("mousedown", (e) => {
             new Audio("assets/sounds/click-5.mp3").play();
         }
     } else if (
-        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw"].includes(
+        ["waf", "alb", "compute", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw"].includes(
             STATE.activeTool
         )
     ) {
-        // Handle upgrades for compute, db, cache, apigw, and nosql
+        // Handle upgrades for compute, lambda, db, cache, apigw, and nosql
         if (
-            (STATE.activeTool === "lambda" && i.type === "service") ||
+            ((STATE.activeTool === "compute" || STATE.activeTool === "lambda") && i.type === "service") ||
             (STATE.activeTool === "db" && i.type === "service") ||
             (STATE.activeTool === "cache" && i.type === "service") ||
             (STATE.activeTool === "apigw" && i.type === "service") ||
@@ -1920,7 +1928,8 @@ container.addEventListener("mousedown", (e) => {
             const svc = STATE.services.find((s) => s.id === i.id);
             if (
                 svc &&
-                ((STATE.activeTool === "lambda" && svc.type === "compute") ||
+                ((STATE.activeTool === "compute" && svc.type === "compute") ||
+                    (STATE.activeTool === "lambda" && svc.type === "lambda") ||
                     (STATE.activeTool === "db" && svc.type === "db") ||
                     (STATE.activeTool === "cache" && svc.type === "cache") ||
                     (STATE.activeTool === "apigw" && svc.type === "apigw") ||
@@ -1934,7 +1943,8 @@ container.addEventListener("mousedown", (e) => {
             const typeMap = {
                 waf: "waf",
                 alb: "alb",
-                lambda: "compute",
+                compute: "compute",
+                lambda: "lambda",
                 db: "db",
                 nosql: "nosql",
                 s3: "s3",
@@ -2245,13 +2255,13 @@ function showTooltip(x, y, html) {
 
 // Setup UI tooltips
 function setupUITooltips() {
-    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn"];
+    const tools = ["waf", "apigw", "sqs", "alb", "compute", "lambda", "db", "nosql", "cache", "s3", "cdn"];
     tools.forEach((toolId) => {
         const btn = document.getElementById(`tool-${toolId}`);
         if (!btn) return;
 
-        // Map tool ID to config service key
-        const serviceKey = toolId === "lambda" ? "compute" : toolId;
+        // Map tool ID to config service key (1:1 now that compute and lambda are separate)
+        const serviceKey = toolId;
         const config = CONFIG.services[serviceKey];
 
         if (config && config.tooltip) {

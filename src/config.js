@@ -15,6 +15,7 @@ const CONFIG = {
     grid: 0x1a1a1a,
     alb: 0x3b82f6,
     compute: 0xf97316,
+    lambda: 0xf59e0b,
     db: 0xdc2626,
     waf: 0xa855f7,
     s3: 0x10b981,
@@ -135,6 +136,23 @@ const CONFIG = {
         { level: 1, capacity: 4, cost: 0 },
         { level: 2, capacity: 10, cost: 100 },
         { level: 3, capacity: 18, cost: 160 },
+      ],
+    },
+    lambda: {
+      name: "Lambda",
+      cost: 50,
+      type: "lambda",
+      processingTime: 450,
+      capacity: 6,
+      upkeep: 3,
+      tooltip: {
+        upkeep: "Low",
+        desc: "<b>Serverless Lambda.</b> Auto-scales function invocations. Best for spiky traffic.",
+      },
+      tiers: [
+        { level: 1, capacity: 6, cost: 0 },
+        { level: 2, capacity: 14, cost: 90 },
+        { level: 3, capacity: 26, cost: 150 },
       ],
     },
     db: {

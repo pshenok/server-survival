@@ -595,6 +595,17 @@
           <span data-i18n="queue" class="text-[10px] font-bold mt-1">Queue</span>
         </button>
 
+        <!-- Compute -->
+        <button id="tool-compute"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('compute')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $60
+          </div>
+          <div class="w-4 h-4 bg-orange-500 rounded-full mb-1 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></div>
+          <span data-i18n="compute_short" class="text-[10px] font-bold mt-1">Compute</span>
+        </button>
+
         <button id="tool-alb"
           class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
           onclick="setTool('alb')">
@@ -605,14 +616,15 @@
           <span data-i18n="lb" class="text-[10px] font-bold mt-1">LB</span>
         </button>
 
+        <!-- Lambda -->
         <button id="tool-lambda"
           class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
           onclick="setTool('lambda')">
           <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $60
+            $50
           </div>
           <div class="w-4 h-4 bg-orange-500 rounded-full mb-1 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></div>
-          <span data-i18n="compute_short" class="text-[10px] font-bold mt-1">Compute</span>
+          <span data-i18n="lambda_short" class="text-[10px] font-bold mt-1">Lambda</span>
         </button>
 
         <button id="tool-db"
