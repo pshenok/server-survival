@@ -699,6 +699,36 @@ function updateFinancesDisplay() {
             color: "text-cyan-400",
             cost: CONFIG.services.sqs.cost,
         },
+        {
+            key: "search",
+            label: i18n.t('search_engine'),
+            color: "text-cyan-400",
+            cost: CONFIG.services.search.cost,
+        },
+        {
+            key: "replica",
+            label: i18n.t('read_replica'),
+            color: "text-pink-400",
+            cost: CONFIG.services.replica.cost,
+        },
+        {
+            key: "apigw",
+            label: i18n.t('apigw'),
+            color: "text-fuchsia-400",
+            cost: CONFIG.services.apigw.cost,
+        },
+        {
+            key: "nosql",
+            label: i18n.t('nosql'),
+            color: "text-violet-400",
+            cost: CONFIG.services.nosql.cost,
+        },
+        {
+            key: "cdn",
+            label: i18n.t('cdn'),
+            color: "text-green-400",
+            cost: CONFIG.services.cdn.cost,
+        },
     ];
 
     const repairPercent = CONFIG.survival.degradation?.repairCostPercent || 0.15;
@@ -781,6 +811,78 @@ function updateFinancesDisplay() {
         netProfitEl.className = `text-right font-bold ${netProfit >= 0 ? "text-green-400" : "text-red-400"
             }`;
     }
+}
+
+function checkSmartHints() {
+  if (STATE.gameMode !== "survival") return;
+  if (!STATE.hints) return;
+  if (window.tutorial?.isActive) return;
+  if (STATE.timeScale === 0) return;
+
+  const now = STATE.elapsedGameTime;
+  if (now - STATE.hints.lastHintTime < STATE.hints.hintCooldown) return;
+
+  const dbServices = STATE.services.filter(s => s.type === "db");
+  const hasSearch = STATE.services.some(s => s.type === "search");
+  const hasReplica = STATE.services.some(s => s.type === "replica");
+  const hasWaf = STATE.services.some(s => s.type === "waf");
+  const hasCache = STATE.services.some(s => s.type === "cache");
+  const hasCdn = STATE.services.some(s => s.type === "cdn");
+
+  const dbOverloaded = dbServices.some(s => s.totalLoad > 0.8);
+  const computeOverloaded = STATE.services
+    .filter(s => s.type === "compute")
+    .some(s => s.totalLoad > 0.8);
+
+  let hint = null;
+
+  if (dbOverloaded && !hasSearch && STATE.trafficDistribution.SEARCH > 0.05 &&
+      !STATE.hints.dismissedHints.has("search")) {
+    hint = { key: "hint_search_overload", id: "search" };
+  } else if (dbOverloaded && !hasReplica && STATE.trafficDistribution.READ > 0.1 &&
+      !STATE.hints.dismissedHints.has("replica")) {
+    hint = { key: "hint_read_overload", id: "replica" };
+  } else if (!hasWaf && (STATE.failures.MALICIOUS || 0) > 5 &&
+      !STATE.hints.dismissedHints.has("waf")) {
+    hint = { key: "hint_no_waf", id: "waf" };
+  } else if (!hasCache && STATE.trafficDistribution.READ + STATE.trafficDistribution.STATIC + STATE.trafficDistribution.SEARCH > 0.5 &&
+      !STATE.hints.dismissedHints.has("cache")) {
+    hint = { key: "hint_no_cache", id: "cache" };
+  } else if (computeOverloaded && !STATE.services.some(s => s.type === "sqs") &&
+      !STATE.hints.dismissedHints.has("sqs")) {
+    hint = { key: "hint_compute_overload", id: "sqs" };
+  } else if (!hasCdn && STATE.trafficDistribution.STATIC > 0.3 &&
+      !STATE.hints.dismissedHints.has("cdn")) {
+    hint = { key: "hint_no_cdn", id: "cdn" };
+  }
+
+  if (hint) {
+    showSmartHint(hint);
+    STATE.hints.lastHintTime = now;
+  }
+}
+
+function showSmartHint(hint) {
+  const warningsContainer = document.getElementById("intervention-warnings");
+  if (!warningsContainer) return;
+
+  const warning = document.createElement("div");
+  warning.className = "intervention-warning warning-info border-2 rounded-lg px-6 py-3 mb-2 shadow-lg";
+  warning.innerHTML = `
+    <div class="flex items-center gap-3">
+      <span class="font-bold text-sm">${i18n.t(hint.key)}</span>
+      <button onclick="this.parentElement.parentElement.remove(); STATE.hints.dismissedHints.add('${hint.id}')"
+        class="pointer-events-auto text-xs bg-blue-800 hover:bg-blue-700 px-2 py-1 rounded ml-2">${i18n.t('hint_dismiss')}</button>
+    </div>
+  `;
+  warningsContainer.appendChild(warning);
+
+  setTimeout(() => {
+    warning.style.transition = "all 0.3s ease-out";
+    warning.style.opacity = "0";
+    warning.style.transform = "translateY(-20px)";
+    setTimeout(() => warning.remove(), 300);
+  }, 10000);
 }
 
 // ==================== END INTERVENTION MECHANICS ====================
@@ -936,6 +1038,11 @@ function resetGame(mode = "survival") {
     STATE.maliciousSpikeActive = false;
     STATE.normalTrafficDist = null;
     STATE.autoRepairEnabled = false;
+    STATE.hints = {
+      lastHintTime: 0,
+      dismissedHints: new Set(),
+      hintCooldown: 30,
+    };
 
     // Initialize detailed finance tracking
     STATE.finances = {
@@ -973,6 +1080,11 @@ function resetGame(mode = "survival") {
                 s3: 0,
                 cache: 0,
                 sqs: 0,
+                search: 0,
+                replica: 0,
+                apigw: 0,
+                nosql: 0,
+                cdn: 0,
             },
             countByService: {
                 // Count of each service purchased
@@ -983,6 +1095,11 @@ function resetGame(mode = "survival") {
                 s3: 0,
                 cache: 0,
                 sqs: 0,
+                search: 0,
+                apigw: 0,
+                nosql: 0,
+                cdn: 0,
+                replica: 0,
             },
         },
     };
@@ -1549,6 +1666,14 @@ function createConnection(fromId, toId) {
     // NoSQL connections
     else if (t1 === "compute" && t2 === "nosql") valid = true;
     else if (t1 === "cache" && t2 === "nosql") valid = true;
+    // Search Engine connections
+    else if (t1 === "compute" && t2 === "search") valid = true;
+    else if (t1 === "cache" && t2 === "search") valid = true;
+    // Read Replica connections
+    else if (t1 === "compute" && t2 === "replica") valid = true;
+    else if (t1 === "cache" && t2 === "replica") valid = true;
+    else if (t1 === "replica" && t2 === "db") valid = true;
+    else if (t1 === "replica" && t2 === "nosql") valid = true;
 
     if (!valid) {
         new Audio("assets/sounds/click-9.mp3").play();
@@ -1905,7 +2030,7 @@ container.addEventListener("mousedown", (e) => {
             new Audio("assets/sounds/click-5.mp3").play();
         }
     } else if (
-        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw"].includes(
+        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw", "search", "replica"].includes(
             STATE.activeTool
         )
     ) {
@@ -1915,7 +2040,9 @@ container.addEventListener("mousedown", (e) => {
             (STATE.activeTool === "db" && i.type === "service") ||
             (STATE.activeTool === "cache" && i.type === "service") ||
             (STATE.activeTool === "apigw" && i.type === "service") ||
-            (STATE.activeTool === "nosql" && i.type === "service")
+            (STATE.activeTool === "nosql" && i.type === "service") ||
+            (STATE.activeTool === "search" && i.type === "service") ||
+            (STATE.activeTool === "replica" && i.type === "service")
         ) {
             const svc = STATE.services.find((s) => s.id === i.id);
             if (
@@ -1924,7 +2051,9 @@ container.addEventListener("mousedown", (e) => {
                     (STATE.activeTool === "db" && svc.type === "db") ||
                     (STATE.activeTool === "cache" && svc.type === "cache") ||
                     (STATE.activeTool === "apigw" && svc.type === "apigw") ||
-                    (STATE.activeTool === "nosql" && svc.type === "nosql"))
+                    (STATE.activeTool === "nosql" && svc.type === "nosql") ||
+                    (STATE.activeTool === "search" && svc.type === "search") ||
+                    (STATE.activeTool === "replica" && svc.type === "replica"))
             ) {
                 svc.upgrade();
                 return;
@@ -1942,6 +2071,8 @@ container.addEventListener("mousedown", (e) => {
                 cache: "cache",
                 apigw: "apigw",
                 cdn: "cdn",
+                search: "search",
+                replica: "replica",
             };
 
             const serviceType = typeMap[STATE.activeTool];
@@ -2127,7 +2258,9 @@ container.addEventListener("mousemove", (e) => {
                 (STATE.activeTool === "db" && s.type === "db") ||
                 (STATE.activeTool === "cache" && s.type === "cache") ||
                 (STATE.activeTool === "apigw" && s.type === "apigw") ||
-                (STATE.activeTool === "nosql" && s.type === "nosql")
+                (STATE.activeTool === "nosql" && s.type === "nosql") ||
+                (STATE.activeTool === "search" && s.type === "search") ||
+                (STATE.activeTool === "replica" && s.type === "replica")
             ) {
                 const tiers = CONFIG.services[s.type].tiers;
                 if (s.tier < tiers.length) {
@@ -2142,7 +2275,7 @@ container.addEventListener("mousemove", (e) => {
             }
 
             // SHOW UPGRADE INDICATOR (Green Arrow)
-            if (["compute", "db", "cache", "apigw", "nosql"].includes(s.type)) {
+            if (["compute", "db", "cache", "apigw", "nosql", "search", "replica"].includes(s.type)) {
                 const tiers = CONFIG.services[s.type].tiers;
                 if (s.tier < tiers.length) {
                     // Clear any pending hide timer since we are hovering a valid service
@@ -2245,7 +2378,7 @@ function showTooltip(x, y, html) {
 
 // Setup UI tooltips
 function setupUITooltips() {
-    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn"];
+    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn", "search", "replica"];
     tools.forEach((toolId) => {
         const btn = document.getElementById(`tool-${toolId}`);
         if (!btn) return;
@@ -2460,6 +2593,7 @@ function animate(time) {
     updateActiveEventTimer();
     processAutoRepair(dt);
     updateFinancesDisplay();
+    checkSmartHints();
 
     document.getElementById("money-display").innerText = `$${Math.floor(
         STATE.money
@@ -2770,6 +2904,16 @@ function analyzeFailure() {
     if (!STATE.services.some((s) => s.type === "nosql") &&
         (STATE.failures.READ > 5 || STATE.failures.WRITE > 5)) {
         result.tips.push(i18n.t('tip_nosql'));
+    }
+
+    if (!STATE.services.some((s) => s.type === "search") &&
+        STATE.failures.SEARCH > 5) {
+        result.tips.push(i18n.t('tip_search_engine'));
+    }
+
+    if (!STATE.services.some((s) => s.type === "replica") &&
+        STATE.failures.READ > 10) {
+        result.tips.push(i18n.t('tip_read_replica'));
     }
 
     // Limit tips to 4
@@ -3205,8 +3349,8 @@ function loadGameState(saveData = null) {
                 autoRepair: 0,
                 mitigation: 0,
                 breach: 0,
-                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
-                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
+                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0 },
+                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0 },
             },
         };
 

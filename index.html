@@ -676,6 +676,32 @@
           <div class="w-4 h-4 bg-emerald-500 rounded-full mb-1 shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
           <span data-i18n="storage_short" class="text-[10px] font-bold mt-1">Storage</span>
         </button>
+
+        <!-- Search Engine -->
+        <button id="tool-search"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('search')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $120
+          </div>
+          <div
+            class="w-4 h-4 bg-cyan-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(6,182,212,0.6)]" style="transform: rotate(22deg)">
+          </div>
+          <span data-i18n="search_short" class="text-[10px] font-bold mt-1">Search</span>
+        </button>
+
+        <!-- Read Replica -->
+        <button id="tool-replica"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('replica')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $100
+          </div>
+          <div
+            class="w-4 h-4 bg-pink-400 rounded-sm mb-1 shadow-[0_0_10px_rgba(244,114,182,0.6)] border-b-2 border-pink-600">
+          </div>
+          <span data-i18n="replica_short" class="text-[10px] font-bold mt-1">Replica</span>
+        </button>
       </div>
     </div>
   </div>
@@ -802,7 +828,7 @@
           Save in Browser
         </button>
 
-        <button onclick="saveGameState('file')" id="load-btn"
+        <button onclick="saveGameState('file')" id="btn-download-save"
           data-i18n="save_download"
           class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-purple-400/50">
           Download Save File
@@ -968,6 +994,14 @@
               <span data-i18n="file_storage" class="text-emerald-400 font-bold">File Storage</span>
               <span data-i18n="storage_desc_short">Stores Web Data ($25)</span>
             </li>
+            <li class="flex justify-between">
+              <span data-i18n="search_engine" class="text-cyan-400 font-bold">Search Engine</span>
+              <span data-i18n="search_desc_short">Fast SEARCH queries ($120)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="read_replica" class="text-pink-400 font-bold">Read Replica</span>
+              <span data-i18n="replica_desc_short">Offloads READ from DB ($100)</span>
+            </li>
           </ul>
         </div>
       </div>
@@ -1131,6 +1165,26 @@
             <p data-i18n="nosql_flow" class="text-gray-500 text-xs mt-1">
               Flow: Compute → NoSQL or Compute → Cache → NoSQL
             </p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-cyan-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="search_full" class="text-cyan-400">Search Engine</strong>
+              <span class="text-green-400 font-mono text-sm">$120</span>
+            </div>
+            <p data-i18n="search_desc_long" class="text-sm text-gray-400 mt-1">
+              Processes SEARCH traffic 3× faster than SQL DB (100ms vs 300ms). Only accepts SEARCH queries — other traffic types will fail. Upgrade tiers for higher capacity (12/25/40).
+            </p>
+            <p data-i18n="search_flow" class="text-xs text-gray-500 mt-1">Flow: Compute → Search Engine or Cache → Search Engine</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-pink-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="replica_full" class="text-pink-400">Read Replica</strong>
+              <span class="text-green-400 font-mono text-sm">$100</span>
+            </div>
+            <p data-i18n="replica_desc_long" class="text-sm text-gray-400 mt-1">
+              Processes READ traffic faster than master DB (200ms vs 300ms). Must be connected to a SQL DB or NoSQL DB to function. Only accepts READ queries.
+            </p>
+            <p data-i18n="replica_flow" class="text-xs text-gray-500 mt-1">Flow: Compute → Replica → DB or Cache → Replica → DB</p>
           </div>
         </div>
       </div>
