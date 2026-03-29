@@ -711,6 +711,24 @@ function updateFinancesDisplay() {
             color: "text-pink-400",
             cost: CONFIG.services.replica.cost,
         },
+        {
+            key: "apigw",
+            label: i18n.t('apigw'),
+            color: "text-fuchsia-400",
+            cost: CONFIG.services.apigw.cost,
+        },
+        {
+            key: "nosql",
+            label: i18n.t('nosql'),
+            color: "text-violet-400",
+            cost: CONFIG.services.nosql.cost,
+        },
+        {
+            key: "cdn",
+            label: i18n.t('cdn'),
+            color: "text-green-400",
+            cost: CONFIG.services.cdn.cost,
+        },
     ];
 
     const repairPercent = CONFIG.survival.degradation?.repairCostPercent || 0.15;
@@ -1064,6 +1082,9 @@ function resetGame(mode = "survival") {
                 sqs: 0,
                 search: 0,
                 replica: 0,
+                apigw: 0,
+                nosql: 0,
+                cdn: 0,
             },
             countByService: {
                 // Count of each service purchased
@@ -1075,6 +1096,9 @@ function resetGame(mode = "survival") {
                 cache: 0,
                 sqs: 0,
                 search: 0,
+                apigw: 0,
+                nosql: 0,
+                cdn: 0,
                 replica: 0,
             },
         },
@@ -3325,8 +3349,8 @@ function loadGameState(saveData = null) {
                 autoRepair: 0,
                 mitigation: 0,
                 breach: 0,
-                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0 },
-                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0 },
+                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0 },
+                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0 },
             },
         };
 

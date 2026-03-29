@@ -828,7 +828,7 @@
           Save in Browser
         </button>
 
-        <button onclick="saveGameState('file')" id="load-btn"
+        <button onclick="saveGameState('file')" id="btn-download-save"
           data-i18n="save_download"
           class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-purple-400/50">
           Download Save File
@@ -1165,6 +1165,26 @@
             <p data-i18n="nosql_flow" class="text-gray-500 text-xs mt-1">
               Flow: Compute → NoSQL or Compute → Cache → NoSQL
             </p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-cyan-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="search_full" class="text-cyan-400">Search Engine</strong>
+              <span class="text-green-400 font-mono text-sm">$120</span>
+            </div>
+            <p data-i18n="search_desc_long" class="text-sm text-gray-400 mt-1">
+              Processes SEARCH traffic 3× faster than SQL DB (100ms vs 300ms). Only accepts SEARCH queries — other traffic types will fail. Upgrade tiers for higher capacity (12/25/40).
+            </p>
+            <p data-i18n="search_flow" class="text-xs text-gray-500 mt-1">Flow: Compute → Search Engine or Cache → Search Engine</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-pink-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="replica_full" class="text-pink-400">Read Replica</strong>
+              <span class="text-green-400 font-mono text-sm">$100</span>
+            </div>
+            <p data-i18n="replica_desc_long" class="text-sm text-gray-400 mt-1">
+              Processes READ traffic faster than master DB (200ms vs 300ms). Must be connected to a SQL DB or NoSQL DB to function. Only accepts READ queries.
+            </p>
+            <p data-i18n="replica_flow" class="text-xs text-gray-500 mt-1">Flow: Compute → Replica → DB or Cache → Replica → DB</p>
           </div>
         </div>
       </div>
