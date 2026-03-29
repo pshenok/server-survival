@@ -24,10 +24,10 @@ Survive as long as possible! Manage your **Budget ($)**, **Reputation (%)**, and
 | Traffic       | Color  | Destination        | Reward | Description                            |
 | :------------ | :----- | :----------------- | :----- | :------------------------------------- |
 | **STATIC**    | Green  | CDN / Storage      | $0.50  | Static file requests (images, CSS, JS) |
-| **READ**      | Blue   | NoSQL / SQL DB     | $0.80  | Database read operations               |
+| **READ**      | Blue   | Replica / NoSQL / SQL DB | $0.80  | Database read operations               |
 | **WRITE**     | Orange | NoSQL / SQL DB     | $1.20  | Database write operations              |
 | **UPLOAD**    | Yellow | Storage            | $1.50  | File uploads                           |
-| **SEARCH**    | Cyan   | SQL DB only        | $0.80  | Search queries (NoSQL cannot handle)   |
+| **SEARCH**    | Cyan   | Search Engine / SQL DB | $1.20  | Search queries (Search Engine preferred, SQL DB fallback) |
 | **MALICIOUS** | Red    | Blocked by Firewall| $0     | DDoS attacks — block with Firewall!    |
 
 ### Infrastructure & Services
@@ -45,6 +45,8 @@ Build your architecture using the toolbar. Each service has a cost, capacity, an
 | **SQL DB**       | $150 | 8         | Very High | **Database.** Handles READ/WRITE/SEARCH. **Upgradeable T1→T3.**      |
 | **NoSQL DB**     | $80  | 15        | High      | **Fast Database.** Handles READ/WRITE only (no SEARCH). **Upgradeable T1→T3.** |
 | **Cache**        | $60  | 30        | Medium    | **Caching.** Caches responses to reduce DB load. **Upgradeable T1→T3.** |
+| **Search Engine**| $120 | 12        | High      | **Search.** Specialized for SEARCH queries. 3x faster than SQL DB. **Upgradeable T1→T3.** |
+| **Read Replica** | $100 | 12        | Medium    | **Read Offload.** Offloads READ from master DB. Requires DB connection. **Upgradeable T1→T3.** |
 | **Storage**      | $25  | 25        | Low       | **File System.** Destination for STATIC/UPLOAD traffic.               |
 
 ### Scoring & Economy
@@ -55,7 +57,7 @@ Build your architecture using the toolbar. Each service has a cost, capacity, an
 | DB Read        | +$0.80 | +5    | +0.1       |
 | DB Write       | +$1.20 | +8    | +0.1       |
 | File Upload    | +$1.50 | +10   | +0.1       |
-| Search Query   | +$0.80 | +5    | +0.1       |
+| Search Query   | +$1.20 | +5    | +0.1       |
 | Attack Blocked | +$0.50 | +10   | -          |
 | Request Failed | -      | -half | -1         |
 | Req. Throttled | -      | -     | -0.2       |
@@ -106,7 +108,15 @@ A fully customizable testing environment for experimenting with any architecture
 
 **No game over in Sandbox** - experiment freely!
 
-### Recent Features (v2.1)
+### Recent Features (v2.2)
+
+- **Search Engine** - Specialized SEARCH handler, 3x faster than SQL DB (100ms vs 300ms). Upgradeable (Tiers 1-3: 12/25/40 capacity)
+- **Read Replica** - Offloads READ traffic from master DB. Requires connection to SQL DB or NoSQL. Upgradeable (Tiers 1-3)
+- **Smart Hints** - Contextual suggestions when your architecture is suboptimal (e.g. "DB overloaded with SEARCH — add a Search Engine!")
+- **Economy Rebalance** - Starting budget $500, SEARCH reward increased to $1.20
+- **New Traffic Shifts** - "Read Heavy" (45% READ) and "Full-Text Flood" (55% SEARCH) patterns
+
+### Previous Features (v2.1)
 
 - **API Gateway** - Rate limits traffic with soft-fail throttling (-0.2 rep instead of -1.0). Upgradeable (Tiers 1-3: 20/40/80 RPS)
 - **NoSQL Database** - Fast alternative to SQL for READ/WRITE traffic (150ms vs 300ms). Cannot handle SEARCH. Upgradeable (Tiers 1-3)
@@ -130,7 +140,7 @@ A fully customizable testing environment for experimenting with any architecture
 - **Birds-Eye View:** Press `T` to switch between isometric and top-down view.
 - **Hide HUD:** Press `H` to toggle UI panels.
 - **Connect Tool:** Click two nodes to create a connection (flow direction matters!).
-  - _Valid Flows:_ Internet -> (Firewall/CDN/API Gateway) -> Load Balancer -> Queue -> Compute -> Cache -> (SQL DB/NoSQL DB/Storage)
+  - _Valid Flows:_ Internet -> (Firewall/CDN/API Gateway) -> Load Balancer -> Queue -> Compute -> Cache -> (Search Engine/Read Replica/SQL DB/NoSQL DB/Storage)
 - **Delete Tool:** Remove services to recover 50% of the cost.
 - **Time Controls:** Pause, Play (1x), and Fast Forward (3x).
 
@@ -146,6 +156,8 @@ A fully customizable testing environment for experimenting with any architecture
 8.  **React to Events:** Watch the event bar - cost spikes mean hold off on purchases, traffic bursts mean ensure capacity.
 9.  **API Gateway for Graceful Degradation:** Throttled requests only lose -0.2 reputation (vs -1.0 for failures). Great for surviving traffic spikes!
 10. **Split DB Traffic with NoSQL:** Route READ/WRITE to NoSQL (faster, cheaper) and keep SQL DB for SEARCH queries only.
+11. **Search Engine for SEARCH Storms:** SEARCH is the heaviest traffic type (2.5x weight). A dedicated Search Engine processes it 3x faster than SQL DB.
+12. **Read Replica for READ offloading:** Under "API Heavy" or "Read Heavy" shifts, a Read Replica prevents your main DB from drowning in READ requests.
 
 ## Tech Stack
 
