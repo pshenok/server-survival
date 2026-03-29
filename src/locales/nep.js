@@ -438,5 +438,36 @@ const NE_TRANSLATIONS = {
     "tip_apigw": "ट्राफिक स्पाइकको समयमा सुन्दर गिरावटको लागि API गेटवे थप्नुहोस्",
     "tip_nosql": "छिटो READ/WRITE को लागि NoSQL प्रयोग गर्नुहोस्, SEARCH प्रश्नहरूको लागि SQL राख्नुहोस्",
     "apigw_desc_short": "ट्राफिक दर सीमित गर्छ ($70)",
-    "nosql_desc_short": "छिटो READ/WRITE DB ($80)"
+    "nosql_desc_short": "छिटो READ/WRITE DB ($80)",
+    // Search Engine
+    "search": "Search Engine",
+    "search_short": "Search",
+    "search_engine": "Search Engine",
+    "search_desc": "<b>Search Engine.</b> Specialized for SEARCH queries. 3× faster than SQL DB. <b>Upgradeable (Tiers 1-3).</b>",
+    "search_full": "Search Engine",
+    "search_desc_long": "Processes SEARCH traffic 3× faster than SQL DB (100ms vs 300ms). Only accepts SEARCH queries — other traffic types will fail. Upgrade tiers for higher capacity (12/25/40).",
+    "search_flow": "Flow: Compute → Search Engine or Cache → Search Engine",
+    "search_desc_short": "Fast SEARCH queries ($120)",
+    "tip_search_engine": "Add a Search Engine to handle SEARCH queries faster than SQL DB",
+    // Read Replica
+    "replica": "Read Replica",
+    "replica_short": "Replica",
+    "read_replica": "Read Replica",
+    "replica_desc": "<b>Read Replica.</b> Offloads READ traffic from master DB. Requires connection to a DB. <b>Upgradeable (Tiers 1-3).</b>",
+    "replica_full": "Read Replica",
+    "replica_desc_long": "Processes READ traffic faster than master DB (200ms vs 300ms). Must be connected to a SQL DB or NoSQL DB to function. Only accepts READ queries.",
+    "replica_flow": "Flow: Compute → Replica → DB or Cache → Replica → DB",
+    "replica_desc_short": "Offloads READ from DB ($100)",
+    "tip_read_replica": "Add a Read Replica to offload READ traffic from your overloaded DB",
+    // Smart Hints
+    "hint_search_overload": "💡 Your DB is overloaded with SEARCH queries. Consider adding a Search Engine!",
+    "hint_read_overload": "💡 Too many READs hitting your DB. A Read Replica can offload read traffic!",
+    "hint_no_waf": "💡 Malicious traffic is getting through! Add a Firewall to block attacks.",
+    "hint_no_cache": "💡 Many requests are cacheable. A Memory Cache would reduce DB load!",
+    "hint_compute_overload": "💡 Your Compute nodes are overwhelmed. Add a Message Queue to buffer requests.",
+    "hint_no_cdn": "💡 High static traffic! A CDN can serve it without hitting your servers.",
+    "hint_dismiss": "Dismiss",
+    // Traffic shifts
+    "shift_read_heavy": "Read Heavy",
+    "shift_full_text_flood": "Full-Text Flood"
 };
