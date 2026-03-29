@@ -699,6 +699,18 @@ function updateFinancesDisplay() {
             color: "text-cyan-400",
             cost: CONFIG.services.sqs.cost,
         },
+        {
+            key: "search",
+            label: i18n.t('search_engine'),
+            color: "text-cyan-400",
+            cost: CONFIG.services.search.cost,
+        },
+        {
+            key: "replica",
+            label: i18n.t('read_replica'),
+            color: "text-pink-400",
+            cost: CONFIG.services.replica.cost,
+        },
     ];
 
     const repairPercent = CONFIG.survival.degradation?.repairCostPercent || 0.15;
@@ -973,6 +985,8 @@ function resetGame(mode = "survival") {
                 s3: 0,
                 cache: 0,
                 sqs: 0,
+                search: 0,
+                replica: 0,
             },
             countByService: {
                 // Count of each service purchased
@@ -983,6 +997,8 @@ function resetGame(mode = "survival") {
                 s3: 0,
                 cache: 0,
                 sqs: 0,
+                search: 0,
+                replica: 0,
             },
         },
     };
@@ -1549,6 +1565,14 @@ function createConnection(fromId, toId) {
     // NoSQL connections
     else if (t1 === "compute" && t2 === "nosql") valid = true;
     else if (t1 === "cache" && t2 === "nosql") valid = true;
+    // Search Engine connections
+    else if (t1 === "compute" && t2 === "search") valid = true;
+    else if (t1 === "cache" && t2 === "search") valid = true;
+    // Read Replica connections
+    else if (t1 === "compute" && t2 === "replica") valid = true;
+    else if (t1 === "cache" && t2 === "replica") valid = true;
+    else if (t1 === "replica" && t2 === "db") valid = true;
+    else if (t1 === "replica" && t2 === "nosql") valid = true;
 
     if (!valid) {
         new Audio("assets/sounds/click-9.mp3").play();
@@ -1905,7 +1929,7 @@ container.addEventListener("mousedown", (e) => {
             new Audio("assets/sounds/click-5.mp3").play();
         }
     } else if (
-        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw"].includes(
+        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw", "search", "replica"].includes(
             STATE.activeTool
         )
     ) {
@@ -1915,7 +1939,9 @@ container.addEventListener("mousedown", (e) => {
             (STATE.activeTool === "db" && i.type === "service") ||
             (STATE.activeTool === "cache" && i.type === "service") ||
             (STATE.activeTool === "apigw" && i.type === "service") ||
-            (STATE.activeTool === "nosql" && i.type === "service")
+            (STATE.activeTool === "nosql" && i.type === "service") ||
+            (STATE.activeTool === "search" && i.type === "service") ||
+            (STATE.activeTool === "replica" && i.type === "service")
         ) {
             const svc = STATE.services.find((s) => s.id === i.id);
             if (
@@ -1924,7 +1950,9 @@ container.addEventListener("mousedown", (e) => {
                     (STATE.activeTool === "db" && svc.type === "db") ||
                     (STATE.activeTool === "cache" && svc.type === "cache") ||
                     (STATE.activeTool === "apigw" && svc.type === "apigw") ||
-                    (STATE.activeTool === "nosql" && svc.type === "nosql"))
+                    (STATE.activeTool === "nosql" && svc.type === "nosql") ||
+                    (STATE.activeTool === "search" && svc.type === "search") ||
+                    (STATE.activeTool === "replica" && svc.type === "replica"))
             ) {
                 svc.upgrade();
                 return;
@@ -1942,6 +1970,8 @@ container.addEventListener("mousedown", (e) => {
                 cache: "cache",
                 apigw: "apigw",
                 cdn: "cdn",
+                search: "search",
+                replica: "replica",
             };
 
             const serviceType = typeMap[STATE.activeTool];
@@ -2127,7 +2157,9 @@ container.addEventListener("mousemove", (e) => {
                 (STATE.activeTool === "db" && s.type === "db") ||
                 (STATE.activeTool === "cache" && s.type === "cache") ||
                 (STATE.activeTool === "apigw" && s.type === "apigw") ||
-                (STATE.activeTool === "nosql" && s.type === "nosql")
+                (STATE.activeTool === "nosql" && s.type === "nosql") ||
+                (STATE.activeTool === "search" && s.type === "search") ||
+                (STATE.activeTool === "replica" && s.type === "replica")
             ) {
                 const tiers = CONFIG.services[s.type].tiers;
                 if (s.tier < tiers.length) {
@@ -2142,7 +2174,7 @@ container.addEventListener("mousemove", (e) => {
             }
 
             // SHOW UPGRADE INDICATOR (Green Arrow)
-            if (["compute", "db", "cache", "apigw", "nosql"].includes(s.type)) {
+            if (["compute", "db", "cache", "apigw", "nosql", "search", "replica"].includes(s.type)) {
                 const tiers = CONFIG.services[s.type].tiers;
                 if (s.tier < tiers.length) {
                     // Clear any pending hide timer since we are hovering a valid service
@@ -2245,7 +2277,7 @@ function showTooltip(x, y, html) {
 
 // Setup UI tooltips
 function setupUITooltips() {
-    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn"];
+    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn", "search", "replica"];
     tools.forEach((toolId) => {
         const btn = document.getElementById(`tool-${toolId}`);
         if (!btn) return;
@@ -2772,6 +2804,16 @@ function analyzeFailure() {
         result.tips.push(i18n.t('tip_nosql'));
     }
 
+    if (!STATE.services.some((s) => s.type === "search") &&
+        STATE.failures.SEARCH > 5) {
+        result.tips.push(i18n.t('tip_search_engine'));
+    }
+
+    if (!STATE.services.some((s) => s.type === "replica") &&
+        STATE.failures.READ > 10) {
+        result.tips.push(i18n.t('tip_read_replica'));
+    }
+
     // Limit tips to 4
     result.tips = result.tips.slice(0, 4);
 
@@ -3205,8 +3247,8 @@ function loadGameState(saveData = null) {
                 autoRepair: 0,
                 mitigation: 0,
                 breach: 0,
-                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
-                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0 },
+                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0 },
+                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0 },
             },
         };
 
