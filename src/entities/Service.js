@@ -84,6 +84,20 @@ class Service {
           roughness: 0.3,
         });
         break;
+      case "search":
+        geo = new THREE.DodecahedronGeometry(1.5, 0);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.search,
+          ...materialProps,
+        });
+        break;
+      case "replica":
+        geo = new THREE.CylinderGeometry(1.8, 1.8, 1, 6);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.replica,
+          roughness: 0.3,
+        });
+        break;
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
@@ -98,6 +112,8 @@ class Service {
     else if (type === "cdn") this.mesh.position.y += 1.5;
     else if (type === "apigw") this.mesh.position.y += 1.5;
     else if (type === "nosql") this.mesh.position.y += 1;
+    else if (type === "search") this.mesh.position.y += 1.5;
+    else if (type === "replica") this.mesh.position.y += 1;
     else this.mesh.position.y += 1;
 
     this.mesh.castShadow = true;
@@ -145,7 +161,7 @@ class Service {
   }
 
   upgrade() {
-    if (!["compute", "db", "cache", "apigw", "nosql"].includes(this.type)) return;
+    if (!["compute", "db", "cache", "apigw", "nosql", "search", "replica"].includes(this.type)) return;
     const tiers = CONFIG.services[this.type].tiers;
     if (this.tier >= tiers.length) return;
 
@@ -191,6 +207,12 @@ class Service {
     } else if (this.type === "nosql") {
       ringSize = 2.0;
       ringColor = 0x7c3aed;
+    } else if (this.type === "search") {
+      ringSize = 1.5;
+      ringColor = 0x06b6d4;
+    } else if (this.type === "replica") {
+      ringSize = 1.8;
+      ringColor = 0xf472b6;
     } else {
       ringSize = 1.3;
       ringColor = 0xffff00;
@@ -374,6 +396,32 @@ class Service {
           continue;
         }
 
+        if (this.type === "search") {
+          if (job.req.type === "SEARCH") {
+            finishRequest(job.req);
+          } else {
+            failRequest(job.req);
+          }
+          continue;
+        }
+
+        if (this.type === "replica") {
+          const hasMaster = this.connections.some(id => {
+            const s = STATE.services.find(svc => svc.id === id);
+            return s && (s.type === "db" || s.type === "nosql");
+          });
+          if (!hasMaster) {
+            failRequest(job.req);
+            continue;
+          }
+          if (job.req.type === "READ" && job.req.destination === "db") {
+            finishRequest(job.req);
+          } else {
+            failRequest(job.req);
+          }
+          continue;
+        }
+
         if (this.type === "s3") {
           if (job.req.destination === "s3" || job.req.destination === "cdn") {
             finishRequest(job.req);
@@ -398,8 +446,16 @@ class Service {
 
           const destType = job.req.destination;
 
-          // Cache miss routing: prefer NoSQL for READ/WRITE, only SQL for SEARCH
+          // Cache miss routing: prefer specialized services
           if (destType === "db") {
+            if (job.req.type === "SEARCH") {
+              const searchTarget = this.findConnectedService("search");
+              if (searchTarget) { job.req.flyTo(searchTarget); continue; }
+            }
+            if (job.req.type === "READ") {
+              const replicaTarget = this.findConnectedService("replica");
+              if (replicaTarget) { job.req.flyTo(replicaTarget); continue; }
+            }
             if (job.req.type !== "SEARCH") {
               const nosqlTarget = this.findConnectedService("nosql");
               if (nosqlTarget) { job.req.flyTo(nosqlTarget); continue; }
@@ -537,14 +593,21 @@ class Service {
             }
           }
 
-          // NoSQL routing: prefer NoSQL for READ/WRITE, only SQL for SEARCH
+          // Routing: prefer specialized services, fallback to general
           if (destType === "db") {
             if (job.req.type === "SEARCH") {
-              // SEARCH only works on SQL
+              const searchTarget = this.findConnectedService("search");
+              if (searchTarget) { job.req.flyTo(searchTarget); continue; }
+              const sqlTarget = this.findConnectedService("db");
+              if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
+            } else if (job.req.type === "READ") {
+              const replicaTarget = this.findConnectedService("replica");
+              if (replicaTarget) { job.req.flyTo(replicaTarget); continue; }
+              const nosqlTarget = this.findConnectedService("nosql");
+              if (nosqlTarget) { job.req.flyTo(nosqlTarget); continue; }
               const sqlTarget = this.findConnectedService("db");
               if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
             } else {
-              // READ/WRITE prefer NoSQL (faster, cheaper), fallback to SQL
               const nosqlTarget = this.findConnectedService("nosql");
               if (nosqlTarget) { job.req.flyTo(nosqlTarget); continue; }
               const sqlTarget = this.findConnectedService("db");
@@ -856,6 +919,12 @@ class Service {
           } else if (service.type === "nosql") {
             ringSize = 2.0;
             ringColor = 0x7c3aed;
+          } else if (service.type === "search") {
+            ringSize = 1.5;
+            ringColor = 0x06b6d4;
+          } else if (service.type === "replica") {
+            ringSize = 1.8;
+            ringColor = 0xf472b6;
           } else {
             ringSize = 1.3;
             ringColor = 0xffff00;
