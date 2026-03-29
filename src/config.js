@@ -25,6 +25,8 @@ const CONFIG = {
     sqs: 0xff9900, // AWS orange
     apigw: 0xe879f9, // Pink/magenta for API Gateway
     nosql: 0x7c3aed, // Violet for NoSQL
+    search: 0x06b6d4, // Cyan-500 for Search Engine
+    replica: 0xf472b6, // Pink-400 for Read Replica
   },
   trafficTypes: {
     STATIC: {
@@ -75,7 +77,7 @@ const CONFIG = {
       name: "SEARCH",
       method: "GET+query",
       color: 0x06b6d4,
-      reward: 0.8,
+      reward: 1.2,
       score: 5,
       cacheable: true,
       cacheHitRate: 0.15,
@@ -245,9 +247,43 @@ const CONFIG = {
         { level: 3, capacity: 50, cost: 200 },
       ],
     },
+    search: {
+      name: "Search Engine",
+      cost: 120,
+      type: "search",
+      processingTime: 100,
+      capacity: 12,
+      upkeep: 16,
+      tooltip: {
+        upkeep: "High",
+        desc: "<b>Search Engine.</b> Specialized for SEARCH queries. 3× faster than SQL DB. <b>Upgradeable (Tiers 1-3).</b>",
+      },
+      tiers: [
+        { level: 1, capacity: 12, cost: 0 },
+        { level: 2, capacity: 25, cost: 150 },
+        { level: 3, capacity: 40, cost: 250 },
+      ],
+    },
+    replica: {
+      name: "Read Replica",
+      cost: 100,
+      type: "replica",
+      processingTime: 200,
+      capacity: 12,
+      upkeep: 12,
+      tooltip: {
+        upkeep: "Medium",
+        desc: "<b>Read Replica.</b> Offloads READ traffic from master DB. Requires connection to a DB. <b>Upgradeable (Tiers 1-3).</b>",
+      },
+      tiers: [
+        { level: 1, capacity: 12, cost: 0 },
+        { level: 2, capacity: 24, cost: 130 },
+        { level: 3, capacity: 40, cost: 200 },
+      ],
+    },
   },
   survival: {
-    startBudget: 420,
+    startBudget: 500,
     baseRPS: 1.0,
     rampUp: 0.025,
     maxRPS: Infinity,
@@ -345,6 +381,28 @@ const CONFIG = {
             WRITE: 0.45,
             UPLOAD: 0.1,
             SEARCH: 0.1,
+            MALICIOUS: 0.15,
+          },
+        },
+        {
+          name: "Read Heavy",
+          distribution: {
+            STATIC: 0.1,
+            READ: 0.45,
+            WRITE: 0.15,
+            UPLOAD: 0.05,
+            SEARCH: 0.15,
+            MALICIOUS: 0.1,
+          },
+        },
+        {
+          name: "Full-Text Flood",
+          distribution: {
+            STATIC: 0.05,
+            READ: 0.1,
+            WRITE: 0.1,
+            UPLOAD: 0.05,
+            SEARCH: 0.55,
             MALICIOUS: 0.15,
           },
         },
