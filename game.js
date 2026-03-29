@@ -795,6 +795,78 @@ function updateFinancesDisplay() {
     }
 }
 
+function checkSmartHints() {
+  if (STATE.gameMode !== "survival") return;
+  if (!STATE.hints) return;
+  if (window.tutorial?.isActive) return;
+  if (STATE.timeScale === 0) return;
+
+  const now = STATE.elapsedGameTime;
+  if (now - STATE.hints.lastHintTime < STATE.hints.hintCooldown) return;
+
+  const dbServices = STATE.services.filter(s => s.type === "db");
+  const hasSearch = STATE.services.some(s => s.type === "search");
+  const hasReplica = STATE.services.some(s => s.type === "replica");
+  const hasWaf = STATE.services.some(s => s.type === "waf");
+  const hasCache = STATE.services.some(s => s.type === "cache");
+  const hasCdn = STATE.services.some(s => s.type === "cdn");
+
+  const dbOverloaded = dbServices.some(s => s.totalLoad > 0.8);
+  const computeOverloaded = STATE.services
+    .filter(s => s.type === "compute")
+    .some(s => s.totalLoad > 0.8);
+
+  let hint = null;
+
+  if (dbOverloaded && !hasSearch && STATE.trafficDistribution.SEARCH > 0.05 &&
+      !STATE.hints.dismissedHints.has("search")) {
+    hint = { key: "hint_search_overload", id: "search" };
+  } else if (dbOverloaded && !hasReplica && STATE.trafficDistribution.READ > 0.1 &&
+      !STATE.hints.dismissedHints.has("replica")) {
+    hint = { key: "hint_read_overload", id: "replica" };
+  } else if (!hasWaf && (STATE.failures.MALICIOUS || 0) > 5 &&
+      !STATE.hints.dismissedHints.has("waf")) {
+    hint = { key: "hint_no_waf", id: "waf" };
+  } else if (!hasCache && STATE.trafficDistribution.READ + STATE.trafficDistribution.STATIC + STATE.trafficDistribution.SEARCH > 0.5 &&
+      !STATE.hints.dismissedHints.has("cache")) {
+    hint = { key: "hint_no_cache", id: "cache" };
+  } else if (computeOverloaded && !STATE.services.some(s => s.type === "sqs") &&
+      !STATE.hints.dismissedHints.has("sqs")) {
+    hint = { key: "hint_compute_overload", id: "sqs" };
+  } else if (!hasCdn && STATE.trafficDistribution.STATIC > 0.3 &&
+      !STATE.hints.dismissedHints.has("cdn")) {
+    hint = { key: "hint_no_cdn", id: "cdn" };
+  }
+
+  if (hint) {
+    showSmartHint(hint);
+    STATE.hints.lastHintTime = now;
+  }
+}
+
+function showSmartHint(hint) {
+  const warningsContainer = document.getElementById("intervention-warnings");
+  if (!warningsContainer) return;
+
+  const warning = document.createElement("div");
+  warning.className = "intervention-warning warning-info border-2 rounded-lg px-6 py-3 mb-2 shadow-lg";
+  warning.innerHTML = `
+    <div class="flex items-center gap-3">
+      <span class="font-bold text-sm">${i18n.t(hint.key)}</span>
+      <button onclick="this.parentElement.parentElement.remove(); STATE.hints.dismissedHints.add('${hint.id}')"
+        class="pointer-events-auto text-xs bg-blue-800 hover:bg-blue-700 px-2 py-1 rounded ml-2">${i18n.t('hint_dismiss')}</button>
+    </div>
+  `;
+  warningsContainer.appendChild(warning);
+
+  setTimeout(() => {
+    warning.style.transition = "all 0.3s ease-out";
+    warning.style.opacity = "0";
+    warning.style.transform = "translateY(-20px)";
+    setTimeout(() => warning.remove(), 300);
+  }, 10000);
+}
+
 // ==================== END INTERVENTION MECHANICS ====================
 
 // ==================== END BALANCE OVERHAUL FUNCTIONS ====================
@@ -948,6 +1020,11 @@ function resetGame(mode = "survival") {
     STATE.maliciousSpikeActive = false;
     STATE.normalTrafficDist = null;
     STATE.autoRepairEnabled = false;
+    STATE.hints = {
+      lastHintTime: 0,
+      dismissedHints: new Set(),
+      hintCooldown: 30,
+    };
 
     // Initialize detailed finance tracking
     STATE.finances = {
@@ -2492,6 +2569,7 @@ function animate(time) {
     updateActiveEventTimer();
     processAutoRepair(dt);
     updateFinancesDisplay();
+    checkSmartHints();
 
     document.getElementById("money-display").innerText = `$${Math.floor(
         STATE.money
