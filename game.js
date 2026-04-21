@@ -1375,6 +1375,28 @@ function getTrafficType() {
     return TRAFFIC_TYPES.STATIC;
 }
 
+// Round-robin counters for entry-point load splitting across
+// multiple services of the same type (e.g. two WAFs on the Internet).
+// Keyed by service type ("waf", "cdn", "apigw", "any").
+const entryRRIndex = {};
+
+function pickEntryNode(entryNodes, type) {
+    // Filter for live (non-disabled) nodes of the requested type.
+    // Type "any" means "any live entry node" (last-resort path).
+    const candidates = entryNodes.filter((s) => {
+        if (!s || s.isDisabled) return false;
+        return type === "any" ? true : s.type === type;
+    });
+    if (candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+
+    // Round robin: each subsequent call rotates to the next candidate,
+    // splitting load evenly across identical entry points.
+    const idx = (entryRRIndex[type] || 0) % candidates.length;
+    entryRRIndex[type] = idx + 1;
+    return candidates[idx];
+}
+
 function spawnRequest() {
     const type = getTrafficType();
     const req = new Request(type);
@@ -1385,27 +1407,28 @@ function spawnRequest() {
             STATE.services.find((s) => s.id === id)
         );
 
-        // Traffic Routing Logic
+        // Traffic Routing Logic — now round-robin aware so multiple
+        // firewalls / CDNs / gateways actually share the load.
         let target;
 
         // 1. Prefer CDN for STATIC traffic
         if (type === "STATIC") {
-            target = entryNodes.find(s => s?.type === "cdn");
+            target = pickEntryNode(entryNodes, "cdn");
         }
 
         // 2. Fallback to WAF (Security Best Practice)
         if (!target) {
-            target = entryNodes.find((s) => s?.type === "waf");
+            target = pickEntryNode(entryNodes, "waf");
         }
 
         // 3. Fallback to API Gateway (Rate Limiting)
         if (!target) {
-            target = entryNodes.find((s) => s?.type === "apigw");
+            target = pickEntryNode(entryNodes, "apigw");
         }
 
-        // 4. Last Resort: Random entry point (Reckless)
+        // 4. Last Resort: any live entry point (also round-robin)
         if (!target) {
-            target = entryNodes[Math.floor(Math.random() * entryNodes.length)];
+            target = pickEntryNode(entryNodes, "any");
         }
 
         if (target) req.flyTo(target);
