@@ -617,6 +617,17 @@
           <span data-i18n="compute_short" class="text-[10px] font-bold mt-1">Compute</span>
         </button>
 
+        <!-- Serverless Function -->
+        <button id="tool-serverless"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('serverless')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $45
+          </div>
+          <div class="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[14px] border-b-amber-400 mb-1 shadow-[0_0_10px_rgba(251,191,36,0.6)]"></div>
+          <span data-i18n="serverless_short" class="text-[10px] font-bold mt-1">λ Func</span>
+        </button>
+
         <button id="tool-db"
           class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
           onclick="setTool('db')">
@@ -983,6 +994,10 @@
               <span data-i18n="compute_desc_short">Processes Requests ($60)</span>
             </li>
             <li class="flex justify-between">
+              <span data-i18n="serverless" class="text-amber-400 font-bold">Serverless Function</span>
+              <span data-i18n="serverless_desc_short">Pay-per-use compute ($45)</span>
+            </li>
+            <li class="flex justify-between">
               <span data-i18n="relational_db" class="text-red-400 font-bold">Relational DB</span>
               <span data-i18n="db_desc_short">Stores API Data ($150)</span>
             </li>
@@ -1185,6 +1200,16 @@
               Processes READ traffic faster than master DB (200ms vs 300ms). Must be connected to a SQL DB or NoSQL DB to function. Only accepts READ queries.
             </p>
             <p data-i18n="replica_flow" class="text-xs text-gray-500 mt-1">Flow: Compute → Replica → DB or Cache → Replica → DB</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-amber-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="serverless_full" class="text-amber-400">Serverless Function</strong>
+              <span class="text-green-400 font-mono text-sm">$45</span>
+            </div>
+            <p data-i18n="serverless_desc_long" class="text-sm text-gray-400 mt-1">
+              Auto-scales with traffic (capacity 30). Very low upkeep ($2/min) but charges $0.03 per completed request. Cheap for bursty / low-volume traffic; expensive at sustained high RPS. Same connection topology as Compute.
+            </p>
+            <p data-i18n="serverless_flow" class="text-xs text-gray-500 mt-1">Flow: ALB / Queue → Serverless → Cache / DB / NoSQL / S3</p>
           </div>
         </div>
       </div>

@@ -98,6 +98,13 @@ class Service {
           roughness: 0.3,
         });
         break;
+      case "serverless":
+        geo = new THREE.TetrahedronGeometry(1.8, 0);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.serverless,
+          ...materialProps,
+        });
+        break;
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
@@ -114,6 +121,7 @@ class Service {
     else if (type === "nosql") this.mesh.position.y += 1;
     else if (type === "search") this.mesh.position.y += 1.5;
     else if (type === "replica") this.mesh.position.y += 1;
+    else if (type === "serverless") this.mesh.position.y += 1.5;
     else this.mesh.position.y += 1;
 
     this.mesh.castShadow = true;
@@ -308,8 +316,8 @@ class Service {
       }
     }
 
-    // COMPUTE PULL LOGIC
-    if (this.type === "compute") {
+    // COMPUTE / SERVERLESS PULL LOGIC
+    if (this.type === "compute" || this.type === "serverless") {
       // Check if we have space in our queue+processing
       // We want the UPSTREAM queue (SQS) to do the buffering, not the compute node local queue.
       // So we only pull if we are running low on work locally.
@@ -354,7 +362,7 @@ class Service {
       let job = this.processing[i];
 
       const processingTime =
-        this.type === "compute"
+        this.type === "compute" || this.type === "serverless"
           ? this.config.processingTime * job.req.processingWeight
           : this.config.processingTime;
 
@@ -371,6 +379,16 @@ class Service {
             : 0;
         const totalFailChance = Math.min(1, failChance + healthPenalty);
         if (Math.random() < totalFailChance) {
+          // Serverless pays per invocation even when the function errors out
+          if (this.type === "serverless") {
+            const cost = this.config.perRequestCost || 0;
+            STATE.money -= cost;
+            if (STATE.finances) {
+              STATE.finances.expenses.upkeep += cost;
+              STATE.finances.expenses.byService.serverless =
+                (STATE.finances.expenses.byService.serverless || 0) + cost;
+            }
+          }
           failRequest(job.req);
           continue;
         }
@@ -577,10 +595,24 @@ class Service {
           continue;
         }
 
-        if (this.type === "compute") {
+        if (this.type === "compute" || this.type === "serverless") {
+          // Per-request cost for serverless (AWS Lambda style - charged per invocation,
+          // including failed ones since you still pay for execution time)
+          const chargePerRequest = () => {
+            if (this.type !== "serverless") return;
+            const cost = this.config.perRequestCost || 0;
+            STATE.money -= cost;
+            if (STATE.finances) {
+              STATE.finances.expenses.upkeep += cost;
+              STATE.finances.expenses.byService.serverless =
+                (STATE.finances.expenses.byService.serverless || 0) + cost;
+            }
+          };
+
           const destType = job.req.destination;
 
           if (destType === "blocked") {
+            chargePerRequest();
             failRequest(job.req);
             continue;
           }
@@ -588,6 +620,7 @@ class Service {
           if (job.req.isCacheable) {
             const cacheTarget = this.findConnectedService("cache");
             if (cacheTarget) {
+              chargePerRequest();
               job.req.flyTo(cacheTarget);
               continue;
             }
@@ -597,30 +630,33 @@ class Service {
           if (destType === "db") {
             if (job.req.type === "SEARCH") {
               const searchTarget = this.findConnectedService("search");
-              if (searchTarget) { job.req.flyTo(searchTarget); continue; }
+              if (searchTarget) { chargePerRequest(); job.req.flyTo(searchTarget); continue; }
               const sqlTarget = this.findConnectedService("db");
-              if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
+              if (sqlTarget) { chargePerRequest(); job.req.flyTo(sqlTarget); continue; }
             } else if (job.req.type === "READ") {
               const replicaTarget = this.findConnectedService("replica");
-              if (replicaTarget) { job.req.flyTo(replicaTarget); continue; }
+              if (replicaTarget) { chargePerRequest(); job.req.flyTo(replicaTarget); continue; }
               const nosqlTarget = this.findConnectedService("nosql");
-              if (nosqlTarget) { job.req.flyTo(nosqlTarget); continue; }
+              if (nosqlTarget) { chargePerRequest(); job.req.flyTo(nosqlTarget); continue; }
               const sqlTarget = this.findConnectedService("db");
-              if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
+              if (sqlTarget) { chargePerRequest(); job.req.flyTo(sqlTarget); continue; }
             } else {
               const nosqlTarget = this.findConnectedService("nosql");
-              if (nosqlTarget) { job.req.flyTo(nosqlTarget); continue; }
+              if (nosqlTarget) { chargePerRequest(); job.req.flyTo(nosqlTarget); continue; }
               const sqlTarget = this.findConnectedService("db");
-              if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
+              if (sqlTarget) { chargePerRequest(); job.req.flyTo(sqlTarget); continue; }
             }
+            chargePerRequest();
             failRequest(job.req);
             continue;
           }
 
           const directTarget = this.findConnectedService(destType);
           if (directTarget) {
+            chargePerRequest();
             job.req.flyTo(directTarget);
           } else {
+            chargePerRequest();
             failRequest(job.req);
           }
         } else {

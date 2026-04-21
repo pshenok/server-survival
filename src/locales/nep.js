@@ -459,6 +459,16 @@ const NE_TRANSLATIONS = {
     "replica_flow": "Flow: Compute → Replica → DB or Cache → Replica → DB",
     "replica_desc_short": "Offloads READ from DB ($100)",
     "tip_read_replica": "Add a Read Replica to offload READ traffic from your overloaded DB",
+    // Serverless Function
+    "serverless": "Serverless Function",
+    "serverless_short": "λ Func",
+    "serverless_desc": "<b>Serverless Function.</b> Auto-scales with traffic. Very low upkeep but pays $0.03 per completed request.",
+    "serverless_full": "Serverless Function",
+    "serverless_desc_long": "Auto-scales with traffic (capacity 30). Very low upkeep ($2/min) but charges $0.03 per completed request. Cheap for bursty / low-volume traffic; expensive at sustained high RPS. Same connection topology as Compute.",
+    "serverless_flow": "Flow: ALB / Queue → Serverless → Cache / DB / NoSQL / S3",
+    "serverless_desc_short": "Pay-per-use compute ($45)",
+    "tip_serverless": "Serverless is cheap when idle but pays per request — pair it with CDN/Cache to keep invocations low",
+    "hint_serverless_expensive": "💡 Your Serverless is racking up per-request costs at this RPS. Consider adding a Compute node for cheaper sustained throughput.",
     // Smart Hints
     "hint_search_overload": "💡 Your DB is overloaded with SEARCH queries. Consider adding a Search Engine!",
     "hint_read_overload": "💡 Too many READs hitting your DB. A Read Replica can offload read traffic!",
