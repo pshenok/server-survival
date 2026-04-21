@@ -27,6 +27,7 @@ const CONFIG = {
     nosql: 0x7c3aed, // Violet for NoSQL
     search: 0x06b6d4, // Cyan-500 for Search Engine
     replica: 0xf472b6, // Pink-400 for Read Replica
+    serverless: 0xfbbf24, // amber - lambda style
   },
   trafficTypes: {
     STATIC: {
@@ -280,6 +281,19 @@ const CONFIG = {
         { level: 2, capacity: 24, cost: 130 },
         { level: 3, capacity: 40, cost: 200 },
       ],
+    },
+    serverless: {
+      name: "Serverless Function",
+      cost: 45,
+      type: "serverless",
+      processingTime: 900,
+      capacity: 30,
+      upkeep: 2,
+      perRequestCost: 0.03,
+      tooltip: {
+        upkeep: "Very Low",
+        desc: "<b>Serverless Function.</b> Auto-scales with traffic. Very low upkeep but pays $0.03 per completed request. Great for spiky / low-volume traffic, expensive at high RPS.",
+      },
     },
   },
   survival: {

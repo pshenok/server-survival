@@ -41,6 +41,7 @@ Build your architecture using the toolbar. Each service has a cost, capacity, an
 | **Queue**        | $45  | Queue:200 | Low       | **Buffer.** Buffers requests during spikes. Prevents drops.           |
 | **Load Balancer**| $50  | 20        | Medium    | **Distribution.** Distributes traffic to multiple instances.          |
 | **Compute**      | $60  | 4         | High      | **Processing.** Processes requests. **Upgradeable T1→T3.**            |
+| **Serverless Function** | $45 | 30 (auto) | Very Low + $0.03/req | **Pay-per-use Compute.** Auto-scales with traffic. Low upkeep, but charges $0.03 per request. Cheap when idle, expensive at high RPS. |
 | **CDN**          | $60  | 50        | Low       | **Delivery.** Caches STATIC content at edge (95% hit rate).           |
 | **SQL DB**       | $150 | 8         | Very High | **Database.** Handles READ/WRITE/SEARCH. **Upgradeable T1→T3.**      |
 | **NoSQL DB**     | $80  | 15        | High      | **Fast Database.** Handles READ/WRITE only (no SEARCH). **Upgradeable T1→T3.** |
@@ -108,6 +109,11 @@ A fully customizable testing environment for experimenting with any architecture
 
 **No game over in Sandbox** - experiment freely!
 
+### Recent Features (v2.3)
+
+- **Serverless Function** - Pay-per-use compute variant ($45 to place, $2/min upkeep, $0.03 per completed request). Auto-scales to capacity 30 with a 900ms cold-start processing time. Same routing topology as Compute (ALB/Queue/API Gateway upstream; Cache/DB/NoSQL/S3/Search/Replica downstream).
+- **Cost-aware Smart Hint** - Warns when a Serverless node's per-request cost is adding up at high RPS, nudging players toward a Compute node for sustained throughput.
+
 ### Recent Features (v2.2)
 
 - **Search Engine** - Specialized SEARCH handler, 3x faster than SQL DB (100ms vs 300ms). Upgradeable (Tiers 1-3: 12/25/40 capacity)
@@ -158,6 +164,7 @@ A fully customizable testing environment for experimenting with any architecture
 10. **Split DB Traffic with NoSQL:** Route READ/WRITE to NoSQL (faster, cheaper) and keep SQL DB for SEARCH queries only.
 11. **Search Engine for SEARCH Storms:** SEARCH is the heaviest traffic type (2.5x weight). A dedicated Search Engine processes it 3x faster than SQL DB.
 12. **Read Replica for READ offloading:** Under "API Heavy" or "Read Heavy" shifts, a Read Replica prevents your main DB from drowning in READ requests.
+13. **Serverless Function = pay-per-use:** Great for spiky traffic, but monitor finances — per-request cost ($0.03) adds up fast at high RPS.
 
 ## Tech Stack
 

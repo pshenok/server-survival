@@ -712,6 +712,12 @@ function updateFinancesDisplay() {
             cost: CONFIG.services.replica.cost,
         },
         {
+            key: "serverless",
+            label: i18n.t('serverless'),
+            color: "text-amber-400",
+            cost: CONFIG.services.serverless.cost,
+        },
+        {
             key: "apigw",
             label: i18n.t('apigw'),
             color: "text-fuchsia-400",
@@ -854,6 +860,12 @@ function checkSmartHints() {
   } else if (!hasCdn && STATE.trafficDistribution.STATIC > 0.3 &&
       !STATE.hints.dismissedHints.has("cdn")) {
     hint = { key: "hint_no_cdn", id: "cdn" };
+  } else if (
+    STATE.services.some(s => s.type === "serverless") &&
+    STATE.currentRPS > 8 &&
+    !STATE.hints.dismissedHints.has("serverless_expensive")
+  ) {
+    hint = { key: "hint_serverless_expensive", id: "serverless_expensive" };
   }
 
   if (hint) {
@@ -1085,6 +1097,7 @@ function resetGame(mode = "survival") {
                 apigw: 0,
                 nosql: 0,
                 cdn: 0,
+                serverless: 0,
             },
             countByService: {
                 // Count of each service purchased
@@ -1100,6 +1113,7 @@ function resetGame(mode = "survival") {
                 nosql: 0,
                 cdn: 0,
                 replica: 0,
+                serverless: 0,
             },
         },
     };
@@ -1674,6 +1688,16 @@ function createConnection(fromId, toId) {
     else if (t1 === "cache" && t2 === "replica") valid = true;
     else if (t1 === "replica" && t2 === "db") valid = true;
     else if (t1 === "replica" && t2 === "nosql") valid = true;
+    // Serverless Function connections (same topology as Compute)
+    else if (t1 === "alb" && t2 === "serverless") valid = true;
+    else if (t1 === "sqs" && t2 === "serverless") valid = true;
+    else if (t1 === "apigw" && t2 === "serverless") valid = true;
+    else if (t1 === "serverless" && t2 === "cache") valid = true;
+    else if (t1 === "serverless" && t2 === "db") valid = true;
+    else if (t1 === "serverless" && t2 === "nosql") valid = true;
+    else if (t1 === "serverless" && t2 === "s3") valid = true;
+    else if (t1 === "serverless" && t2 === "search") valid = true;
+    else if (t1 === "serverless" && t2 === "replica") valid = true;
 
     if (!valid) {
         new Audio("assets/sounds/click-9.mp3").play();
@@ -2030,7 +2054,7 @@ container.addEventListener("mousedown", (e) => {
             new Audio("assets/sounds/click-5.mp3").play();
         }
     } else if (
-        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw", "search", "replica"].includes(
+        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw", "search", "replica", "serverless"].includes(
             STATE.activeTool
         )
     ) {
@@ -2073,6 +2097,7 @@ container.addEventListener("mousedown", (e) => {
                 cdn: "cdn",
                 search: "search",
                 replica: "replica",
+                serverless: "serverless",
             };
 
             const serviceType = typeMap[STATE.activeTool];
@@ -2378,7 +2403,7 @@ function showTooltip(x, y, html) {
 
 // Setup UI tooltips
 function setupUITooltips() {
-    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn", "search", "replica"];
+    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn", "search", "replica", "serverless"];
     tools.forEach((toolId) => {
         const btn = document.getElementById(`tool-${toolId}`);
         if (!btn) return;
@@ -3349,8 +3374,8 @@ function loadGameState(saveData = null) {
                 autoRepair: 0,
                 mitigation: 0,
                 breach: 0,
-                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0 },
-                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0 },
+                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0 },
+                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0 },
             },
         };
 
