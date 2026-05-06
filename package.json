@@ -1,0 +1,34 @@
+{
+  "name": "server-survival",
+  "version": "1.0.0",
+  "description": "![Gameplay Demo](assets/gameplay.gif)",
+  "homepage": "https://github.com/pshenok/server-survival#readme",
+  "bugs": {
+    "url": "https://github.com/pshenok/server-survival/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pshenok/server-survival.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "build": {
+    "appId": "com.serversurvival.game",
+    "productName": "Server Survival",
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^39.2.5",
+    "electron-builder": "^26.0.12"
+  }
+}
