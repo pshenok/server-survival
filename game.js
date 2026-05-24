@@ -1637,6 +1637,73 @@ window.startSandbox = () => {
     resetGame("sandbox");
 };
 
+// ===================== CAMPAIGN MODE =====================
+
+window.openCampaignSelect = () => {
+    document.getElementById("main-menu-modal").classList.add("hidden");
+    document.getElementById("campaign-select-modal").classList.remove("hidden");
+    renderCampaignLevels();
+};
+
+window.exitCampaignToMenu = () => {
+    document.getElementById("campaign-select-modal").classList.add("hidden");
+    document.getElementById("campaign-briefing-modal").classList.add("hidden");
+    document.getElementById("campaign-debrief-modal").classList.add("hidden");
+    document.getElementById("main-menu-modal").classList.remove("hidden");
+};
+
+window.exitCampaignToMap = () => {
+    document.getElementById("campaign-briefing-modal").classList.add("hidden");
+    document.getElementById("campaign-debrief-modal").classList.add("hidden");
+    document.getElementById("campaign-select-modal").classList.remove("hidden");
+    renderCampaignLevels();
+    if (window.campaign?.active) window.campaign.exit();
+};
+
+function renderCampaignLevels() {
+    const list = document.getElementById("campaign-levels-list");
+    if (!list) return;
+    const progress = window.campaign.loadProgress();
+    const chapters = { 1: "Chapter 1: Basics", 2: "Chapter 2: Optimization", 3: "Chapter 3: Defense & Mastery" };
+    let html = "";
+    let lastChapter = -1;
+    for (const lvl of CAMPAIGN_LEVELS) {
+        if (lvl.chapter !== lastChapter) {
+            if (lastChapter !== -1) html += "</div>";
+            html += `<div class="text-yellow-400 text-sm font-bold uppercase tracking-wider mt-4 mb-2">${chapters[lvl.chapter]}</div>`;
+            html += `<div class="space-y-2">`;
+            lastChapter = lvl.chapter;
+        }
+        const unlocked = lvl.id <= progress.highestUnlocked;
+        const entry = progress.completed[lvl.id];
+        const stars = entry?.stars || 0;
+        const starStr = unlocked ? ("★".repeat(stars) + "☆".repeat(3 - stars)) : "🔒";
+        const time = entry ? ` · ${Math.round(entry.bestTimeSec)}s` : "";
+        const clickHandler = unlocked ? `onclick="openCampaignBriefing(${lvl.id})"` : "";
+        const cursor = unlocked ? "cursor-pointer hover:bg-gray-800/60" : "opacity-50 cursor-not-allowed";
+        html += `
+            <div ${clickHandler}
+                class="border border-gray-700 rounded-lg p-3 ${cursor} transition flex items-center gap-3">
+                <div class="text-3xl">${lvl.icon}</div>
+                <div class="flex-1">
+                    <div class="text-white font-bold">${lvl.id}. ${lvl.title}</div>
+                    <div class="text-gray-400 text-xs">${lvl.scenario.slice(0, 80)}${lvl.scenario.length > 80 ? "…" : ""}</div>
+                </div>
+                <div class="text-yellow-400 font-mono text-sm">${starStr}${time}</div>
+            </div>`;
+    }
+    html += "</div>";
+    list.innerHTML = html;
+    updateCampaignProgressLabel();
+}
+
+function updateCampaignProgressLabel() {
+    const el = document.getElementById("campaign-progress-label");
+    if (!el) return;
+    const c = window.campaign;
+    el.textContent = `${c.completedCount()}/${CAMPAIGN_LEVELS.length} ★${c.totalStars()}`;
+}
+
 function createService(type, pos) {
     if (STATE.money < CONFIG.services[type].cost) {
         flashMoney();
