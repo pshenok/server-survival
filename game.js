@@ -1704,8 +1704,10 @@ function renderCampaignLevels() {
         const time = entry ? ` · ${Math.round(entry.bestTimeSec)}s` : "";
         const clickHandler = unlocked ? `onclick="openCampaignBriefing(${lvl.id})"` : "";
         const cursor = unlocked ? "cursor-pointer hover:bg-gray-800/60" : "opacity-50 cursor-not-allowed";
+        // Hover tooltip works for BOTH locked and unlocked levels — players can peek ahead at what's coming.
+        const hoverHandlers = `onmousemove="showCampaignLevelTooltip(event, ${lvl.id})" onmouseleave="hideCampaignLevelTooltip()"`;
         html += `
-            <div ${clickHandler}
+            <div ${clickHandler} ${hoverHandlers}
                 class="border border-gray-700 rounded-lg p-3 ${cursor} transition flex items-center gap-3">
                 <div class="text-3xl">${lvl.icon}</div>
                 <div class="flex-1">
@@ -1726,6 +1728,62 @@ function updateCampaignProgressLabel() {
     const c = window.campaign;
     el.textContent = `${c.completedCount()}/${CAMPAIGN_LEVELS.length} ★${c.totalStars()}`;
 }
+
+// Mini-briefing tooltip shown when hovering a level card in Level Select.
+// Reuses the existing global #tooltip element (z-index 100 beats the modal's z-50).
+window.showCampaignLevelTooltip = (event, levelId) => {
+    const level = CAMPAIGN_LEVELS.find((l) => l.id === levelId);
+    if (!level) return;
+    const t = document.getElementById("tooltip");
+    if (!t) return;
+
+    const goalsHtml = level.objectives.primary.map((o) => `<li>• ${o.label}</li>`).join("");
+    const bonusHtml = level.objectives.bonus.map((o) => `<li>• ${o.label}</li>`).join("");
+    // Shrink the diagram for tooltip use — viewBox stays the same, only displayed height.
+    const diagram = renderArchitectureSVG(level.preBuilt, level.diagramHighlights)
+        .replace('height="160"', 'height="90"');
+
+    t.innerHTML = `
+        <div class="text-base font-bold text-cyan-400 mb-2">${level.icon} ${level.id}. ${level.title}</div>
+        <p class="text-xs text-gray-300 mb-2">${level.scenario}</p>
+        <div class="bg-blue-900/40 rounded p-2 mb-2 border border-blue-700/30">
+            <div class="text-[10px] text-blue-400 uppercase font-bold mb-1">\u{1F4DA} Learn</div>
+            <p class="text-xs text-gray-200">${level.learn}</p>
+        </div>
+        <div class="text-[10px] text-green-400 uppercase font-bold mb-1">\u{1F3AF} Goals</div>
+        <ul class="text-xs text-gray-200 mb-2">${goalsHtml}</ul>
+        <div class="text-[10px] text-yellow-400 uppercase font-bold mb-1">⭐ Bonus</div>
+        <ul class="text-xs text-gray-200 mb-2">${bonusHtml}</ul>
+        <div class="mt-2 pt-2 border-t border-gray-700">${diagram}</div>
+    `;
+
+    t.style.display = "block";
+    t.style.maxWidth = "440px";
+    t.style.whiteSpace = "normal";
+
+    // Position: prefer right-of-cursor, but clamp to viewport so it never spills off-screen.
+    const margin = 16;
+    const rect = t.getBoundingClientRect();
+    let left = event.clientX + 20;
+    let top = event.clientY + 12;
+    if (left + rect.width + margin > window.innerWidth) {
+        left = event.clientX - rect.width - 20;
+    }
+    if (top + rect.height + margin > window.innerHeight) {
+        top = Math.max(margin, window.innerHeight - rect.height - margin);
+    }
+    t.style.left = `${Math.max(margin, left)}px`;
+    t.style.top = `${Math.max(margin, top)}px`;
+};
+
+window.hideCampaignLevelTooltip = () => {
+    const t = document.getElementById("tooltip");
+    if (!t) return;
+    t.style.display = "none";
+    // Reset overrides so the canvas-hover tooltips work normally afterwards.
+    t.style.maxWidth = "";
+    t.style.whiteSpace = "";
+};
 
 let _pendingCampaignLevelId = null;
 
@@ -1795,8 +1853,10 @@ window.startCampaignLevel = (levelId) => {
     // Toolbar gating
     applyCampaignToolbarGating(level.allowedServices, level.forbiddenServices);
 
-    // Auto-start at 1× — no need to press Play
-    setTimeScale(1);
+    // Start PAUSED — like Survival mode. Player surveys the situation
+    // (pre-built architecture, allowed services, objectives panel) and
+    // presses Play when ready. resetGame already set timeScale=0 and put
+    // pulse-green on btn-play, so nothing else to do here.
 };
 
 function applyCampaignToolbarGating(allowed, forbidden) {
