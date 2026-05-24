@@ -487,5 +487,19 @@ const ZH_TRANSLATIONS = {
     "hint_dismiss": "Dismiss",
     // Traffic shifts
     "shift_read_heavy": "Read Heavy",
-    "shift_full_text_flood": "Full-Text Flood"
+    "shift_full_text_flood": "Full-Text Flood",
+    // Campaign Mode
+    "campaign_mode": "Campaign",
+    "campaign_select_title": "CAMPAIGN",
+    "campaign_briefing_start": "Start Level",
+    "campaign_briefing_back": "Back",
+    "campaign_complete": "LEVEL COMPLETE",
+    "campaign_failed": "LEVEL FAILED",
+    "campaign_retry": "Retry",
+    "campaign_next": "Next",
+    "campaign_map": "Map",
+    "campaign_chapter_1": "Chapter 1: Basics",
+    "campaign_chapter_2": "Chapter 2: Optimization",
+    "campaign_chapter_3": "Chapter 3: Defense & Mastery",
+    "campaign_locked": "Locked"
 };

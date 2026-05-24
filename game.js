@@ -77,7 +77,11 @@ function getUpkeepMultiplier() {
 }
 
 function updateMaliciousSpike(dt) {
-    if (STATE.gameMode !== "survival") return;
+    if (STATE.gameMode === "campaign") {
+        if (!STATE.campaign?.level?.enableSurvivalShifts) return;
+    } else if (STATE.gameMode !== "survival") {
+        return;
+    }
     if (!CONFIG.survival.maliciousSpike.enabled) return;
 
     STATE.maliciousSpikeTimer += dt;
@@ -235,7 +239,11 @@ function addInterventionWarning(message, type = "warning", duration = 4000) {
 }
 
 function updateTrafficShift(dt) {
-    if (STATE.gameMode !== "survival") return;
+    if (STATE.gameMode === "campaign") {
+        if (!STATE.campaign?.level?.enableSurvivalShifts) return;
+    } else if (STATE.gameMode !== "survival") {
+        return;
+    }
     if (!CONFIG.survival.trafficShift?.enabled) return;
     if (!STATE.intervention) return;
 
@@ -307,7 +315,11 @@ function endTrafficShift() {
 }
 
 function updateRandomEvents(dt) {
-    if (STATE.gameMode !== "survival") return;
+    if (STATE.gameMode === "campaign") {
+        if (!STATE.campaign?.level?.enableSurvivalShifts) return;
+    } else if (STATE.gameMode !== "survival") {
+        return;
+    }
     if (!CONFIG.survival.randomEvents?.enabled) return;
     if (!STATE.intervention) return;
 
@@ -999,7 +1011,12 @@ function resetGame(mode = "survival") {
     STATE.gameMode = mode;
 
     // Set budget based on mode
-    if (mode === "sandbox") {
+    if (mode === "campaign") {
+        STATE.money = 0; // will be set by startCampaignLevel from level.budget
+        STATE.upkeepEnabled = true;
+        STATE.trafficDistribution = { STATIC: 0.3, READ: 0.2, WRITE: 0.15, UPLOAD: 0.05, SEARCH: 0.1, MALICIOUS: 0.2 };
+        STATE.currentRPS = 1; // overridden by level.rps
+    } else if (mode === "sandbox") {
         STATE.sandboxBudget = CONFIG.sandbox.defaultBudget;
         STATE.money = STATE.sandboxBudget;
         STATE.upkeepEnabled = CONFIG.sandbox.upkeepEnabled;
@@ -1179,7 +1196,10 @@ function resetGame(mode = "survival") {
     const sandboxPanel = document.getElementById("sandboxPanel");
     const objectivesPanel = document.getElementById("objectivesPanel");
 
-    if (mode === "sandbox") {
+    if (mode === "campaign") {
+        if (sandboxPanel) sandboxPanel.classList.add("hidden");
+        if (objectivesPanel) objectivesPanel.classList.remove("hidden");
+    } else if (mode === "sandbox") {
         // Show sandbox panel, hide objectives
         if (sandboxPanel) {
             sandboxPanel.classList.remove("hidden");
@@ -1525,9 +1545,12 @@ function updateScore(req, outcome) {
     updateScoreUI();
 }
 
-function finishRequest(req) {
+function finishRequest(req, viaServiceType) {
     STATE.requestsProcessed++;
     updateScore(req, "COMPLETED");
+    if (window.campaign?.active) {
+        window.campaign.onRequestCompleted(req, viaServiceType);
+    }
     removeRequest(req);
 }
 
@@ -1635,6 +1658,268 @@ window.startGame = () => {
 window.startSandbox = () => {
     document.getElementById("main-menu-modal").classList.add("hidden");
     resetGame("sandbox");
+};
+
+// ===================== CAMPAIGN MODE =====================
+
+window.openCampaignSelect = () => {
+    document.getElementById("main-menu-modal").classList.add("hidden");
+    document.getElementById("campaign-select-modal").classList.remove("hidden");
+    renderCampaignLevels();
+};
+
+window.exitCampaignToMenu = () => {
+    document.getElementById("campaign-select-modal").classList.add("hidden");
+    document.getElementById("campaign-briefing-modal").classList.add("hidden");
+    document.getElementById("campaign-debrief-modal").classList.add("hidden");
+    document.getElementById("main-menu-modal").classList.remove("hidden");
+};
+
+window.exitCampaignToMap = () => {
+    document.getElementById("campaign-briefing-modal").classList.add("hidden");
+    document.getElementById("campaign-debrief-modal").classList.add("hidden");
+    document.getElementById("campaign-select-modal").classList.remove("hidden");
+    renderCampaignLevels();
+    if (window.campaign?.active) window.campaign.exit();
+};
+
+function renderCampaignLevels() {
+    const list = document.getElementById("campaign-levels-list");
+    if (!list) return;
+    const progress = window.campaign.loadProgress();
+    const chapters = { 1: "Chapter 1: Basics", 2: "Chapter 2: Optimization", 3: "Chapter 3: Defense & Mastery" };
+    let html = "";
+    let lastChapter = -1;
+    for (const lvl of CAMPAIGN_LEVELS) {
+        if (lvl.chapter !== lastChapter) {
+            if (lastChapter !== -1) html += "</div>";
+            html += `<div class="text-yellow-400 text-sm font-bold uppercase tracking-wider mt-4 mb-2">${chapters[lvl.chapter]}</div>`;
+            html += `<div class="space-y-2">`;
+            lastChapter = lvl.chapter;
+        }
+        const unlocked = lvl.id <= progress.highestUnlocked;
+        const entry = progress.completed[lvl.id];
+        const stars = entry?.stars || 0;
+        const starStr = unlocked ? ("★".repeat(stars) + "☆".repeat(3 - stars)) : "🔒";
+        const time = entry ? ` · ${Math.round(entry.bestTimeSec)}s` : "";
+        const clickHandler = unlocked ? `onclick="openCampaignBriefing(${lvl.id})"` : "";
+        const cursor = unlocked ? "cursor-pointer hover:bg-gray-800/60" : "opacity-50 cursor-not-allowed";
+        html += `
+            <div ${clickHandler}
+                class="border border-gray-700 rounded-lg p-3 ${cursor} transition flex items-center gap-3">
+                <div class="text-3xl">${lvl.icon}</div>
+                <div class="flex-1">
+                    <div class="text-white font-bold">${lvl.id}. ${lvl.title}</div>
+                    <div class="text-gray-400 text-xs">${lvl.scenario.slice(0, 80)}${lvl.scenario.length > 80 ? "…" : ""}</div>
+                </div>
+                <div class="text-yellow-400 font-mono text-sm">${starStr}${time}</div>
+            </div>`;
+    }
+    html += "</div>";
+    list.innerHTML = html;
+    updateCampaignProgressLabel();
+}
+
+function updateCampaignProgressLabel() {
+    const el = document.getElementById("campaign-progress-label");
+    if (!el) return;
+    const c = window.campaign;
+    el.textContent = `${c.completedCount()}/${CAMPAIGN_LEVELS.length} ★${c.totalStars()}`;
+}
+
+let _pendingCampaignLevelId = null;
+
+window.openCampaignBriefing = (levelId) => {
+    const level = CAMPAIGN_LEVELS.find((l) => l.id === levelId);
+    if (!level) return;
+    _pendingCampaignLevelId = levelId;
+
+    document.getElementById("campaign-select-modal").classList.add("hidden");
+    document.getElementById("campaign-briefing-modal").classList.remove("hidden");
+
+    document.getElementById("campaign-briefing-icon").textContent = level.icon;
+    document.getElementById("campaign-briefing-chapter").textContent =
+        `Chapter ${level.chapter} · Level ${level.id}`;
+    document.getElementById("campaign-briefing-title").textContent = level.title.toUpperCase();
+    document.getElementById("campaign-briefing-scenario").textContent = level.scenario;
+    document.getElementById("campaign-briefing-learn").textContent = level.learn;
+
+    document.getElementById("campaign-briefing-diagram").innerHTML =
+        renderArchitectureSVG(level.preBuilt, level.diagramHighlights);
+
+    document.getElementById("campaign-briefing-goals").innerHTML =
+        level.objectives.primary.map((o) => `<li>• ${o.label}</li>`).join("");
+    document.getElementById("campaign-briefing-bonus").innerHTML =
+        level.objectives.bonus.map((o) => `<li>• ${o.label}</li>`).join("");
+};
+
+window.campaignStartCurrentLevel = () => {
+    const id = _pendingCampaignLevelId;
+    if (!id) return;
+    document.getElementById("campaign-briefing-modal").classList.add("hidden");
+    startCampaignLevel(id);
+};
+
+window.startCampaignLevel = (levelId) => {
+    const level = CAMPAIGN_LEVELS.find((l) => l.id === levelId);
+    if (!level) return;
+
+    if (!window.campaign.loadLevel(levelId)) return;
+
+    resetGame("campaign");
+
+    // Pre-place services using survival's existing creation path (bypasses cost check)
+    const placed = [];
+    for (const s of level.preBuilt.services) {
+        const pos = new THREE.Vector3(s.x, 0, s.z);
+        const svc = new Service(s.type, pos);
+        STATE.services.push(svc);
+        placed.push(svc);
+        if (STATE.finances) {
+            STATE.finances.expenses.countByService[s.type] =
+                (STATE.finances.expenses.countByService[s.type] || 0) + 1;
+        }
+    }
+    for (const [from, to] of level.preBuilt.connections) {
+        const fromId = from === "internet" ? "internet" : placed[from].id;
+        const toId = placed[to].id;
+        createConnection(fromId, toId);
+    }
+    updateRepairCostTable();
+
+    // Apply level-specific forced settings
+    STATE.trafficDistribution = { ...level.trafficDistribution };
+    STATE.currentRPS = level.rps;
+    STATE.money = level.budget;
+
+    // Toolbar gating
+    applyCampaignToolbarGating(level.allowedServices, level.forbiddenServices);
+
+    // Auto-start at 1× — no need to press Play
+    setTimeScale(1);
+};
+
+function applyCampaignToolbarGating(allowed, forbidden) {
+    // Map service config keys to their toolbar button IDs.
+    // (matches the toolbar typeMap in mousedown handler)
+    const toolMap = {
+        waf: "tool-waf", apigw: "tool-apigw", sqs: "tool-sqs", alb: "tool-alb",
+        lambda: "tool-lambda", serverless: "tool-serverless",
+        db: "tool-db", nosql: "tool-nosql", cache: "tool-cache",
+        cdn: "tool-cdn", s3: "tool-s3", search: "tool-search", replica: "tool-replica",
+    };
+
+    // First clear any prior gating
+    Object.values(toolMap).forEach((id) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.classList.remove("opacity-30", "pointer-events-none");
+        btn.removeAttribute("data-campaign-blocked");
+    });
+
+    const allowSet = allowed && allowed.length ? new Set(allowed) : null;
+    const blockSet = new Set(forbidden || []);
+
+    // The "lambda" tool is a button for compute service.
+    // Normalize: allowSet uses CONFIG keys, but toolMap key for compute is "lambda".
+    // To gate compute, accept both "compute" and "lambda" in allowed/forbidden lists.
+    const isAllowed = (toolKey) => {
+        if (!allowSet) return !blockSet.has(toolKey) && !blockSet.has(toolKey === "lambda" ? "compute" : toolKey);
+        if (allowSet.has(toolKey)) return true;
+        if (toolKey === "lambda" && allowSet.has("compute")) return true;
+        return false;
+    };
+
+    Object.entries(toolMap).forEach(([k, id]) => {
+        if (!isAllowed(k)) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.classList.add("opacity-30", "pointer-events-none");
+            btn.setAttribute("data-campaign-blocked", "true");
+        }
+    });
+}
+
+function renderCampaignObjectives(level, primaryResults, bonusResults) {
+    const panel = document.getElementById("objectivesPanel");
+    if (!panel) return;
+    panel.classList.remove("hidden");
+
+    const primaryHtml = level.objectives.primary.map((o) => {
+        const done = primaryResults[o.id];
+        const icon = done ? "☑" : "☐";
+        const color = done ? "text-green-400" : "text-gray-400";
+        return `<li class="${color}"><span class="font-mono">${icon}</span> ${o.label}</li>`;
+    }).join("");
+
+    const bonusHtml = level.objectives.bonus.map((o) => {
+        const done = bonusResults[o.id];
+        const icon = done ? "⭐" : "☆";
+        const color = done ? "text-yellow-300" : "text-gray-500";
+        return `<li class="${color}"><span class="font-mono">${icon}</span> ${o.label}</li>`;
+    }).join("");
+
+    panel.innerHTML = `
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="text-xs font-bold text-yellow-400 uppercase tracking-wider">
+                Level ${level.id}: ${level.title}
+            </h3>
+            <span class="text-[10px] bg-yellow-900/50 px-2 py-0.5 rounded text-yellow-400 border border-yellow-800">${Math.round(STATE.elapsedGameTime)}s / ${level.durationSec}s</span>
+        </div>
+        <ul class="text-xs space-y-1 font-mono mb-2">${primaryHtml}</ul>
+        <div class="text-[10px] text-yellow-500 uppercase mt-2 mb-1">Bonus</div>
+        <ul class="text-[11px] space-y-1 font-mono">${bonusHtml}</ul>`;
+}
+
+function showCampaignDebrief(outcome, reason, level) {
+    document.getElementById("campaign-debrief-modal").classList.remove("hidden");
+
+    const titleEl = document.getElementById("campaign-debrief-title");
+    const iconEl = document.getElementById("campaign-debrief-icon");
+    const starsEl = document.getElementById("campaign-debrief-stars");
+    const reasonEl = document.getElementById("campaign-debrief-reason");
+    const tipEl = document.getElementById("campaign-debrief-tip");
+    const nextBtn = document.getElementById("campaign-debrief-next-btn");
+
+    if (outcome === "win") {
+        const stars = window.campaign._calculateStars();
+        iconEl.textContent = "🎉";
+        titleEl.textContent = "LEVEL COMPLETE";
+        titleEl.className = "text-3xl font-bold mb-2 text-green-400";
+        starsEl.textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
+        reasonEl.textContent = `Completed in ${Math.round(STATE.elapsedGameTime)}s`;
+        tipEl.textContent = level.debriefTip;
+
+        const hasNext = CAMPAIGN_LEVELS.some((l) => l.id === level.id + 1);
+        nextBtn.classList.toggle("hidden", !hasNext);
+        if (typeof STATE.sound?.playSuccess === "function") STATE.sound.playSuccess();
+    } else {
+        iconEl.textContent = "❌";
+        titleEl.textContent = "LEVEL FAILED";
+        titleEl.className = "text-3xl font-bold mb-2 text-red-400";
+        starsEl.textContent = "";
+        reasonEl.textContent = reason || "Objectives not met";
+        tipEl.textContent = level.debriefTip;
+        nextBtn.classList.add("hidden");
+        if (typeof STATE.sound?.playGameOver === "function") STATE.sound.playGameOver();
+    }
+    updateCampaignProgressLabel();
+}
+
+window.campaignRetryLevel = () => {
+    const id = STATE.campaign.currentLevelId;
+    document.getElementById("campaign-debrief-modal").classList.add("hidden");
+    if (id) startCampaignLevel(id);
+};
+
+window.campaignNextLevel = () => {
+    const id = STATE.campaign.currentLevelId;
+    document.getElementById("campaign-debrief-modal").classList.add("hidden");
+    if (id) {
+        const next = CAMPAIGN_LEVELS.find((l) => l.id === id + 1);
+        if (next) openCampaignBriefing(next.id);
+        else exitCampaignToMap();
+    }
 };
 
 function createService(type, pos) {
@@ -2523,6 +2808,7 @@ function animate(time) {
     const dt = clampedDt * STATE.timeScale;
     STATE.lastTime = time;
     STATE.elapsedGameTime += dt;
+    if (window.campaign?.active) window.campaign.tick(dt);
 
     // Keyboard panning
     const moveSpeed = 50 * clampedDt; // Use unscaled time so we can move while paused

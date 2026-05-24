@@ -395,7 +395,7 @@ class Service {
 
         if (this.type === "db") {
           if (job.req.destination === "db") {
-            finishRequest(job.req);
+            finishRequest(job.req, this.type);
           } else {
             failRequest(job.req);
           }
@@ -407,7 +407,7 @@ class Service {
           if (job.req.type === "SEARCH") {
             failRequest(job.req);
           } else if (job.req.destination === "db") {
-            finishRequest(job.req);
+            finishRequest(job.req, this.type);
           } else {
             failRequest(job.req);
           }
@@ -416,7 +416,7 @@ class Service {
 
         if (this.type === "search") {
           if (job.req.type === "SEARCH") {
-            finishRequest(job.req);
+            finishRequest(job.req, this.type);
           } else {
             failRequest(job.req);
           }
@@ -433,7 +433,7 @@ class Service {
             continue;
           }
           if (job.req.type === "READ" && job.req.destination === "db") {
-            finishRequest(job.req);
+            finishRequest(job.req, this.type);
           } else {
             failRequest(job.req);
           }
@@ -442,7 +442,7 @@ class Service {
 
         if (this.type === "s3") {
           if (job.req.destination === "s3" || job.req.destination === "cdn") {
-            finishRequest(job.req);
+            finishRequest(job.req, this.type);
           } else {
             failRequest(job.req);
           }
@@ -457,7 +457,7 @@ class Service {
               job.req.cached = true;
               STATE.sound.playSuccess();
               this.flashCacheHit();
-              finishRequest(job.req);
+              finishRequest(job.req, this.type);
               continue;
             }
           }
@@ -502,7 +502,7 @@ class Service {
               job.req.cached = true;
               STATE.sound.playSuccess();
               this.flashCacheHit();
-              finishRequest(job.req);
+              finishRequest(job.req, this.type);
               continue;
             }
           }
