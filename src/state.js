@@ -94,5 +94,18 @@ const STATE = {
 
         // Warning state
         warnings: []
+    },
+
+    // Campaign mode runtime state. Populated by CampaignController when active.
+    campaign: {
+        active: false,
+        currentLevelId: null,
+        level: null,            // level config object
+        objectiveResults: {},   // { objectiveId: boolean }
+        bonusResults: {},
+        startedAt: 0,
+        ended: false,
+        outcome: null,          // "win" | "lose" | null
+        failureReason: null,
     }
 };
