@@ -100,7 +100,11 @@ class CampaignController {
             if (STATE.campaign.burstTimer >= bp.intervalSec) {
                 STATE.campaign.burstTimer = 0;
                 for (let i = 0; i < bp.burstSize; i++) {
-                    setTimeout(() => { if (typeof spawnRequest === "function") spawnRequest(); }, i * 20);
+                    setTimeout(() => {
+                        // Bail if the level ended or campaign exited while this burst was in flight.
+                        if (!this.active || STATE.campaign.ended) return;
+                        if (typeof spawnRequest === "function") spawnRequest();
+                    }, i * 20);
                 }
             }
         }
