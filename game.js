@@ -1704,6 +1704,39 @@ function updateCampaignProgressLabel() {
     el.textContent = `${c.completedCount()}/${CAMPAIGN_LEVELS.length} ★${c.totalStars()}`;
 }
 
+let _pendingCampaignLevelId = null;
+
+window.openCampaignBriefing = (levelId) => {
+    const level = CAMPAIGN_LEVELS.find((l) => l.id === levelId);
+    if (!level) return;
+    _pendingCampaignLevelId = levelId;
+
+    document.getElementById("campaign-select-modal").classList.add("hidden");
+    document.getElementById("campaign-briefing-modal").classList.remove("hidden");
+
+    document.getElementById("campaign-briefing-icon").textContent = level.icon;
+    document.getElementById("campaign-briefing-chapter").textContent =
+        `Chapter ${level.chapter} · Level ${level.id}`;
+    document.getElementById("campaign-briefing-title").textContent = level.title.toUpperCase();
+    document.getElementById("campaign-briefing-scenario").textContent = level.scenario;
+    document.getElementById("campaign-briefing-learn").textContent = level.learn;
+
+    document.getElementById("campaign-briefing-diagram").innerHTML =
+        renderArchitectureSVG(level.preBuilt, level.diagramHighlights);
+
+    document.getElementById("campaign-briefing-goals").innerHTML =
+        level.objectives.primary.map((o) => `<li>• ${o.label}</li>`).join("");
+    document.getElementById("campaign-briefing-bonus").innerHTML =
+        level.objectives.bonus.map((o) => `<li>• ${o.label}</li>`).join("");
+};
+
+window.campaignStartCurrentLevel = () => {
+    const id = _pendingCampaignLevelId;
+    if (!id) return;
+    document.getElementById("campaign-briefing-modal").classList.add("hidden");
+    startCampaignLevel(id);
+};
+
 function createService(type, pos) {
     if (STATE.money < CONFIG.services[type].cost) {
         flashMoney();
