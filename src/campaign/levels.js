@@ -35,7 +35,7 @@ const CAMPAIGN_LEVELS = [
         preBuilt: { services: [], connections: [] },
         trafficDistribution: { STATIC: 0, READ: 0.85, WRITE: 0.1, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0.05 },
         rps: 2,
-        allowedServices: ["waf", "alb", "lambda", "db", "s3"],
+        allowedServices: ["waf", "alb", "compute", "db", "s3"],
         objectives: {
             primary: [
                 { id: "process_50_read", label: "Process 50 READ requests", check: (s) => CampaignObjectives.completedOfType(s, "READ") >= 50 },
@@ -185,7 +185,7 @@ const CAMPAIGN_LEVELS = [
             ],
             bonus: [
                 { id: "zero_drops", label: "Zero dropped requests", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
-                { id: "speedrun", label: "Complete under 72s", check: (s) => s.elapsedGameTime <= 72 },
+                { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
             ],
         },
         failConditions: { repBelow: 40 },
@@ -293,7 +293,7 @@ const CAMPAIGN_LEVELS = [
             ],
             bonus: [
                 { id: "nosql_takes_writes", label: "NoSQL handles ≥60% of WRITE", check: (s) => CampaignObjectives.nosqlShareOfWrites(s) >= 0.6 },
-                { id: "speedrun", label: "Complete under 48s", check: (s) => s.elapsedGameTime <= 48 },
+                { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
             ],
         },
         failConditions: { repBelow: 40 },
@@ -329,7 +329,7 @@ const CAMPAIGN_LEVELS = [
             ],
             bonus: [
                 { id: "rep_above_80", label: "Reputation above 80%", check: (s) => s.reputation >= 80 },
-                { id: "speedrun", label: "Complete under 48s", check: (s) => s.elapsedGameTime <= 48 },
+                { id: "rep_above_90", label: "Reputation above 90%", check: (s) => s.reputation >= 90 },
             ],
         },
         failConditions: { repBelow: 30 },
