@@ -1840,6 +1840,37 @@ function applyCampaignToolbarGating(allowed, forbidden) {
     });
 }
 
+function renderCampaignObjectives(level, primaryResults, bonusResults) {
+    const panel = document.getElementById("objectivesPanel");
+    if (!panel) return;
+    panel.classList.remove("hidden");
+
+    const primaryHtml = level.objectives.primary.map((o) => {
+        const done = primaryResults[o.id];
+        const icon = done ? "☑" : "☐";
+        const color = done ? "text-green-400" : "text-gray-400";
+        return `<li class="${color}"><span class="font-mono">${icon}</span> ${o.label}</li>`;
+    }).join("");
+
+    const bonusHtml = level.objectives.bonus.map((o) => {
+        const done = bonusResults[o.id];
+        const icon = done ? "⭐" : "☆";
+        const color = done ? "text-yellow-300" : "text-gray-500";
+        return `<li class="${color}"><span class="font-mono">${icon}</span> ${o.label}</li>`;
+    }).join("");
+
+    panel.innerHTML = `
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="text-xs font-bold text-yellow-400 uppercase tracking-wider">
+                Level ${level.id}: ${level.title}
+            </h3>
+            <span class="text-[10px] bg-yellow-900/50 px-2 py-0.5 rounded text-yellow-400 border border-yellow-800">${Math.round(STATE.elapsedGameTime)}s / ${level.durationSec}s</span>
+        </div>
+        <ul class="text-xs space-y-1 font-mono mb-2">${primaryHtml}</ul>
+        <div class="text-[10px] text-yellow-500 uppercase mt-2 mb-1">Bonus</div>
+        <ul class="text-[11px] space-y-1 font-mono">${bonusHtml}</ul>`;
+}
+
 function createService(type, pos) {
     if (STATE.money < CONFIG.services[type].cost) {
         flashMoney();
@@ -2726,6 +2757,7 @@ function animate(time) {
     const dt = clampedDt * STATE.timeScale;
     STATE.lastTime = time;
     STATE.elapsedGameTime += dt;
+    if (window.campaign?.active) window.campaign.tick(dt);
 
     // Keyboard panning
     const moveSpeed = 50 * clampedDt; // Use unscaled time so we can move while paused
