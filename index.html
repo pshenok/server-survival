@@ -1234,6 +1234,100 @@
   <script src="src/campaign/levels.js"></script>
   <script src="src/campaign/campaign.js"></script>
   <script src="game.js"></script>
+
+  <!-- Campaign: Level Select Modal -->
+  <div id="campaign-select-modal"
+    class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden overflow-y-auto">
+    <div class="min-h-screen flex items-start justify-center p-6">
+      <div class="glass-panel rounded-2xl p-8 max-w-2xl w-full border border-yellow-500/30">
+        <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+          <h2 class="text-3xl font-bold text-yellow-400" data-i18n="campaign_select_title">CAMPAIGN</h2>
+          <button onclick="exitCampaignToMenu()"
+            class="text-gray-400 hover:text-white text-2xl">×</button>
+        </div>
+        <div id="campaign-levels-list" class="space-y-6">
+          <!-- populated by renderCampaignLevels() -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Campaign: Briefing Modal -->
+  <div id="campaign-briefing-modal"
+    class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden overflow-y-auto">
+    <div class="min-h-screen flex items-center justify-center p-6">
+      <div class="glass-panel rounded-2xl p-8 max-w-3xl w-full border border-cyan-500/30">
+        <div class="flex items-center gap-4 mb-4">
+          <div id="campaign-briefing-icon" class="text-5xl"></div>
+          <div>
+            <div class="text-xs text-gray-500 font-mono" id="campaign-briefing-chapter"></div>
+            <h2 id="campaign-briefing-title" class="text-2xl font-bold text-white"></h2>
+          </div>
+        </div>
+
+        <div id="campaign-briefing-diagram" class="my-4 rounded-lg overflow-hidden border border-gray-700"></div>
+
+        <p id="campaign-briefing-scenario" class="text-gray-300 mb-4 leading-relaxed"></p>
+
+        <div class="bg-blue-900/30 border border-blue-500/40 rounded-lg p-3 mb-3">
+          <div class="text-blue-400 text-xs font-bold uppercase mb-1">📚 Learn</div>
+          <p id="campaign-briefing-learn" class="text-gray-200 text-sm"></p>
+        </div>
+
+        <div class="bg-green-900/30 border border-green-500/40 rounded-lg p-3 mb-3">
+          <div class="text-green-400 text-xs font-bold uppercase mb-1">🎯 Goals</div>
+          <ul id="campaign-briefing-goals" class="text-gray-200 text-sm space-y-1"></ul>
+        </div>
+
+        <div class="bg-yellow-900/30 border border-yellow-500/40 rounded-lg p-3 mb-4">
+          <div class="text-yellow-400 text-xs font-bold uppercase mb-1">⭐ Bonus</div>
+          <ul id="campaign-briefing-bonus" class="text-gray-200 text-sm space-y-1"></ul>
+        </div>
+
+        <div class="flex justify-between gap-4">
+          <button onclick="exitCampaignToMap()"
+            class="bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-mono uppercase text-sm">
+            ← Back
+          </button>
+          <button onclick="campaignStartCurrentLevel()"
+            class="bg-cyan-600 hover:bg-cyan-500 text-white py-3 px-8 rounded-lg font-mono uppercase text-sm font-bold">
+            Start Level →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Campaign: Debrief Modal -->
+  <div id="campaign-debrief-modal"
+    class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm hidden">
+    <div class="min-h-screen flex items-center justify-center p-6">
+      <div class="glass-panel rounded-2xl p-8 max-w-md w-full text-center border border-gray-600">
+        <div id="campaign-debrief-icon" class="text-6xl mb-2"></div>
+        <h2 id="campaign-debrief-title" class="text-3xl font-bold mb-2 text-white"></h2>
+        <div id="campaign-debrief-stars" class="text-3xl mb-4"></div>
+        <p id="campaign-debrief-reason" class="text-gray-400 mb-3 text-sm"></p>
+        <div class="bg-blue-900/30 border border-blue-500/40 rounded-lg p-3 mb-6 text-left">
+          <div class="text-blue-400 text-xs font-bold uppercase mb-1">💡 Tip</div>
+          <p id="campaign-debrief-tip" class="text-gray-200 text-sm"></p>
+        </div>
+        <div class="flex justify-center gap-3">
+          <button onclick="campaignRetryLevel()"
+            class="bg-yellow-600 hover:bg-yellow-500 text-white py-3 px-6 rounded-lg font-mono uppercase text-sm">
+            Retry
+          </button>
+          <button id="campaign-debrief-next-btn" onclick="campaignNextLevel()"
+            class="bg-green-600 hover:bg-green-500 text-white py-3 px-6 rounded-lg font-mono uppercase text-sm hidden">
+            Next →
+          </button>
+          <button onclick="exitCampaignToMap()"
+            class="bg-gray-700 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-mono uppercase text-sm">
+            Map
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 
 </html>
