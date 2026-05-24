@@ -1871,6 +1871,57 @@ function renderCampaignObjectives(level, primaryResults, bonusResults) {
         <ul class="text-[11px] space-y-1 font-mono">${bonusHtml}</ul>`;
 }
 
+function showCampaignDebrief(outcome, reason, level) {
+    document.getElementById("campaign-debrief-modal").classList.remove("hidden");
+
+    const titleEl = document.getElementById("campaign-debrief-title");
+    const iconEl = document.getElementById("campaign-debrief-icon");
+    const starsEl = document.getElementById("campaign-debrief-stars");
+    const reasonEl = document.getElementById("campaign-debrief-reason");
+    const tipEl = document.getElementById("campaign-debrief-tip");
+    const nextBtn = document.getElementById("campaign-debrief-next-btn");
+
+    if (outcome === "win") {
+        const stars = window.campaign._calculateStars();
+        iconEl.textContent = "🎉";
+        titleEl.textContent = "LEVEL COMPLETE";
+        titleEl.className = "text-3xl font-bold mb-2 text-green-400";
+        starsEl.textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
+        reasonEl.textContent = `Completed in ${Math.round(STATE.elapsedGameTime)}s`;
+        tipEl.textContent = level.debriefTip;
+
+        const hasNext = CAMPAIGN_LEVELS.some((l) => l.id === level.id + 1);
+        nextBtn.classList.toggle("hidden", !hasNext);
+        if (typeof STATE.sound?.playSuccess === "function") STATE.sound.playSuccess();
+    } else {
+        iconEl.textContent = "❌";
+        titleEl.textContent = "LEVEL FAILED";
+        titleEl.className = "text-3xl font-bold mb-2 text-red-400";
+        starsEl.textContent = "";
+        reasonEl.textContent = reason || "Objectives not met";
+        tipEl.textContent = level.debriefTip;
+        nextBtn.classList.add("hidden");
+        if (typeof STATE.sound?.playGameOver === "function") STATE.sound.playGameOver();
+    }
+    updateCampaignProgressLabel();
+}
+
+window.campaignRetryLevel = () => {
+    const id = STATE.campaign.currentLevelId;
+    document.getElementById("campaign-debrief-modal").classList.add("hidden");
+    if (id) startCampaignLevel(id);
+};
+
+window.campaignNextLevel = () => {
+    const id = STATE.campaign.currentLevelId;
+    document.getElementById("campaign-debrief-modal").classList.add("hidden");
+    if (id) {
+        const next = CAMPAIGN_LEVELS.find((l) => l.id === id + 1);
+        if (next) openCampaignBriefing(next.id);
+        else exitCampaignToMap();
+    }
+};
+
 function createService(type, pos) {
     if (STATE.money < CONFIG.services[type].cost) {
         flashMoney();
