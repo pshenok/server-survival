@@ -1545,9 +1545,12 @@ function updateScore(req, outcome) {
     updateScoreUI();
 }
 
-function finishRequest(req) {
+function finishRequest(req, viaServiceType) {
     STATE.requestsProcessed++;
     updateScore(req, "COMPLETED");
+    if (window.campaign?.active) {
+        window.campaign.onRequestCompleted(req, viaServiceType);
+    }
     removeRequest(req);
 }
 
