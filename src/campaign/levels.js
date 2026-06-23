@@ -174,7 +174,7 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2], [2, 3]],
         },
-        trafficDistribution: { STATIC: 0, READ: 0.5, WRITE: 0.35, UPLOAD: 0.05, SEARCH: 0.05, MALICIOUS: 0.05 },
+        trafficDistribution: { STATIC: 0, READ: 0.5, WRITE: 0.35, UPLOAD: 0, SEARCH: 0.05, MALICIOUS: 0.05 },
         rps: 5,
         burstPattern: { enabled: true, intervalSec: 5, burstSize: 15 },
         allowedServices: ["sqs"],
