@@ -174,7 +174,9 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2], [2, 3]],
         },
-        trafficDistribution: { STATIC: 0, READ: 0.5, WRITE: 0.35, UPLOAD: 0.05, SEARCH: 0.05, MALICIOUS: 0.05 },
+        // No UPLOAD traffic: the lesson is Queue + bursty READ/WRITE, and S3 is not
+        // available in this level. Including UPLOAD made it unwinnable (see #159).
+        trafficDistribution: { STATIC: 0, READ: 0.5, WRITE: 0.4, UPLOAD: 0, SEARCH: 0.05, MALICIOUS: 0.05 },
         rps: 5,
         burstPattern: { enabled: true, intervalSec: 5, burstSize: 15 },
         allowedServices: ["sqs"],
@@ -188,7 +190,9 @@ const CAMPAIGN_LEVELS = [
                 { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
             ],
         },
-        failConditions: { repBelow: 40 },
+        // Safety net: cap the level at 3× target duration so a future config mistake
+        // can't soft-lock the player again — they'll see "Ran out of time" debrief.
+        failConditions: { repBelow: 40, timeoutSec: 270 },
         debriefTip: "Queues smooth peaks but add latency. Don't use them for low-latency reads.",
     },
 
