@@ -11,7 +11,8 @@ class I18nManager {
             de: typeof DE_TRANSLATIONS !== 'undefined' ? DE_TRANSLATIONS : {},
             fr: typeof FR_TRANSLATIONS !== 'undefined' ? FR_TRANSLATIONS : {},
             ko: typeof KO_TRANSLATIONS !== 'undefined' ? KO_TRANSLATIONS : {},
-            ru: typeof RU_TRANSLATIONS !== 'undefined' ? RU_TRANSLATIONS : {}
+            ru: typeof RU_TRANSLATIONS !== 'undefined' ? RU_TRANSLATIONS : {},
+            it: typeof IT_TRANSLATIONS !== 'undefined' ? IT_TRANSLATIONS : {}
         };
     }
 
