@@ -46,7 +46,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "speedrun", label: "Complete under 48s", check: (s) => s.elapsedGameTime <= 48 },
             ],
         },
-        failConditions: { repBelow: 50 },
+        failConditions: { repBelow: 50, timeoutSec: 180 },
         debriefTip: "The Firewall isn't optional — MALICIOUS traffic destroys reputation fast. Always put it first.",
     },
 
@@ -80,7 +80,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "speedrun", label: "Complete under 36s", check: (s) => s.elapsedGameTime <= 36 },
             ],
         },
-        failConditions: { repBelow: 50 },
+        failConditions: { repBelow: 50, timeoutSec: 135 },
         debriefTip: "Storage is cheap ($25) and handles UPLOAD/STATIC traffic without burdening Compute.",
     },
 
@@ -116,7 +116,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "no_static_fails", label: "Zero STATIC failures", check: (s) => (s.failures.STATIC || 0) === 0 },
             ],
         },
-        failConditions: { repBelow: 30 },
+        failConditions: { repBelow: 30, timeoutSec: 180 },
         debriefTip: "CDN intercepts STATIC before it reaches your servers. Always pair Internet→CDN→Storage for static content.",
     },
 
@@ -152,7 +152,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "rep_above_90", label: "Reputation above 90%", check: (s) => s.reputation >= 90 },
             ],
         },
-        failConditions: { repBelow: 30 },
+        failConditions: { repBelow: 30, timeoutSec: 180 },
         debriefTip: "Cache hit rate degrades for unique keys (e.g. SEARCH with random queries). Use it for repeated READs.",
     },
 
@@ -174,7 +174,7 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2], [2, 3]],
         },
-        trafficDistribution: { STATIC: 0, READ: 0.5, WRITE: 0.35, UPLOAD: 0, SEARCH: 0.05, MALICIOUS: 0.05 },
+        trafficDistribution: { STATIC: 0, READ: 0.5, WRITE: 0.4, UPLOAD: 0, SEARCH: 0.05, MALICIOUS: 0.05 },
         rps: 5,
         burstPattern: { enabled: true, intervalSec: 5, burstSize: 15 },
         allowedServices: ["sqs"],
@@ -188,7 +188,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
             ],
         },
-        failConditions: { repBelow: 40 },
+        failConditions: { repBelow: 40, timeoutSec: 270 },
         debriefTip: "Queues smooth peaks but add latency. Don't use them for low-latency reads.",
     },
 
@@ -224,7 +224,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
             ],
         },
-        failConditions: { repBelow: 40 },
+        failConditions: { repBelow: 40, timeoutSec: 225 },
         debriefTip: "Read Replica needs a master DB connection. Without it, READs to the replica fail.",
     },
 
@@ -260,7 +260,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "rep_above_80", label: "Reputation above 80%", check: (s) => s.reputation >= 80 },
             ],
         },
-        failConditions: { repBelow: 40 },
+        failConditions: { repBelow: 40, timeoutSec: 180 },
         debriefTip: "Search Engine only handles SEARCH. Other traffic must keep going to DB/NoSQL.",
     },
 
@@ -296,7 +296,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
             ],
         },
-        failConditions: { repBelow: 40 },
+        failConditions: { repBelow: 40, timeoutSec: 180 },
         debriefTip: "NoSQL ≠ universal upgrade. SEARCH still needs SQL DB or a Search Engine.",
     },
 
@@ -332,7 +332,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "rep_above_90", label: "Reputation above 90%", check: (s) => s.reputation >= 90 },
             ],
         },
-        failConditions: { repBelow: 30 },
+        failConditions: { repBelow: 30, timeoutSec: 180 },
         debriefTip: "Throttling > failing. Place API Gateway behind WAF (Internet→WAF→APIGW→ALB).",
     },
 
@@ -359,7 +359,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "speedrun", label: "Complete under 72s", check: (s) => s.elapsedGameTime <= 72 },
             ],
         },
-        failConditions: { moneyBelow: -50, repBelow: 30 },
+        failConditions: { moneyBelow: -50, repBelow: 30, timeoutSec: 270 },
         debriefTip: "Pay-per-use only wins at low RPS. Once traffic stabilizes high, switch to always-on Compute.",
     },
 
@@ -394,7 +394,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "uses_both", label: "Used both WAF and API Gateway", check: (s) => CampaignObjectives.hasService(s, "waf") && CampaignObjectives.hasService(s, "apigw") },
             ],
         },
-        failConditions: { repBelow: 20 },
+        failConditions: { repBelow: 20, timeoutSec: 180 },
         debriefTip: "MALICIOUS leaks are 5× worse than failures. WAF is non-negotiable for any production system.",
     },
 
@@ -430,7 +430,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "no_leaks", label: "Zero MALICIOUS leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
             ],
         },
-        failConditions: { repBelow: 20 },
+        failConditions: { repBelow: 20, timeoutSec: 225 },
         debriefTip: "Two cheap WAFs beat one expensive one. Redundancy > capacity for entry points.",
     },
 
@@ -477,7 +477,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "rep_above_70", label: "Reputation above 70%", check: (s) => s.reputation >= 70 },
             ],
         },
-        failConditions: { moneyBelow: -200 },
+        failConditions: { moneyBelow: -200, timeoutSec: 180 },
         debriefTip: "Over-provisioning is the silent killer. Right-size every service to actual load.",
     },
 
@@ -505,7 +505,7 @@ const CAMPAIGN_LEVELS = [
                 { id: "no_leaks", label: "Zero MALICIOUS leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
             ],
         },
-        failConditions: { repBelow: 20, moneyBelow: -500 },
+        failConditions: { repBelow: 20, moneyBelow: -500, timeoutSec: 270 },
         debriefTip: "Congratulations, Architect. You've mastered the basics of cloud system design. Now try Survival mode for the real grind.",
     },
 ];
