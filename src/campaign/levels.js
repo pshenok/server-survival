@@ -139,7 +139,10 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2], [2, 3]],
         },
-        trafficDistribution: { STATIC: 0.05, READ: 0.75, WRITE: 0.1, UPLOAD: 0, SEARCH: 0.05, MALICIOUS: 0.05 },
+        // STATIC has no destination on this level (no Storage/CDN in preBuilt, not in
+        // allowedServices) so any STATIC traffic was doomed to fail — moved to READ
+        // which is the actual lesson here. Same fix as Level 5 (see #159, #162).
+        trafficDistribution: { STATIC: 0, READ: 0.8, WRITE: 0.1, UPLOAD: 0, SEARCH: 0.05, MALICIOUS: 0.05 },
         rps: 6,
         allowedServices: ["cache"],
         objectives: {
@@ -211,7 +214,9 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2], [2, 4], [4, 3], [2, 3]],
         },
-        trafficDistribution: { STATIC: 0.1, READ: 0.45, WRITE: 0.15, UPLOAD: 0.05, SEARCH: 0.15, MALICIOUS: 0.1 },
+        // STATIC + UPLOAD have no destination on this level — moved into READ
+        // (the actual lesson is Read Replica offloading reads). Same fix as L5.
+        trafficDistribution: { STATIC: 0, READ: 0.6, WRITE: 0.15, UPLOAD: 0, SEARCH: 0.15, MALICIOUS: 0.1 },
         rps: 7,
         allowedServices: ["replica"],
         objectives: {
@@ -247,7 +252,9 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2], [2, 4], [4, 3], [2, 3]],
         },
-        trafficDistribution: { STATIC: 0.05, READ: 0.2, WRITE: 0.1, UPLOAD: 0.05, SEARCH: 0.5, MALICIOUS: 0.1 },
+        // STATIC + UPLOAD have no destination — moved into SEARCH which is the
+        // actual focus of this level (Search Engine for full-text queries).
+        trafficDistribution: { STATIC: 0, READ: 0.2, WRITE: 0.1, UPLOAD: 0, SEARCH: 0.6, MALICIOUS: 0.1 },
         rps: 6,
         allowedServices: ["search"],
         objectives: {
@@ -283,7 +290,9 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2], [2, 4], [4, 3], [2, 3]],
         },
-        trafficDistribution: { STATIC: 0.05, READ: 0.4, WRITE: 0.3, UPLOAD: 0.05, SEARCH: 0.1, MALICIOUS: 0.1 },
+        // STATIC + UPLOAD have no destination — split into READ/WRITE which is
+        // the actual lesson here (NoSQL is the alternative for transactional READs/WRITEs).
+        trafficDistribution: { STATIC: 0, READ: 0.45, WRITE: 0.35, UPLOAD: 0, SEARCH: 0.1, MALICIOUS: 0.1 },
         rps: 7,
         allowedServices: ["nosql"],
         objectives: {
@@ -318,7 +327,10 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2], [2, 3]],
         },
-        trafficDistribution: { STATIC: 0.1, READ: 0.4, WRITE: 0.2, UPLOAD: 0.05, SEARCH: 0.15, MALICIOUS: 0.1 },
+        // STATIC + UPLOAD have no destination — moved into READ. The lesson is
+        // API Gateway throttling under burst pressure, which is what 15% extra READ
+        // load lets us demonstrate without the unwinnable doom-traffic (fixes #162).
+        trafficDistribution: { STATIC: 0, READ: 0.55, WRITE: 0.2, UPLOAD: 0, SEARCH: 0.15, MALICIOUS: 0.1 },
         rps: 4,
         burstPattern: { enabled: true, intervalSec: 8, burstSize: 25 },
         allowedServices: ["apigw"],
@@ -381,7 +393,9 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2]],
         },
-        trafficDistribution: { STATIC: 0.05, READ: 0.1, WRITE: 0.05, UPLOAD: 0.05, SEARCH: 0.05, MALICIOUS: 0.7 },
+        // STATIC + UPLOAD have no destination — moved into READ. MALICIOUS stays at
+        // 0.7 because the lesson is layered DDoS defense (WAF + APIGW).
+        trafficDistribution: { STATIC: 0, READ: 0.2, WRITE: 0.05, UPLOAD: 0, SEARCH: 0.05, MALICIOUS: 0.7 },
         rps: 8,
         allowedServices: ["waf", "apigw"],
         objectives: {
@@ -416,7 +430,9 @@ const CAMPAIGN_LEVELS = [
             ],
             connections: [["internet", 0], [0, 1], [1, 2], [2, 3]],
         },
-        trafficDistribution: { STATIC: 0.1, READ: 0.4, WRITE: 0.2, UPLOAD: 0.05, SEARCH: 0.1, MALICIOUS: 0.15 },
+        // STATIC + UPLOAD have no destination — moved into READ. The lesson here
+        // is redundancy (multiple WAFs surviving a forced outage event).
+        trafficDistribution: { STATIC: 0, READ: 0.55, WRITE: 0.2, UPLOAD: 0, SEARCH: 0.1, MALICIOUS: 0.15 },
         rps: 6,
         forceOutageAtSec: 30,
         allowedServices: ["waf"],
