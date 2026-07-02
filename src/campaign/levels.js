@@ -163,7 +163,7 @@ const CAMPAIGN_LEVELS = [
         id: 5, chapter: 2,
         title: "Buffer the Spikes",
         scenario: "Your traffic is bursty — quiet for 5 seconds, then 20 requests at once. Compute can't keep up and requests drop.",
-        learn: "Message Queue (max 200) buffers bursts so Compute processes them at its own pace. Prevents drops during spikes.",
+        learn: "Message Queue (max 200) buffers bursts so Compute processes them at its own pace. But a queue only buys time — it can't add throughput. Sustained load here exceeds Compute Tier 1, so upgrade Compute too, or the queue will eventually saturate.",
         icon: "📊",
         diagramHighlights: { 2: "critical" },
         budget: 180,
