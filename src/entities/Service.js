@@ -618,7 +618,29 @@ class Service {
           }
 
           if (job.req.isCacheable) {
+            // Prefer specialized services over Cache when they're a better fit (#167):
+            // - SEARCH cache hit rate is only 15%, so routing through Cache is mostly
+            //   wasted latency. If a Search Engine is connected, use it directly.
+            // - READ hit rate is 40%, but if Cache is heavily loaded, its queue delay
+            //   outweighs the savings — prefer Read Replica when both are connected
+            //   and Cache is >60% loaded.
+            if (job.req.type === "SEARCH") {
+              const searchDirect = this.findConnectedService("search");
+              if (searchDirect) {
+                chargePerRequest();
+                job.req.flyTo(searchDirect);
+                continue;
+              }
+            }
             const cacheTarget = this.findConnectedService("cache");
+            if (job.req.type === "READ" && cacheTarget && cacheTarget.totalLoad > 0.6) {
+              const replicaDirect = this.findConnectedService("replica");
+              if (replicaDirect) {
+                chargePerRequest();
+                job.req.flyTo(replicaDirect);
+                continue;
+              }
+            }
             if (cacheTarget) {
               chargePerRequest();
               job.req.flyTo(cacheTarget);

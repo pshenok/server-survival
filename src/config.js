@@ -214,21 +214,26 @@ const CONFIG = {
       },
     },
     apigw: {
+      // Rate limits and capacity bumped 2026-06 (#166): the previous ceiling
+      // (T3 rateLimit=80 RPS, capacity=80) throttled legit traffic at endgame
+      // load (~200 RPS). Players learned to remove the gateway to survive,
+      // inverting the intended lesson (throttle > hard-fail). New ceilings
+      // scale with the ×4 RPS milestone so the gateway stays useful late-game.
       name: "API Gateway",
       cost: 70,
       type: "apigw",
       processingTime: 30,
-      capacity: 40,
+      capacity: 60,
       upkeep: 8,
-      rateLimit: 20,
+      rateLimit: 30,
       tooltip: {
         upkeep: "Medium",
         desc: "<b>API Gateway.</b> Rate limits traffic. Throttled requests lose less reputation than failures.",
       },
       tiers: [
-        { level: 1, capacity: 40, rateLimit: 20, cost: 0 },
-        { level: 2, capacity: 60, rateLimit: 40, cost: 120 },
-        { level: 3, capacity: 80, rateLimit: 80, cost: 200 },
+        { level: 1, capacity: 60,  rateLimit: 30,  cost: 0 },
+        { level: 2, capacity: 100, rateLimit: 80,  cost: 120 },
+        { level: 3, capacity: 160, rateLimit: 200, cost: 200 },
       ],
     },
     nosql: {
