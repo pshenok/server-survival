@@ -318,17 +318,25 @@ class Service {
 
     // COMPUTE / SERVERLESS PULL LOGIC
     if (this.type === "compute" || this.type === "serverless") {
-      // Check if we have space in our queue+processing
-      // We want the UPSTREAM queue (SQS) to do the buffering, not the compute node local queue.
-      // So we only pull if we are running low on work locally.
-      // If we have ANY work in our local queue, we should process that first before pulling more.
-      // We allow a tiny buffer (e.g. 1) so there's no gap in processing.
-      const pullThreshold = 1;
+      // Keep the local pipeline full. The upstream SQS does the long-term
+      // buffering, but Compute must pull aggressively enough to saturate its
+      // own processing slots.
+      //
+      // The previous logic pulled at most ONE request per frame and only when
+      // (queue + inFlight) <= 1. Because a request spends ~0.5s in flight from
+      // SQS to Compute, that capped the SQS→Compute path at ~4 req/s no matter
+      // how upgraded the Compute was — making the Queue topology strictly worse
+      // than a direct ALB link and soft-locking Campaign Level 5 (#170) and
+      // degrading late-game Queue setups (#166).
+      //
+      // New logic: pull until processing + queue + inFlight covers effective
+      // capacity plus a small buffer, so the pipeline never starves while
+      // requests are in flight.
+      const capacity = this.getEffectiveCapacity();
+      const pipelineTarget = capacity + 2;
+      let freeSlots = pipelineTarget - (this.processing.length + this.queue.length + this.incomingCount);
 
-      // Current load logic: count requests in queue and incoming (in flight)
-      const pendingWork = this.queue.length + this.incomingCount;
-
-      if (pendingWork <= pullThreshold) {
+      if (freeSlots > 0) {
         // Find upstream SQS services
         const upstreamSQS = STATE.services.filter(s =>
           s.type === 'sqs' &&
@@ -337,19 +345,23 @@ class Service {
         );
 
         if (upstreamSQS.length > 0) {
-          // Round robin pull
+          // Round robin pull across upstream queues until slots are filled
+          // or every queue is empty this frame.
           if (typeof this.upstreamRR === 'undefined') this.upstreamRR = 0;
 
-          // Try up to the number of upstream sources (don't loop forever)
-          for (let i = 0; i < upstreamSQS.length; i++) {
-            const idx = (this.upstreamRR + i) % upstreamSQS.length;
+          let emptyStreak = 0;
+          while (freeSlots > 0 && emptyStreak < upstreamSQS.length) {
+            const idx = this.upstreamRR % upstreamSQS.length;
             const sqs = upstreamSQS[idx];
+            this.upstreamRR = (idx + 1) % upstreamSQS.length;
 
             const req = sqs.popRequest();
             if (req) {
               req.flyTo(this);
-              this.upstreamRR = (idx + 1) % upstreamSQS.length;
-              break;
+              freeSlots--;
+              emptyStreak = 0;
+            } else {
+              emptyStreak++;
             }
           }
         }
