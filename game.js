@@ -1438,39 +1438,45 @@ function spawnRequest() {
     if (type === null) return;
     const req = new Request(type);
     STATE.requests.push(req);
+    routeRequestToEntry(req, type);
+}
+
+// Shared entry routing for spawned traffic (regular spawns AND sandbox bursts).
+// Round-robin aware so multiple firewalls / CDNs / gateways share the load.
+function routeRequestToEntry(req, type) {
     const conns = STATE.internetNode.connections;
-    if (conns.length > 0) {
-        const entryNodes = conns.map((id) =>
-            STATE.services.find((s) => s.id === id)
-        );
+    if (conns.length === 0) {
+        failRequest(req);
+        return;
+    }
+    const entryNodes = conns.map((id) =>
+        STATE.services.find((s) => s.id === id)
+    );
 
-        // Traffic Routing Logic — now round-robin aware so multiple
-        // firewalls / CDNs / gateways actually share the load.
-        let target;
+    let target;
 
-        // 1. Prefer CDN for STATIC traffic
-        if (type === "STATIC") {
-            target = pickEntryNode(entryNodes, "cdn");
-        }
+    // 1. Prefer CDN for STATIC traffic
+    if (type === "STATIC") {
+        target = pickEntryNode(entryNodes, "cdn");
+    }
 
-        // 2. Fallback to WAF (Security Best Practice)
-        if (!target) {
-            target = pickEntryNode(entryNodes, "waf");
-        }
+    // 2. Fallback to WAF (Security Best Practice)
+    if (!target) {
+        target = pickEntryNode(entryNodes, "waf");
+    }
 
-        // 3. Fallback to API Gateway (Rate Limiting)
-        if (!target) {
-            target = pickEntryNode(entryNodes, "apigw");
-        }
+    // 3. Fallback to API Gateway (Rate Limiting)
+    if (!target) {
+        target = pickEntryNode(entryNodes, "apigw");
+    }
 
-        // 4. Last Resort: any live entry point (also round-robin)
-        if (!target) {
-            target = pickEntryNode(entryNodes, "any");
-        }
+    // 4. Last Resort: any live entry point (also round-robin)
+    if (!target) {
+        target = pickEntryNode(entryNodes, "any");
+    }
 
-        if (target) req.flyTo(target);
-        else failRequest(req);
-    } else failRequest(req);
+    if (target) req.flyTo(target);
+    else failRequest(req);
 }
 
 function updateScore(req, outcome) {
@@ -3412,19 +3418,9 @@ window.spawnBurst = (type) => {
         setTimeout(() => {
             const req = new Request(type);
             STATE.requests.push(req);
-            const conns = STATE.internetNode.connections;
-            if (conns.length > 0) {
-                const entryNodes = conns.map((id) =>
-                    STATE.services.find((s) => s.id === id)
-                );
-                const wafEntry = entryNodes.find((s) => s?.type === "waf");
-                const target =
-                    wafEntry || entryNodes[Math.floor(Math.random() * entryNodes.length)];
-                if (target) req.flyTo(target);
-                else failRequest(req);
-            } else {
-                failRequest(req);
-            }
+            // Same entry routing as regular spawns — STATIC bursts prefer CDN,
+            // everything falls back WAF → APIGW → any live entry (#175).
+            routeRequestToEntry(req, type);
         }, i * 30);
     }
 };
