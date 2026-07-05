@@ -1394,7 +1394,8 @@ function getTrafficType() {
     const dist = STATE.trafficDistribution;
     const types = Object.keys(dist);
     const total = types.reduce((sum, type) => sum + (dist[type] || 0), 0);
-    if (total === 0) return TRAFFIC_TYPES.STATIC;
+    // All types at 0% means "no traffic", not "default to STATIC" (#174).
+    if (total === 0) return null;
 
     const r = Math.random() * total;
     let cumulative = 0;
@@ -1433,6 +1434,8 @@ function pickEntryNode(entryNodes, type) {
 
 function spawnRequest() {
     const type = getTrafficType();
+    // No traffic mix configured (all sliders at 0%) — nothing to spawn (#174).
+    if (type === null) return;
     const req = new Request(type);
     STATE.requests.push(req);
     const conns = STATE.internetNode.connections;
