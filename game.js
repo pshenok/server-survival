@@ -2485,7 +2485,16 @@ container.addEventListener("mousedown", (e) => {
     }
 });
 
+// Last known pointer position over the canvas — lets the animate loop
+// refresh the hover tooltip in real time while the mouse is stationary (#173).
+let lastPointerPos = null;
+let tooltipRefreshAcc = 0;
+container.addEventListener("mouseleave", () => {
+    lastPointerPos = null;
+});
+
 container.addEventListener("mousemove", (e) => {
+    lastPointerPos = { x: e.clientX, y: e.clientY };
     if (isDraggingNode && draggedNode) {
         const hit = getIntersect(e.clientX, e.clientY);
         if (hit.pos) {
@@ -2997,6 +3006,23 @@ function animate(time) {
     processAutoRepair(dt);
     updateFinancesDisplay();
     checkSmartHints();
+
+    // Live tooltip refresh (#173): while the pointer sits still over a service,
+    // replay the last mousemove at ~4 Hz so the tooltip's load/queue/rate stats
+    // keep updating. Reuses the full hover pipeline — zero duplicated logic.
+    tooltipRefreshAcc += clampedDt;
+    if (tooltipRefreshAcc >= 0.25) {
+        tooltipRefreshAcc = 0;
+        if (lastPointerPos && !isDraggingNode && !isPanning) {
+            const tooltipEl = document.getElementById("tooltip");
+            if (tooltipEl && tooltipEl.style.display === "block") {
+                container.dispatchEvent(new MouseEvent("mousemove", {
+                    clientX: lastPointerPos.x,
+                    clientY: lastPointerPos.y,
+                }));
+            }
+        }
+    }
 
     document.getElementById("money-display").innerText = `$${Math.floor(
         STATE.money
