@@ -494,7 +494,13 @@ class Service {
             if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
             failRequest(job.req);
           } else {
-            const target = this.findConnectedService(destType);
+            // Storage-family destinations are interchangeable on a miss (#88):
+            // STATIC's destination is "cdn" but a Cache wired to S3 should still
+            // deliver it — both are static-content origins.
+            let target = this.findConnectedService(destType);
+            if (!target && (destType === "cdn" || destType === "s3")) {
+              target = this.findConnectedService(destType === "cdn" ? "s3" : "cdn");
+            }
             if (target) {
               job.req.flyTo(target);
             } else {
@@ -653,10 +659,22 @@ class Service {
                 continue;
               }
             }
+            // Only route through Cache if a miss can still reach its destination
+            // from there (#88). A Cache wired only to the DB must not swallow
+            // STATIC traffic whose destination is Storage — those requests
+            // should use Compute's direct S3 link instead.
             if (cacheTarget) {
-              chargePerRequest();
-              job.req.flyTo(cacheTarget);
-              continue;
+              const dest = job.req.destination;
+              const cacheCanDeliver =
+                dest === "db"
+                  ? true // cache-miss cascade handles search/replica/nosql/db
+                  : !!(cacheTarget.findConnectedService("s3") ||
+                       cacheTarget.findConnectedService("cdn"));
+              if (cacheCanDeliver) {
+                chargePerRequest();
+                job.req.flyTo(cacheTarget);
+                continue;
+              }
             }
           }
 
@@ -685,7 +703,13 @@ class Service {
             continue;
           }
 
-          const directTarget = this.findConnectedService(destType);
+          // Storage-family destinations are interchangeable (#88): STATIC's
+          // destination is "cdn" but a Compute wired directly to S3 must still
+          // deliver it — both are static-content origins.
+          let directTarget = this.findConnectedService(destType);
+          if (!directTarget && (destType === "cdn" || destType === "s3")) {
+            directTarget = this.findConnectedService(destType === "cdn" ? "s3" : "cdn");
+          }
           if (directTarget) {
             chargePerRequest();
             job.req.flyTo(directTarget);
