@@ -960,6 +960,7 @@ scene.fog = new THREE.FogExp2(CONFIG.colors.bg, 0.008);
 let isDraggingNode = false;
 let draggedNode = null;
 let dragOffset = new THREE.Vector3();
+let dragStartPos = new THREE.Vector3();
 
 const aspect = window.innerWidth / window.innerHeight;
 const d = 50;
@@ -2077,7 +2078,6 @@ function createConnection(fromId, toId) {
     else if (t1 === "waf" && t2 === "alb") valid = true;
     else if (t1 === "waf" && t2 === "sqs") valid = true;
     else if (t1 === "sqs" && t2 === "alb") valid = true;
-    else if (t1 === "alb" && t2 === "sqs") valid = true;
     else if (t1 === "sqs" && t2 === "compute") valid = true;
     else if (t1 === "alb" && t2 === "compute") valid = true;
     else if (t1 === "compute" && t2 === "cache") valid = true;
@@ -2414,6 +2414,13 @@ window.addEventListener("keyup", (e) => {
     keysPressed[e.key] = false;
 });
 
+// Clear all held keys when the window loses focus — otherwise a keyup missed
+// during an alt-tab / focus switch leaves the key "stuck" and the camera pans
+// forever until that key is pressed and released again.
+window.addEventListener("blur", () => {
+    for (const k in keysPressed) keysPressed[k] = false;
+});
+
 container.addEventListener("contextmenu", (e) => e.preventDefault());
 
 container.addEventListener("mousedown", (e) => {
@@ -2452,6 +2459,7 @@ container.addEventListener("mousedown", (e) => {
         }
         if (draggedNode) {
             isDraggingNode = true;
+            dragStartPos.copy(draggedNode.position);
             const hit = getIntersect(e.clientX, e.clientY);
             if (hit.pos) {
                 dragOffset.copy(draggedNode.position).sub(hit.pos);
@@ -2553,14 +2561,14 @@ container.addEventListener("mousemove", (e) => {
 
             draggedNode.position.copy(newPos);
 
-            if (draggedNode.mesh) {
-                draggedNode.mesh.position.x = newPos.x;
-                draggedNode.mesh.position.z = newPos.z;
-            } else {
+            if (draggedNode === STATE.internetNode) {
                 STATE.internetNode.mesh.position.x = newPos.x;
                 STATE.internetNode.mesh.position.z = newPos.z;
                 STATE.internetNode.ring.position.x = newPos.x;
                 STATE.internetNode.ring.position.z = newPos.z;
+            } else if (draggedNode.mesh) {
+                draggedNode.mesh.position.x = newPos.x;
+                draggedNode.mesh.position.z = newPos.z;
             }
 
             updateConnectionsForNode(draggedNode.id);
@@ -2878,18 +2886,28 @@ container.addEventListener("mouseup", (e) => {
     if (isDraggingNode && draggedNode) {
         isDraggingNode = false;
 
-        const snapped = snapToGrid(draggedNode.position);
+        let snapped = snapToGrid(draggedNode.position);
+
+        // Reject a drop onto a tile already occupied by another service —
+        // otherwise the two overlap and whichever mesh the raycaster hits first
+        // makes the other permanently unselectable (can't delete/upgrade it).
+        const occupied = STATE.services.some(
+            (s) => s !== draggedNode && s.position.distanceTo(snapped) < 1
+        );
+        if (occupied) {
+            snapped = snapToGrid(dragStartPos);
+        }
 
         draggedNode.position.copy(snapped);
 
-        if (draggedNode.mesh) {
-            draggedNode.mesh.position.x = snapped.x;
-            draggedNode.mesh.position.z = snapped.z;
-        } else {
+        if (draggedNode === STATE.internetNode) {
             STATE.internetNode.mesh.position.x = snapped.x;
             STATE.internetNode.mesh.position.z = snapped.z;
             STATE.internetNode.ring.position.x = snapped.x;
             STATE.internetNode.ring.position.z = snapped.z;
+        } else if (draggedNode.mesh) {
+            draggedNode.mesh.position.x = snapped.x;
+            draggedNode.mesh.position.z = snapped.z;
         }
 
         updateConnectionsForNode(draggedNode.id);
@@ -3514,7 +3532,11 @@ window.toggleUpkeep = () => {
 window.clearAllServices = () => {
     STATE.services.forEach((s) => s.destroy());
     STATE.services = [];
-    STATE.connections.forEach((c) => connectionGroup.remove(c.mesh));
+    STATE.connections.forEach((c) => {
+        connectionGroup.remove(c.mesh);
+        c.mesh.geometry.dispose();
+        c.mesh.material.dispose();
+    });
     STATE.connections = [];
     STATE.internetNode.connections = [];
     STATE.requests.forEach((r) => r.destroy());

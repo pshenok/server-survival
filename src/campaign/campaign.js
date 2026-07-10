@@ -71,6 +71,10 @@ class CampaignController {
         }
 
         this.active = true;
+        // Monotonic session id: distinguishes "this level attempt" from a
+        // later retry/next that reuses the controller. Stale burst callbacks
+        // scheduled by a previous attempt compare against this and bail.
+        this._session = (this._session || 0) + 1;
         STATE.campaign.active = true;
         STATE.campaign.currentLevelId = levelId;
         STATE.campaign.level = level;
@@ -99,10 +103,12 @@ class CampaignController {
             STATE.campaign.burstTimer += dt;
             if (STATE.campaign.burstTimer >= bp.intervalSec) {
                 STATE.campaign.burstTimer = 0;
+                const session = this._session;
                 for (let i = 0; i < bp.burstSize; i++) {
                     setTimeout(() => {
-                        // Bail if the level ended or campaign exited while this burst was in flight.
-                        if (!this.active || STATE.campaign.ended) return;
+                        // Bail if the level ended, campaign exited, or a different
+                        // level session started (retry/next) while this burst was in flight.
+                        if (session !== this._session || !this.active || STATE.campaign.ended) return;
                         if (typeof spawnRequest === "function") spawnRequest();
                     }, i * 20);
                 }
@@ -224,9 +230,12 @@ class CampaignController {
     _persistWin(levelId, stars, elapsed) {
         const progress = this.loadProgress();
         const existing = progress.completed[levelId] || { stars: 0, bestTimeSec: Infinity };
+        // Guard against a malformed/hand-edited entry missing bestTimeSec —
+        // Math.min(undefined, elapsed) is NaN and would poison the best time forever.
+        const prevBest = Number.isFinite(existing.bestTimeSec) ? existing.bestTimeSec : Infinity;
         progress.completed[levelId] = {
-            stars: Math.max(existing.stars, stars),
-            bestTimeSec: Math.min(existing.bestTimeSec, elapsed),
+            stars: Math.max(existing.stars || 0, stars),
+            bestTimeSec: Math.min(prevBest, elapsed),
             lastPlayed: Date.now(),
         };
         progress.highestUnlocked = Math.max(progress.highestUnlocked, levelId + 1);
