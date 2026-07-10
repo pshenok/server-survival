@@ -1277,6 +1277,12 @@ function resetGame(mode = "survival") {
 
 function restartGame() {
     document.getElementById("modal").classList.add("hidden");
+
+    // startCampaignLevel integrates important campaign level state and calls resetGame
+    if (STATE.gameMode === "campaign" && STATE.campaign?.currentLevelId) {
+        startCampaignLevel(STATE.campaign.currentLevelId);
+        return;
+    }
     resetGame(STATE.gameMode);
 }
 
