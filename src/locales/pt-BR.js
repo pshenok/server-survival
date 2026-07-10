@@ -400,6 +400,7 @@ const PT_BR_TRANSLATIONS = {
     "max": "Máx",
     "reason_malicious": "{count} ataques maliciosos penetraram suas defesas.",
     "reason_failed_type": "{count} solicitações {type} falharam devido a capacidade insuficiente ou caminho faltante.",
+    "tip_waf": "Coloque um Firewall conectado à Internet para bloquear o tráfego malicioso antes que chegue aos seus serviços.",
     "tip_multiple_waf": "Implante múltiplos firewalls para lidar com picos de ataque em larga escala",
     "waf": "Firewall",
     "alb": "Load Balancer",

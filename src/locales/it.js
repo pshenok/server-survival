@@ -391,6 +391,7 @@ const IT_TRANSLATIONS = {
     "max": "Max",
     "reason_malicious": "{count} attacchi malevoli hanno superato le tue difese.",
     "reason_failed_type": "{count} richieste di tipo {type} sono fallite a causa della capacità o di percorsi mancanti.",
+    "tip_waf": "Posiziona un Firewall collegato a Internet per bloccare il traffico dannoso prima che raggiunga i tuoi servizi.",
     "tip_multiple_waf": "Distribuisci più Firewall per gestire grandi ondate di attacchi",
     "waf": "Firewall",
     "alb": "Load Balancer",

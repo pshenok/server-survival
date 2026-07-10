@@ -3672,7 +3672,7 @@ window.onSaveGameFileUpload = (event) => {
             STATE.sound.playPlace(); // Use place sound as feedback
         } catch (error) {
             console.error("Failed to load game:", error);
-            alert(i18n.t('load_failed'));
+            alert(i18n.t('load_failed_corrupted'));
         }
     };
     reader.readAsText(file);

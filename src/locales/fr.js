@@ -392,6 +392,7 @@ const FR_TRANSLATIONS = {
     "max": "Max",
     "reason_malicious": "{count} attaques malveillantes ont contourné vos défenses.",
     "reason_failed_type": "{count} requêtes {type} ont échoué en raison de la capacité ou de chemins manquants.",
+    "tip_waf": "Placez un Firewall connecté à Internet pour bloquer le trafic malveillant avant qu'il n'atteigne vos services.",
     "tip_multiple_waf": "Déployez plusieurs Pare-feu pour gérer les grandes vagues d'attaques",
     "waf": "Pare-feu",
     "alb": "Répartiteur de charge",

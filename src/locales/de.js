@@ -392,6 +392,7 @@ const DE_TRANSLATIONS = {
     "max": "Max",
     "reason_malicious": "{count} bösartige Angriffe haben deine Verteidigung umgangen.",
     "reason_failed_type": "{count} {type}-Anfragen fehlgeschlagen (Kapazität oder fehlender Pfad).",
+    "tip_waf": "Platziere eine Firewall mit Internetverbindung, um bösartigen Traffic zu blockieren, bevor er deine Dienste erreicht.",
     "tip_multiple_waf": "Platziere mehrere Firewalls, um große Angriffe abzuwehren",
     "waf": "Firewall",
     "alb": "Load Balancer",
