@@ -246,7 +246,11 @@ class Service {
 
       if (this.type === "waf" && req.type === TRAFFIC_TYPES.MALICIOUS) {
         updateScore(req, "MALICIOUS_BLOCKED");
-        req.destroy();
+        // Must go through removeRequest (not raw destroy) — otherwise the blocked
+        // request stays in STATE.requests forever and is ticked every frame. This
+        // fires on every WAF block (a large fraction of all traffic), so raw
+        // destroy() leaked the request array unbounded over a session.
+        removeRequest(req);
         continue;
       }
 
@@ -255,8 +259,12 @@ class Service {
   }
 
   findConnectedService(serviceType) {
+    // Skip disabled services (e.g. during a SERVICE_OUTAGE event) so routing
+    // falls through to a healthy alternative instead of stalling traffic on a
+    // node with 0 effective capacity — otherwise the redundancy the player
+    // built (the whole point of the High Availability level) does nothing.
     return STATE.services.find(
-      (s) => this.connections.includes(s.id) && s.type === serviceType
+      (s) => this.connections.includes(s.id) && s.type === serviceType && !s.isDisabled
     );
   }
 
@@ -529,7 +537,7 @@ class Service {
           // We look for any connected service that isn't Internet
           const connectedServices = this.connections
             .map((id) => STATE.services.find((s) => s.id === id))
-            .filter((s) => s && s.type !== "internet");
+            .filter((s) => s && s.type !== "internet" && !s.isDisabled);
 
           if (connectedServices.length > 0) {
             // Simple round robin or just pick first
