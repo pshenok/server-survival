@@ -1486,7 +1486,6 @@ function updateScore(req, outcome) {
     if (outcome === "MALICIOUS_BLOCKED") {
         STATE.score.maliciousBlocked += points.MALICIOUS_BLOCKED_SCORE;
         STATE.score.total += points.MALICIOUS_BLOCKED_SCORE;
-        STATE.score.total += points.MALICIOUS_BLOCKED_SCORE;
 
         // Mitigation cost for blocking attacks
         const mitigationCost = CONFIG.survival.SCORE_POINTS.MALICIOUS_MITIGATION_COST || 1.0;
@@ -1499,7 +1498,6 @@ function updateScore(req, outcome) {
         req.type === TRAFFIC_TYPES.MALICIOUS &&
         outcome === "MALICIOUS_PASSED"
     ) {
-        STATE.reputation += points.MALICIOUS_PASSED_REPUTATION;
         STATE.reputation += points.MALICIOUS_PASSED_REPUTATION;
         STATE.failures.MALICIOUS++;
 
@@ -2196,6 +2194,19 @@ function deleteObject(id) {
         c.mesh.material.dispose();
     });
     STATE.connections = STATE.connections.filter((c) => !toRemove.includes(c));
+
+    // Clean up any requests tied to this service — sitting in its queue, in its
+    // processing slots, or in flight toward it. Without this they'd be stranded
+    // on the destroyed service (whose update() never runs again) and freeze in
+    // the scene forever. Collected from every source and de-duped, then removed
+    // cleanly (no reputation penalty — the player is restructuring, not dropping
+    // production traffic).
+    const orphaned = new Set([
+        ...svc.queue,
+        ...svc.processing.map((job) => job.req),
+        ...STATE.requests.filter((r) => r.target === svc),
+    ]);
+    orphaned.forEach((r) => removeRequest(r));
 
     svc.destroy();
     STATE.services = STATE.services.filter((s) => s.id !== id);
