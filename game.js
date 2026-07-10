@@ -146,15 +146,23 @@ function startMaliciousSpike() {
     const maliciousPct = CONFIG.survival.maliciousSpike.maliciousPercent;
     const remaining = 1 - maliciousPct;
 
+    // Guard against a distribution that's already 100% malicious — otherwise
+    // every non-malicious share divides by zero and becomes NaN/Infinity,
+    // corrupting the mix for the spike's duration. Not reachable with shipped
+    // configs today, but cheap insurance for future levels/shifts.
     const otherTotal = 1 - STATE.normalTrafficDist.MALICIOUS;
-    STATE.trafficDistribution = {
-        STATIC: (STATE.normalTrafficDist.STATIC / otherTotal) * remaining,
-        READ: (STATE.normalTrafficDist.READ / otherTotal) * remaining,
-        WRITE: (STATE.normalTrafficDist.WRITE / otherTotal) * remaining,
-        UPLOAD: (STATE.normalTrafficDist.UPLOAD / otherTotal) * remaining,
-        SEARCH: (STATE.normalTrafficDist.SEARCH / otherTotal) * remaining,
-        MALICIOUS: maliciousPct,
-    };
+    if (otherTotal <= 0) {
+        STATE.trafficDistribution = { ...STATE.normalTrafficDist };
+    } else {
+        STATE.trafficDistribution = {
+            STATIC: (STATE.normalTrafficDist.STATIC / otherTotal) * remaining,
+            READ: (STATE.normalTrafficDist.READ / otherTotal) * remaining,
+            WRITE: (STATE.normalTrafficDist.WRITE / otherTotal) * remaining,
+            UPLOAD: (STATE.normalTrafficDist.UPLOAD / otherTotal) * remaining,
+            SEARCH: (STATE.normalTrafficDist.SEARCH / otherTotal) * remaining,
+            MALICIOUS: maliciousPct,
+        };
+    }
 
     const indicator = document.createElement("div");
     indicator.id = "malicious-spike-indicator";
@@ -261,10 +269,14 @@ function updateTrafficShift(dt) {
         startTrafficShift();
     }
 
-    // Check if shift should end
+    // Check if shift should end. The timer is reset to 0 when a shift actually
+    // activates (see startTrafficShift), so here it measures time-since-active.
+    // Previously this used the absolute `interval + duration` threshold, which
+    // meant a shift that was delayed (blocked while a malicious spike was active)
+    // could end on its very first active frame — running for ~0 seconds.
     if (
         STATE.intervention.trafficShiftActive &&
-        STATE.intervention.trafficShiftTimer >= interval + duration
+        STATE.intervention.trafficShiftTimer >= duration
     ) {
         endTrafficShift();
         STATE.intervention.trafficShiftTimer = 0; // Reset for next cycle
@@ -281,6 +293,10 @@ function startTrafficShift() {
     const shift = shifts[Math.floor(Math.random() * shifts.length)];
     STATE.intervention.currentShift = shift;
     STATE.intervention.trafficShiftActive = true;
+    // Reset so the end check measures duration from actual activation, not from
+    // when the timer first crossed `interval` (it may have kept growing while a
+    // malicious spike blocked the start).
+    STATE.intervention.trafficShiftTimer = 0;
 
     // Store original distribution
     STATE.intervention.originalTrafficDist = { ...STATE.trafficDistribution };
@@ -289,11 +305,12 @@ function startTrafficShift() {
         STATE.trafficDistribution = { ...shift.distribution };
     }
 
+    // Shift configs carry only { name, distribution } — there is no `type`
+    // field, and most shift names have no `shift_<name>` i18n key. Referencing
+    // shift.type threw on every shift start (crashing the frame and suppressing
+    // this warning). Use the shift's display name directly.
     addInterventionWarning(
-        i18n.t('traffic_surging', { 
-            name: i18n.t('shift_' + shift.name.toLowerCase().replace(' ', '_')), 
-            type: i18n.t('traffic_' + shift.type.toLowerCase()) 
-        }),
+        i18n.t('traffic_surging', { name: shift.name }),
         "warning",
         5000
     );
@@ -350,14 +367,18 @@ window.handleGameState = (timeScale) => {
     if (timeScale === 0) { // pause state
         STATE.intervention.pausedEvent = STATE.intervention.activeEvent;
         STATE.intervention.remainingTime = STATE.intervention.eventEndTime - Date.now();
+        // Remember which service the outage hit so resume re-disables the SAME one.
+        STATE.intervention.pausedOutageServiceId = STATE.intervention.outageServiceId || null;
         endRandomEvent();
     } else if (STATE.intervention.pausedEvent) { // not paused state
         triggerRandomEvent(
             STATE.intervention.pausedEvent,
-            STATE.intervention.remainingTime
+            STATE.intervention.remainingTime,
+            STATE.intervention.pausedOutageServiceId
         );
         STATE.intervention.pausedEvent = null;
         STATE.intervention.remainingTime = 0;
+        STATE.intervention.pausedOutageServiceId = null;
     }
 
     window.setTimeScale(timeScale);
@@ -365,7 +386,8 @@ window.handleGameState = (timeScale) => {
 
 function triggerRandomEvent(
     eventType = null,
-    duration = null
+    duration = null,
+    outageServiceId = null
 ) {
     if (!STATE.intervention || STATE.intervention.activeEvent) return;
 
@@ -408,11 +430,22 @@ function triggerRandomEvent(
             STATE.intervention.trafficBurstMultiplier = 3.0;
             break;
 
-        case "SERVICE_OUTAGE":
-            // Pick a random service to temporarily disable
-            const services = STATE.services.filter((s) => s.type !== "waf");
-            if (services.length > 0) {
-                const target = services[Math.floor(Math.random() * services.length)];
+        case "SERVICE_OUTAGE": {
+            // Reuse the previously-chosen service when resuming a paused outage
+            // (STATE.intervention.outageServiceId set), otherwise pick a fresh
+            // random one. Without this, pause→resume re-rolled the target and
+            // the outage could "teleport" to a different service.
+            let target = outageServiceId
+                ? STATE.services.find((s) => s.id === outageServiceId)
+                : null;
+            if (!target) {
+                const services = STATE.services.filter((s) => s.type !== "waf");
+                target = services.length > 0
+                    ? services[Math.floor(Math.random() * services.length)]
+                    : null;
+            }
+            if (target) {
+                STATE.intervention.outageServiceId = target.id;
                 target.isDisabled = true;
                 target.mesh.material.opacity = 0.3;
                 target.mesh.material.transparent = true;
@@ -423,6 +456,7 @@ function triggerRandomEvent(
                 );
             }
             break;
+        }
     }
 
     // Show active event bar
@@ -459,6 +493,11 @@ function endRandomEvent() {
                     s.mesh.material.transparent = false;
                 }
             });
+            // Clear the remembered target. On a pause, handleGameState has
+            // already captured it into pausedOutageServiceId before calling this,
+            // so clearing here only affects a genuine end — the next fresh outage
+            // will pick a new service.
+            STATE.intervention.outageServiceId = null;
             break;
     }
 
@@ -3763,8 +3802,11 @@ function loadGameState(saveData = null) {
             STATE.autoRepairEnabled = false;
         }
 
-        // Initialize finances tracking
-        STATE.finances = {
+        // Restore finances from the save (fall back to zeroed defaults for older
+        // saves that predate finance tracking). Previously this always reset to
+        // zero, so every reload wiped the player's income/expense history even
+        // though saveGameState had written it to disk.
+        const defaultFinances = {
             income: {
                 byType: { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0 },
                 countByType: { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0, blocked: 0 },
@@ -3783,6 +3825,12 @@ function loadGameState(saveData = null) {
                 countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0 },
             },
         };
+        STATE.finances = saveData.finances
+            ? {
+                income: { ...defaultFinances.income, ...saveData.finances.income },
+                expenses: { ...defaultFinances.expenses, ...saveData.finances.expenses },
+            }
+            : defaultFinances;
 
         restoreServices(saveData.services);
 

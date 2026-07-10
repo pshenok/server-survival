@@ -216,7 +216,7 @@ const ZH_TRANSLATIONS = {
     "capacity_reduced": "容量已降低",
     "traffic_burst": "流量爆发中",
     "service_outage_active": "服务中断",
-    "traffic_surging": "📊 {name} - {type} 流量激增！","upkeep_on": "自动维护：开启",
+    "traffic_surging": "📊 {name} 流量激增！","upkeep_on": "自动维护：开启",
     "upkeep_off": "自动维护：关闭",
     "upkeep_on_label": "启用维护",
     "upkeep_off_label": "禁用维护",

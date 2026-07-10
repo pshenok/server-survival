@@ -183,7 +183,7 @@ const NE_TRANSLATIONS = {
     "capacity_reduced": "क्षमता घटाइयो",
     "traffic_burst": "ट्राफिक बर्स्ट",
     "service_outage_active": "सेवा आउटेज सक्रिय",
-    "traffic_surging": "📊 {name} - {type} ट्राफिक छालिँदै छ!",
+    "traffic_surging": "📊 ट्राफिक बढ्दै: {name}!",
     "upkeep_on": "स्वतः-मर्मत: खुला",
     "upkeep_off": "स्वतः-मर्मत: बन्द",
     "upkeep_on_label": "रखरखाव: खुला",

@@ -183,7 +183,7 @@ const RU_TRANSLATIONS = {
     "capacity_reduced": "МОЩНОСТЬ СНИЖЕНА",
     "traffic_burst": "ВСПЛЕСК ТРАФИКА",
     "service_outage_active": "СБОЙ СЕРВИСА",
-    "traffic_surging": "📊 {name} — всплеск {type}‑трафика!",
+    "traffic_surging": "📊 Всплеск трафика: {name}!",
     "upkeep_on": "Авто‑ремонт: ВКЛ",
     "upkeep_off": "Авто‑ремонт: ВЫКЛ",
     "upkeep_on_label": "Содержание: ВКЛ",

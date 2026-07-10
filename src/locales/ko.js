@@ -184,7 +184,7 @@ const KO_TRANSLATIONS = {
     "capacity_reduced": "용량 감소됨",
     "traffic_burst": "트래픽 폭발",
     "service_outage_active": "서비스 장애",
-    "traffic_surging": "📊 {name} - {type} 트래픽 급증!",
+    "traffic_surging": "📊 트래픽 급증: {name}!",
     "upkeep_on": "자동 수리: 켜짐",
     "upkeep_off": "자동 수리: 꺼짐",
     "upkeep_on_label": "유지비: 켜짐",

@@ -183,7 +183,7 @@ const EN_TRANSLATIONS = {
     "capacity_reduced": "CAPACITY REDUCED",
     "traffic_burst": "TRAFFIC BURST",
     "service_outage_active": "SERVICE OUTAGE",
-    "traffic_surging": "📊 {name} - {type} traffic surging!","upkeep_on": "Auto-Repair: ON",
+    "traffic_surging": "📊 {name} traffic surge incoming!","upkeep_on": "Auto-Repair: ON",
     "upkeep_off": "Auto-Repair: OFF",
     "upkeep_on_label": "Upkeep ON",
     "upkeep_off_label": "Upkeep OFF",

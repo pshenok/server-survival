@@ -183,7 +183,7 @@ const FR_TRANSLATIONS = {
     "capacity_reduced": "Capacité réduite",
     "traffic_burst": "Pic de trafic",
     "service_outage_active": "Panne de service",
-    "traffic_surging": "📊 {name} - Trafic {type} en hausse !",
+    "traffic_surging": "📊 Pic de trafic : {name} !",
     "upkeep_on": "Réparation auto : ON",
     "upkeep_off": "Réparation auto : OFF",
     "upkeep_on_label": "Maintenance ON",

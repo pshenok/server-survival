@@ -183,7 +183,7 @@ const DE_TRANSLATIONS = {
     "capacity_reduced": "KAPAZITÄT REDUZIERT",
     "traffic_burst": "TRAFFIC BURST",
     "service_outage_active": "DIENSTAUSFALL",
-    "traffic_surging": "📊 {name} - {type} Traffic steigt an!",
+    "traffic_surging": "📊 Traffic-Anstieg: {name}!",
     "upkeep_on": "Auto-Reparatur: AN",
     "upkeep_off": "Auto-Reparatur: AUS",
     "upkeep_on_label": "Unterhalt AN",

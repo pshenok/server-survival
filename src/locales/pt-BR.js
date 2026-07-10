@@ -216,7 +216,7 @@ const PT_BR_TRANSLATIONS = {
     "capacity_reduced": "Capacidade reduzida",
     "traffic_burst": "Rajada de tráfego ativa",
     "service_outage_active": "Interrupção de serviço",
-    "traffic_surging": "📊 {name} - {type} tráfego aumentando!",
+    "traffic_surging": "📊 Aumento de tráfego: {name}!",
     "upkeep_on": "Manutenção: Ligada",
     "upkeep_off": "Manutenção: Desligada",
     "upkeep_on_label": "Ativar Manutenção",

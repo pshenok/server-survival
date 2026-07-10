@@ -183,7 +183,7 @@ const IT_TRANSLATIONS = {
     "capacity_reduced": "CAPACITÀ RIDOTTA",
     "traffic_burst": "RAFFICA DI TRAFFICO",
     "service_outage_active": "INTERRUZIONE SERVIZIO",
-    "traffic_surging": "📊 {name} - Traffico {type} in forte aumento!",
+    "traffic_surging": "📊 Picco di traffico: {name}!",
     "upkeep_on": "Riparazione Auto: ON",
     "upkeep_off": "Riparazione Auto: OFF",
     "upkeep_on_label": "Mantenimento ON",
