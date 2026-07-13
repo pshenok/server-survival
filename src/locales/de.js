@@ -286,6 +286,8 @@ const DE_TRANSLATIONS = {
     "infra_collapsed": "Infrastruktur zusammengebrochen.",
     "retry_same": "Gleiches Setup erneut versuchen",
     "start_fresh": "Neu beginnen",
+    "minimize": "Minimieren",
+    "show_results": "⚠ Ergebnisse anzeigen",
     "resume_game": "Spiel fortsetzen",
     "start_survival": "Überleben starten",
     "sandbox_mode": "Sandbox-Modus",

@@ -285,6 +285,8 @@ const EN_TRANSLATIONS = {
     "infra_collapsed": "Infrastructure collapsed.",
     "retry_same": "Retry Same Setup",
     "start_fresh": "Start Fresh",
+    "minimize": "Minimize",
+    "show_results": "⚠ Show Results",
     "resume_game": "Resume Game",
     "start_survival": "Start Survival",
     "sandbox_mode": "Sandbox Mode",

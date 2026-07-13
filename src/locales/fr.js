@@ -286,6 +286,8 @@ const FR_TRANSLATIONS = {
     "infra_collapsed": "Infrastructure effondrée.",
     "retry_same": "Réessayer la même configuration",
     "start_fresh": "Recommencer",
+    "minimize": "Réduire",
+    "show_results": "⚠ Voir les résultats",
     "resume_game": "Reprendre la partie",
     "start_survival": "Démarrer la survie",
     "sandbox_mode": "Mode Sandbox",

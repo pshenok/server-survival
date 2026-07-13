@@ -317,6 +317,8 @@ const PT_BR_TRANSLATIONS = {
     "infra_collapsed": "Infraestrutura colapsada.",
     "retry_same": "Tentar mesma arquitetura",
     "start_fresh": "Começar do zero",
+    "minimize": "Minimizar",
+    "show_results": "⚠ Mostrar resultados",
     "resume_game": "Continuar jogo",
     "start_survival": "Iniciar no Modo Sobrevivência",
     "sandbox_mode": "Entrar no Modo Sandbox",

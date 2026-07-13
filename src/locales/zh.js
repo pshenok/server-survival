@@ -316,6 +316,8 @@ const ZH_TRANSLATIONS = {
     "infra_collapsed": "基础设施已瘫痪。",
     "retry_same": "重试当前架构",
     "start_fresh": "重新开始",
+    "minimize": "最小化",
+    "show_results": "⚠ 显示结果",
     "resume_game": "继续游戏",
     "start_survival": "开始生存模式",
     "sandbox_mode": "进入沙盒模式",

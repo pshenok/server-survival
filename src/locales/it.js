@@ -285,6 +285,8 @@ const IT_TRANSLATIONS = {
     "infra_collapsed": "Infrastruttura collassata.",
     "retry_same": "Riprova Stessa Configurazione",
     "start_fresh": "Ricomincia da Capo",
+    "minimize": "Riduci",
+    "show_results": "⚠ Mostra risultati",
     "resume_game": "Riprendi Gioco",
     "start_survival": "Inizia Sopravvivenza",
     "sandbox_mode": "Modalità Sandbox",

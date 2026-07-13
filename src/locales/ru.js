@@ -286,6 +286,8 @@ const RU_TRANSLATIONS = {
     "infra_collapsed": "Инфраструктура рухнула.",
     "retry_same": "Повторить с тем же сетапом",
     "start_fresh": "Начать заново",
+    "minimize": "Свернуть",
+    "show_results": "⚠ Показать результаты",
     "resume_game": "Продолжить игру",
     "start_survival": "Начать режим выживания",
     "sandbox_mode": "Режим песочницы",

@@ -286,6 +286,8 @@ const NE_TRANSLATIONS = {
     "infra_collapsed": "इन्फ्रास्ट्रक्चर पतन भयो।",
     "retry_same": "उही सेटअप पुनः प्रयास गर्नुहोस्",
     "start_fresh": "ताजा सुरु गर्नुहोस्",
+    "minimize": "सानो बनाउनुहोस्",
+    "show_results": "⚠ नतिजा हेर्नुहोस्",
     "resume_game": "खेल जारी राख्नुहोस्",
     "start_survival": "अस्तित्व सुरु गर्नुहोस्",
     "sandbox_mode": "स्यान्डबक्स मोड",

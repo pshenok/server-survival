@@ -1697,6 +1697,14 @@ window.togglePanel = (contentId, iconId) => {
     }
 };
 
+window.toggleFailureModal = () => {
+    const card = document.getElementById("modal-card");
+    const restore = document.getElementById("modal-restore");
+    if (!card || !restore) return;
+    const minimized = card.classList.toggle("hidden");
+    restore.classList.toggle("hidden", !minimized);
+};
+
 window.startGame = () => {
     document.getElementById("main-menu-modal").classList.add("hidden");
     resetGame();
@@ -2840,6 +2848,9 @@ container.addEventListener("mousemove", (e) => {
             STATE.failures.WRITE=0;
             STATE.failures.UPLOAD=0;
             STATE.failures.SEARCH=0;
+            // when click on clear button, update ui immediately
+            document.getElementById('failures-panel').classList.add('hidden');
+            document.getElementById('failures-total').textContent = `0 ${i18n.t('total')}`;
         })
 
 // Helper function for showing tooltips
@@ -3315,6 +3326,10 @@ function animate(time) {
             </div>
         `;
         document.getElementById("modal").classList.remove("hidden");
+        // show the results card , now has an id
+        document.getElementById("modal-card").classList.remove("hidden");
+        // hide the "show results" floating button , new element
+        document.getElementById("modal-restore").classList.add("hidden");
         STATE.sound.playGameOver();
     }
 
@@ -3827,7 +3842,7 @@ function loadGameState(saveData = null) {
             STATE.maliciousSpikeTimer = 0;
             STATE.maliciousSpikeActive = false;
             STATE.normalTrafficDist = null;
-            STATE.autoRepairEnabled = false;
+            STATE.autoRepairEnabled = saveData.autoRepairEnabled || false;
         }
 
         // Restore finances from the save (fall back to zeroed defaults for older
@@ -3861,6 +3876,20 @@ function loadGameState(saveData = null) {
             : defaultFinances;
 
         restoreServices(saveData.services);
+
+        const autoRepairBtn = document.getElementById("auto-repair-toggle");
+        if (autoRepairBtn) {
+            if (STATE.autoRepairEnabled) {
+                autoRepairBtn.textContent = i18n.t('upkeep_on');
+                autoRepairBtn.classList.remove("text-gray-400");
+                autoRepairBtn.classList.add("text-green-400");
+            } else {
+                autoRepairBtn.textContent = i18n.t('upkeep_off');
+                autoRepairBtn.classList.remove("text-green-400");
+                autoRepairBtn.classList.add("text-gray-400");
+            }
+        }
+        updateRepairCostTable();
 
         restoreConnections(
             saveData.connections,

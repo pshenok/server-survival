@@ -264,6 +264,8 @@ const KO_TRANSLATIONS = {
     "infra_collapsed": "인프라가 붕괴되었습니다.",
     "retry_same": "같은 설정으로 재시도",
     "start_fresh": "새로 시작",
+    "minimize": "최소화",
+    "show_results": "⚠ 결과 보기",
     "resume_game": "게임 재개",
     "start_survival": "생존 모드 시작",
     "sandbox_mode": "샌드박스 모드",

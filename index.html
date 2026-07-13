@@ -741,8 +741,12 @@
 
   <!-- End/Next Level Modal -->
   <div id="modal"
-    class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center backdrop-blur-sm">
-    <div class="glass-panel p-8 rounded-2xl text-center max-w-md border border-gray-600">
+    class="hidden fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+    <div id="modal-card" class="relative glass-panel p-8 rounded-2xl text-center max-w-md border border-gray-600 pointer-events-auto">
+      <button onclick="toggleFailureModal()" title="Minimize" data-i18n-title="minimize"
+        class="absolute top-3 right-3 w-6 h-6 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded border border-gray-600 text-gray-400 transition">
+        <span class="text-[10px]">─</span>
+      </button>
       <h2 id="modal-title" data-i18n="system_failure" class="text-4xl font-bold mb-4 text-white font-mono tracking-tighter">
         SYSTEM FAILURE
       </h2>
@@ -763,6 +767,11 @@
         </button>
       </div>
     </div>
+    <button id="modal-restore" onclick="toggleFailureModal()"
+      data-i18n="show_results"
+      class="hidden absolute bottom-6 right-6 pointer-events-auto glass-panel px-4 py-2 rounded-lg border border-red-500/50 text-red-400 text-sm font-mono hover:text-white transition">
+      ⚠ Show Results
+    </button>
   </div>
 
   <!-- Main Menu Modal -->
