@@ -363,7 +363,7 @@ const CAMPAIGN_LEVELS = [
         allowedServices: [],
         objectives: {
             primary: [
-                { id: "profit_100", label: "Net profit ≥ -$210 in 90", check: (s) => CampaignObjectives.netProfit(s) >= -210 },
+                { id: "profit_100", label: "Net profit ≥ -$210 in 90s", check: (s) => CampaignObjectives.netProfit(s) >= -210 },
                 { id: "rep_above_70", label: "Reputation above 70%", check: (s) => s.reputation >= 70 },
             ],
             bonus: [
