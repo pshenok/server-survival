@@ -2083,6 +2083,11 @@ function createConnection(fromId, toId) {
     const from = getEntity(fromId),
         to = getEntity(toId);
     if (!from || !to || from.connections.includes(toId)) return;
+    // Reject the reverse edge of an existing link. ALB⇄SQS is the only pair valid
+    // in both directions, and having both at once loops requests forever (SQS
+    // pushes to ALB, ALB's generic forwarding pushes back) — they never reach
+    // finishRequest/failRequest and leak. Either single direction stays legal.
+    if (to.connections && to.connections.includes(fromId)) return;
 
     let valid = false;
     const t1 = from.type,
@@ -2092,6 +2097,7 @@ function createConnection(fromId, toId) {
     else if (t1 === "waf" && t2 === "alb") valid = true;
     else if (t1 === "waf" && t2 === "sqs") valid = true;
     else if (t1 === "sqs" && t2 === "alb") valid = true;
+    else if (t1 === "alb" && t2 === "sqs") valid = true;
     else if (t1 === "sqs" && t2 === "compute") valid = true;
     else if (t1 === "alb" && t2 === "compute") valid = true;
     else if (t1 === "compute" && t2 === "cache") valid = true;
