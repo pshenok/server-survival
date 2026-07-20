@@ -151,6 +151,8 @@ const EN_TRANSLATIONS = {
     "block_malicious": "Block MALICIOUS with Firewall",
     "help": "Help",
     "sound": "Sound",
+    "music": "Music",
+    "sfx": "SFX",
     "select": "Select",
     "link": "Link",
     "demolish": "Demolish",

@@ -1,7 +1,15 @@
 class SoundService {
     constructor() {
         this.ctx = null;
-        this.muted = true;
+        // Separate music / SFX channels (#112). Both start muted (autoplay
+        // policies require a gesture anyway); saved prefs override.
+        this.musicMuted = true;
+        this.sfxMuted = true;
+        try {
+            const saved = JSON.parse(localStorage.getItem("serverSurvivalSoundPrefs"));
+            if (saved && typeof saved.musicMuted === "boolean") this.musicMuted = saved.musicMuted;
+            if (saved && typeof saved.sfxMuted === "boolean") this.sfxMuted = saved.sfxMuted;
+        } catch (e) { /* corrupt prefs — keep defaults */ }
         this.masterGain = null;
         this.gameBgm = new Audio('assets/sounds/game-background.mp3');
         this.gameBgm.loop = true;
@@ -31,7 +39,7 @@ class SoundService {
             if (this.ctx.state === 'suspended') this.ctx.resume();
 
             // Try to play current BGM if set
-            if (this.currentBgm && this.currentBgm.paused && !this.muted) {
+            if (this.currentBgm && this.currentBgm.paused && !this.musicMuted) {
                 this.currentBgm.play().catch(e => console.log("BGM autoplay blocked"));
             }
 
@@ -56,7 +64,7 @@ class SoundService {
 
     switchBGM(newBgm) {
         if (this.currentBgm === newBgm) {
-            if (this.currentBgm.paused && !this.muted && this.ctx && this.ctx.state === 'running') {
+            if (this.currentBgm.paused && !this.musicMuted && this.ctx && this.ctx.state === 'running') {
                 this.currentBgm.play().catch(e => { });
             }
             return;
@@ -68,7 +76,7 @@ class SoundService {
         }
 
         this.currentBgm = newBgm;
-        if (!this.muted) {
+        if (!this.musicMuted) {
             // If context is running, play immediately. Otherwise it will be picked up by resumeAudio
             if (this.ctx && this.ctx.state === 'running') {
                 this.currentBgm.play().catch(e => console.log("Waiting for interaction to play BGM"));
@@ -77,37 +85,49 @@ class SoundService {
     }
 
     playMenuHover() {
-        if (!this.muted) {
+        if (!this.sfxMuted) {
             this.sfxHover.currentTime = 0;
             this.sfxHover.play().catch(() => { });
         }
     }
 
     playMenuClick() {
-        if (!this.muted) {
+        if (!this.sfxMuted) {
             this.sfxClick.currentTime = 0;
             this.sfxClick.play().catch(() => { });
         }
     }
 
-    toggleMute() {
-        this.muted = !this.muted;
-        if (this.masterGain) {
-            this.masterGain.gain.value = this.muted ? 0 : 0.3;
-        }
+    _persistPrefs() {
+        try {
+            localStorage.setItem("serverSurvivalSoundPrefs",
+                JSON.stringify({ musicMuted: this.musicMuted, sfxMuted: this.sfxMuted }));
+        } catch (e) { /* storage unavailable — non-fatal */ }
+    }
 
-        if (this.muted) {
+    toggleMusic() {
+        this.musicMuted = !this.musicMuted;
+        if (this.musicMuted) {
             if (this.currentBgm) this.currentBgm.pause();
         } else {
             if (this.currentBgm) this.currentBgm.play().catch(e => { });
         }
+        this._persistPrefs();
+        return this.musicMuted;
+    }
 
-        return this.muted;
+    toggleSfx() {
+        this.sfxMuted = !this.sfxMuted;
+        if (this.masterGain) {
+            this.masterGain.gain.value = this.sfxMuted ? 0 : 0.3;
+        }
+        this._persistPrefs();
+        return this.sfxMuted;
     }
 
     playTone(freq, type, duration, startTime = 0) {
         // Also check if audio context is in running state
-        if (!this.ctx || this.muted || this.ctx.state !== 'running') return;
+        if (!this.ctx || this.sfxMuted || this.ctx.state !== 'running') return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 
@@ -142,7 +162,7 @@ class SoundService {
         this.playTone(1200, 'triangle', 0.1, 0.05);
     }
     playGameOver() {
-        if (!this.ctx || this.muted) return;
+        if (!this.ctx || this.sfxMuted) return;
         [440, 415, 392, 370].forEach((f, i) => {
             this.playTone(f, 'triangle', 0.4, i * 0.4);
         });

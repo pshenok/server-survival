@@ -151,6 +151,8 @@ const FR_TRANSLATIONS = {
     "block_malicious": "Bloquer MALVEILLANT avec pare-feu",
     "help": "Aide",
     "sound": "Son",
+    "music": "Musique",
+    "sfx": "Effets",
     "select": "Sélect",
     "link": "Lien",
     "demolish": "Démolir",

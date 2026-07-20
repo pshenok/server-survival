@@ -176,6 +176,8 @@ const ZH_TRANSLATIONS = {
     "block_malicious": "使用防火墙阻断恶意流量",
     "help": "帮助",
     "sound": "音效",
+    "music": "音乐",
+    "sfx": "音效",
     "select": "选择",
     "link": "连接",
     "demolish": "拆除",

@@ -152,6 +152,8 @@ const KO_TRANSLATIONS = {
     "block_malicious": "방화벽으로 악성 트래픽 차단",
     "help": "도움말",
     "sound": "사운드",
+    "music": "음악",
+    "sfx": "효과음",
     "select": "선택",
     "link": "연결",
     "demolish": "철거",

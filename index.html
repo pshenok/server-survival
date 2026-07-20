@@ -514,12 +514,25 @@
         <span data-i18n="help" class="text-[9px] font-bold mt-1 uppercase">Help</span>
       </button>
 
-      <!-- Mute Button -->
-      <button id="tool-mute"
-        class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-gray-600"
-        onclick="toggleMute()">
-        <div class="text-xl" id="mute-icon">🔊</div>
-        <span data-i18n="sound" class="text-[9px] font-bold mt-1 uppercase">Sound</span>
+      <!-- Music / SFX toggles (#112) -->
+      <button id="tool-music"
+        class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-gray-600 bg-red-900 pulse-green"
+        onclick="toggleMusic()">
+        <svg id="music-icon" class="w-6 h-6 opacity-40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 18V6l10-2v12" />
+          <circle cx="7" cy="18" r="2" />
+          <circle cx="17" cy="16" r="2" />
+        </svg>
+        <span data-i18n="music" class="text-[9px] font-bold mt-1 uppercase">Music</span>
+      </button>
+      <button id="tool-sfx"
+        class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-gray-600 bg-red-900 pulse-green"
+        onclick="toggleSfx()">
+        <svg id="sfx-icon" class="w-6 h-6 opacity-40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5 6 9H3v6h3l5 4V5z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" />
+        </svg>
+        <span data-i18n="sfx" class="text-[9px] font-bold mt-1 uppercase">SFX</span>
       </button>
 
       <!-- Tools -->
@@ -778,11 +791,24 @@
   <div id="main-menu-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
     <div
       class="relative bg-gray-900/90 p-12 rounded-2xl border border-blue-500/30 shadow-2xl max-w-md w-full text-center">
-      <!-- Menu Mute Button -->
-      <button id="menu-mute-btn" onclick="toggleMute()"
-        class="absolute top-4 right-4 text-gray-400 hover:text-white transition p-2 rounded-full pulse-green">
-        <span id="menu-mute-icon" class="text-xl">🔇</span>
-      </button>
+      <!-- Menu Music / SFX toggles (#112) -->
+      <div class="absolute top-4 right-4 flex gap-1">
+        <button id="menu-music-btn" onclick="toggleMusic()" title="Music"
+          class="text-gray-400 hover:text-white transition p-2 rounded-full pulse-green">
+          <svg id="menu-music-icon" class="w-5 h-5 opacity-40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 18V6l10-2v12" />
+            <circle cx="7" cy="18" r="2" />
+            <circle cx="17" cy="16" r="2" />
+          </svg>
+        </button>
+        <button id="menu-sfx-btn" onclick="toggleSfx()" title="SFX"
+          class="text-gray-400 hover:text-white transition p-2 rounded-full pulse-green">
+          <svg id="menu-sfx-icon" class="w-5 h-5 opacity-40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5 6 9H3v6h3l5 4V5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" />
+          </svg>
+        </button>
+      </div>
 
       <h1
         data-i18n="title"

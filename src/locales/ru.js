@@ -151,6 +151,8 @@ const RU_TRANSLATIONS = {
     "block_malicious": "Блокируйте вредоносный трафик Firewall",
     "help": "Помощь",
     "sound": "Звук",
+    "music": "Музыка",
+    "sfx": "Звуки",
     "select": "Выбрать",
     "link": "Соединить",
     "demolish": "Удалить",

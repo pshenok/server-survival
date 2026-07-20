@@ -151,6 +151,8 @@ const DE_TRANSLATIONS = {
     "block_malicious": "Blockiere BÖSARTIGES mit Firewall",
     "help": "Hilfe",
     "sound": "Ton",
+    "music": "Musik",
+    "sfx": "Effekte",
     "select": "Auswählen",
     "link": "Verbinden",
     "demolish": "Abreißen",

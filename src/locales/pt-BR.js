@@ -176,6 +176,8 @@ const PT_BR_TRANSLATIONS = {
     "block_malicious": "Bloqueie tráfego malicioso com firewall",
     "help": "Ajuda",
     "sound": "Som",
+    "music": "Música",
+    "sfx": "Efeitos",
     "select": "Selecionar",
     "link": "Conectar",
     "demolish": "Demolir",

@@ -2320,28 +2320,42 @@ window.setTimeScale = (s) => {
     }
 };
 
-window.toggleMute = () => {
-    const muted = STATE.sound.toggleMute();
-    const icon = document.getElementById("mute-icon");
-    const menuIcon = document.getElementById("menu-mute-icon");
-
-    const iconText = muted ? "🔇" : "🔊";
-    if (icon) icon.innerText = iconText;
-    if (menuIcon) menuIcon.innerText = iconText;
-
-    const muteBtn = document.getElementById("tool-mute");
-    const menuMuteBtn = document.getElementById("menu-mute-btn"); // We need to add ID to menu button
-
-    if (muted) {
-        muteBtn.classList.add("bg-red-900");
-        muteBtn.classList.add("pulse-green");
-        if (menuMuteBtn) menuMuteBtn.classList.add("pulse-green");
-    } else {
-        muteBtn.classList.remove("bg-red-900");
-        muteBtn.classList.remove("pulse-green");
-        if (menuMuteBtn) menuMuteBtn.classList.remove("pulse-green");
+// Separate music / SFX controls (#112). Muted channel = red toolbar button,
+// pulsing menu button, dimmed icon — same affordances the old combined
+// mute button used.
+function syncSoundButtons() {
+    const channels = [
+        { muted: STATE.sound.musicMuted, tool: "tool-music", toolIcon: "music-icon", menu: "menu-music-btn", menuIcon: "menu-music-icon" },
+        { muted: STATE.sound.sfxMuted, tool: "tool-sfx", toolIcon: "sfx-icon", menu: "menu-sfx-btn", menuIcon: "menu-sfx-icon" },
+    ];
+    for (const ch of channels) {
+        const toolBtn = document.getElementById(ch.tool);
+        const menuBtn = document.getElementById(ch.menu);
+        for (const iconId of [ch.toolIcon, ch.menuIcon]) {
+            document.getElementById(iconId)?.classList.toggle("opacity-40", ch.muted);
+        }
+        if (toolBtn) {
+            toolBtn.classList.toggle("bg-red-900", ch.muted);
+            toolBtn.classList.toggle("pulse-green", ch.muted);
+        }
+        if (menuBtn) menuBtn.classList.toggle("pulse-green", ch.muted);
     }
+}
+
+window.toggleMusic = () => {
+    STATE.sound.init();
+    STATE.sound.toggleMusic();
+    syncSoundButtons();
 };
+
+window.toggleSfx = () => {
+    STATE.sound.init();
+    STATE.sound.toggleSfx();
+    syncSoundButtons();
+};
+
+// Reflect persisted prefs on load
+syncSoundButtons();
 
 let currentZoom = 1;
 const minZoom = 0.5;

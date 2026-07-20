@@ -151,6 +151,8 @@ const IT_TRANSLATIONS = {
     "block_malicious": "Blocca MALEVOLO con il Firewall",
     "help": "Aiuto",
     "sound": "Suono",
+    "music": "Musica",
+    "sfx": "Effetti",
     "select": "Seleziona",
     "link": "Collega",
     "demolish": "Demolisci",
