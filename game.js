@@ -3824,7 +3824,9 @@ function loadGameState(saveData = null) {
         STATE.money = saveData.money || 0;
         STATE.reputation = saveData.reputation || 100;
         STATE.requestsProcessed = saveData.requestsProcessed || 0;
-        STATE.score = { ...saveData.score } || {
+        // A spread of undefined is {} (truthy), so `|| default` never fired —
+        // an old save without this field got {} and NaN'd the score math.
+        STATE.score = saveData.score ? { ...saveData.score } : {
             total: 0,
             storage: 0,
             database: 0,
@@ -3843,7 +3845,8 @@ function loadGameState(saveData = null) {
         STATE.gameMode = saveData.gameMode || "survival";
         STATE.sandboxBudget = saveData.sandboxBudget || 2000;
         STATE.upkeepEnabled = saveData.upkeepEnabled !== false;
-        STATE.trafficDistribution = { ...saveData.trafficDistribution } || {
+        // Same dead-fallback pattern as score above: spread of undefined is {}.
+        STATE.trafficDistribution = saveData.trafficDistribution ? { ...saveData.trafficDistribution } : {
             STATIC: 0.3,
             READ: 0.2,
             WRITE: 0.15,

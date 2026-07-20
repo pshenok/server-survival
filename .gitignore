@@ -1,2 +1,4 @@
 .DS_Store
 .vs/
+node_modules/
+coverage/
