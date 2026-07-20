@@ -471,6 +471,7 @@ const RU_TRANSLATIONS = {
     "hint_serverless_expensive": "💡 Ваш Serverless накапливает плату за запросы при таком RPS. Добавьте Compute для более дешёвой постоянной нагрузки.",
     "hint_search_overload": "💡 Ваша БД перегружена SEARCH-запросами. Добавьте Search Engine!",
     "hint_read_overload": "💡 Слишком много READ-запросов бьёт по БД. Read Replica разгрузит трафик чтения!",
+    "hint_replica_write": "💡 Реплики только для чтения! Держите Compute подключённым к мастер-БД — WRITE-трафику некуда идти.",
     "hint_no_waf": "💡 Вредоносный трафик проходит! Добавьте Firewall, чтобы блокировать атаки.",
     "hint_no_cache": "💡 Многие запросы кэшируемы. Cache снизит нагрузку на БД!",
     "hint_compute_overload": "💡 Ваши узлы Compute перегружены. Добавьте Queue, чтобы буферизовать запросы.",

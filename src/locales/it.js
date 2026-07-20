@@ -470,6 +470,7 @@ const IT_TRANSLATIONS = {
     "hint_serverless_expensive": "💡 La tua Funzione Serverless sta accumulando costi per richiesta con questa frequenza di RPS. Prendi in considerazione l'aggiunta di un nodo Compute per un rendimento costante più economico.",
     "hint_search_overload": "💡 Il tuo DB è sovraccarico di query di RICERCA. Prendi in considerazione l'aggiunta di un Motore di Ricerca!",
     "hint_read_overload": "💡 Troppe LETTURE colpiscono il tuo DB. Una Read Replica può alleviare il traffico di lettura!",
+    "hint_replica_write": "💡 Le repliche sono di sola lettura! Mantieni Compute collegato al DB principale — il traffico WRITE non ha dove andare.",
     "hint_no_waf": "💡 Il traffico malevolo sta passando! Aggiungi un Firewall per bloccare gli attacchi.",
     "hint_no_cache": "💡 Molte richieste sono memorizzabili in cache. Una Memory Cache ridurrebbe il carico sul DB!",
     "hint_compute_overload": "💡 I tuoi nodi Compute sono sovraccarichi. Aggiungi una Coda di Messaggi per bufferizzare le richieste.",

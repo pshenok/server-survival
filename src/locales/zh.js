@@ -483,6 +483,7 @@ const ZH_TRANSLATIONS = {
     // Smart Hints
     "hint_search_overload": "💡 Your DB is overloaded with SEARCH queries. Consider adding a Search Engine!",
     "hint_read_overload": "💡 Too many READs hitting your DB. A Read Replica can offload read traffic!",
+    "hint_replica_write": "💡 只读副本不能写入！请保持 Compute 与主数据库相连——WRITE 流量无处可去。",
     "hint_no_waf": "💡 Malicious traffic is getting through! Add a Firewall to block attacks.",
     "hint_no_cache": "💡 Many requests are cacheable. A Memory Cache would reduce DB load!",
     "hint_compute_overload": "💡 Your Compute nodes are overwhelmed. Add a Message Queue to buffer requests.",

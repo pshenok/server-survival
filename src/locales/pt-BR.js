@@ -484,6 +484,7 @@ const PT_BR_TRANSLATIONS = {
     // Smart Hints
     "hint_search_overload": "💡 Your DB is overloaded with SEARCH queries. Consider adding a Search Engine!",
     "hint_read_overload": "💡 Too many READs hitting your DB. A Read Replica can offload read traffic!",
+    "hint_replica_write": "💡 Réplicas são somente leitura! Mantenha o Compute conectado ao BD principal — o tráfego WRITE não tem para onde ir.",
     "hint_no_waf": "💡 Malicious traffic is getting through! Add a Firewall to block attacks.",
     "hint_no_cache": "💡 Many requests are cacheable. A Memory Cache would reduce DB load!",
     "hint_compute_overload": "💡 Your Compute nodes are overwhelmed. Add a Message Queue to buffer requests.",

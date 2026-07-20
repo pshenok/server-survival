@@ -891,9 +891,22 @@ function checkSmartHints() {
     .filter(s => s.type === "compute")
     .some(s => s.totalLoad > 0.8);
 
+  // Misconfiguration: a Compute routes READs through a Replica but has no
+  // master DB path left for WRITE/SEARCH traffic (#190). Players replace the
+  // direct DB link with the Replica and then watch WRITEs die with no clue why
+  // — Replicas are read-only by design, so teach that instead of failing silently.
+  const replicaNoMaster = STATE.services.some(s =>
+    s.type === "compute" &&
+    s.connections.some(id => STATE.services.find(x => x.id === id)?.type === "replica") &&
+    !s.connections.some(id => ["db", "nosql"].includes(STATE.services.find(x => x.id === id)?.type))
+  );
+
   let hint = null;
 
-  if (dbOverloaded && !hasSearch && STATE.trafficDistribution.SEARCH > 0.05 &&
+  if (replicaNoMaster && (STATE.failures.WRITE || 0) + (STATE.failures.SEARCH || 0) > 3 &&
+      !STATE.hints.dismissedHints.has("replica_write")) {
+    hint = { key: "hint_replica_write", id: "replica_write" };
+  } else if (dbOverloaded && !hasSearch && STATE.trafficDistribution.SEARCH > 0.05 &&
       !STATE.hints.dismissedHints.has("search")) {
     hint = { key: "hint_search_overload", id: "search" };
   } else if (dbOverloaded && !hasReplica && STATE.trafficDistribution.READ > 0.1 &&
