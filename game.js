@@ -1,3 +1,16 @@
+import { CONFIG, TRAFFIC_TYPES } from "./src/config.js";
+import { STATE } from "./src/state.js";
+import { i18n } from "./src/i18n.js";
+import { Request } from "./src/entities/Request.js";
+import { Service } from "./src/entities/Service.js";
+import { SoundService } from "./src/services/SoundService.js";
+// Side-effect imports: these modules install their instances on window
+// (window.tutorial, window.campaign), which is how game.js reaches them.
+import "./src/tutorial.js";
+import "./src/campaign/campaign.js";
+import { CAMPAIGN_LEVELS } from "./src/campaign/levels.js";
+import { renderArchitectureSVG } from "./src/campaign/diagram.js";
+
 STATE.sound = new SoundService();
 
 // ==================== UTILITY FUNCTIONS ====================
@@ -1294,7 +1307,7 @@ function restartGame() {
 
     // startCampaignLevel integrates important campaign level state and calls resetGame
     if (STATE.gameMode === "campaign" && STATE.campaign?.currentLevelId) {
-        startCampaignLevel(STATE.campaign.currentLevelId);
+        window.startCampaignLevel(STATE.campaign.currentLevelId);
         return;
     }
     resetGame(STATE.gameMode);
@@ -1889,7 +1902,7 @@ window.campaignStartCurrentLevel = () => {
     const id = _pendingCampaignLevelId;
     if (!id) return;
     document.getElementById("campaign-briefing-modal").classList.add("hidden");
-    startCampaignLevel(id);
+    window.startCampaignLevel(id);
 };
 
 window.startCampaignLevel = (levelId) => {
@@ -2043,7 +2056,7 @@ function showCampaignDebrief(outcome, reason, level) {
 window.campaignRetryLevel = () => {
     const id = STATE.campaign.currentLevelId;
     document.getElementById("campaign-debrief-modal").classList.add("hidden");
-    if (id) startCampaignLevel(id);
+    if (id) window.startCampaignLevel(id);
 };
 
 window.campaignNextLevel = () => {
@@ -2051,8 +2064,8 @@ window.campaignNextLevel = () => {
     document.getElementById("campaign-debrief-modal").classList.add("hidden");
     if (id) {
         const next = CAMPAIGN_LEVELS.find((l) => l.id === id + 1);
-        if (next) openCampaignBriefing(next.id);
-        else exitCampaignToMap();
+        if (next) window.openCampaignBriefing(next.id);
+        else window.exitCampaignToMap();
     }
 };
 
@@ -3490,7 +3503,7 @@ document.addEventListener("keydown", (event) => {
         if (menu.classList.contains("hidden")) {
             openMainMenu();
         } else if (STATE.gameStarted && STATE.isRunning) {
-            resumeGame();
+            window.resumeGame();
         }
         return;
     }
@@ -3603,7 +3616,7 @@ window.clearAllServices = () => {
 function openMainMenu() {
     // Store current time scale and pause
     STATE.previousTimeScale = STATE.timeScale;
-    setTimeScale(0);
+    window.setTimeScale(0);
 
     // Hide tutorial while menu is open
     if (window.tutorial?.isActive) {
@@ -3743,7 +3756,7 @@ window.onSaveGameFileUpload = (event) => {
     reader.onload = function (e) {
         try {
             let saveData = JSON.parse(e.target.result);
-            window.loadGameState(saveData);
+            loadGameState(saveData);
 
             STATE.sound.playPlace(); // Use place sound as feedback
         } catch (error) {
@@ -4025,3 +4038,38 @@ function restoreConnections(savedConnections, internetConnections) {
         createConnection(connData.from, connData.to);
     });
 }
+
+// ==================== ESM BOUNDARY (#155 PR 2) ====================
+
+// Under classic scripts these three function declarations were implicit
+// globals; index.html inline on*= handlers still call them, so they must be
+// put on window explicitly now that module scope no longer leaks.
+window.restartGame = restartGame;
+window.retryWithSameArchitecture = retryWithSameArchitecture;
+window.toggleAutoRepair = toggleAutoRepair;
+
+// The generated smart-hint dismiss button (showSmartHint) embeds an inline
+// onclick that touches STATE.hints — inline handlers resolve against the
+// global scope, and the old top-level `const STATE` was a global lexical
+// binding. Keep STATE reachable from there.
+window.STATE = STATE;
+
+// Runtime cross-module surface: Request.js, Service.js and campaign.js import
+// these (cyclically — safe, they are hoisted declarations / top-level consts
+// only dereferenced after evaluation).
+export {
+    addInterventionWarning,
+    calculateFailChanceBasedOnLoad,
+    failRequest,
+    finishRequest,
+    flashMoney,
+    getUpkeepMultiplier,
+    removeRequest,
+    renderCampaignObjectives,
+    requestGroup,
+    serviceGroup,
+    showCampaignDebrief,
+    spawnRequest,
+    throttleRequest,
+    updateScore,
+};

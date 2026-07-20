@@ -1,4 +1,4 @@
-const ZH_TRANSLATIONS = {
+export const ZH_TRANSLATIONS = {
     "title": "服务器：生存协议",
     "survival": "生存模式",
     "budget": "预算",

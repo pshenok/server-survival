@@ -1,7 +1,17 @@
+import { EN_TRANSLATIONS } from "./locales/en.js";
+import { ZH_TRANSLATIONS } from "./locales/zh.js";
+import { PT_BR_TRANSLATIONS } from "./locales/pt-BR.js";
+import { DE_TRANSLATIONS } from "./locales/de.js";
+import { FR_TRANSLATIONS } from "./locales/fr.js";
+import { KO_TRANSLATIONS } from "./locales/ko.js";
+import { RU_TRANSLATIONS } from "./locales/ru.js";
+import { IT_TRANSLATIONS } from "./locales/it.js";
+import { NE_TRANSLATIONS } from "./locales/nep.js";
+
 /**
  * Simple i18n manager for the game
  */
-class I18nManager {
+export class I18nManager {
     constructor() {
         this.currentLocale = localStorage.getItem('game_locale') || 'en';
         this.translations = {
@@ -77,8 +87,10 @@ class I18nManager {
     }
 }
 
-// Create a global instance
-window.i18n = new I18nManager();
+// Create a global instance (kept on window: index.html inline handlers call
+// i18n.setLocale(...), which resolves via the global scope)
+export const i18n = new I18nManager();
+window.i18n = i18n;
 
 // Function to easily translate strings in JS
 window.t = (key, variables) => window.i18n.t(key, variables);

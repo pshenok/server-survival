@@ -2,13 +2,7 @@
 // out-of-range preBuilt connection indices, traffic mixes that don't sum to 1,
 // and traffic types with no reachable destination (#159, #162, #184).
 import { describe, expect, it } from "vitest";
-import { loadScriptGlobals } from "./helpers/load-globals.mjs";
-
-// levels.js closes over CampaignObjectives inside check() functions — the
-// functions aren't called here, so a stub satisfies evaluation.
-const { CAMPAIGN_LEVELS } = loadScriptGlobals("src/campaign/levels.js", {
-  CampaignObjectives: {},
-});
+import { CAMPAIGN_LEVELS } from "../src/campaign/levels.js";
 
 describe("campaign levels", () => {
   it("has 14 levels with sequential ids", () => {

@@ -1,4 +1,4 @@
-const KO_TRANSLATIONS = {
+export const KO_TRANSLATIONS = {
     "title": "서버: 생존 프로토콜",
     "survival": "생존",
     "budget": "예산",

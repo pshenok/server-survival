@@ -1,3 +1,6 @@
+import { STATE } from "./state.js";
+import { i18n } from "./i18n.js";
+
 const TUTORIAL_STORAGE_KEY = 'serverSurvivalTutorialComplete';
 
 function getTutorialSteps() {

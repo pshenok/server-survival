@@ -8,10 +8,23 @@
 //     highestUnlocked: number
 //   }
 
+import { STATE } from "../state.js";
+import { CAMPAIGN_LEVELS } from "./levels.js";
+// Cyclic import (game.js ⇄ campaign.js) is safe: hoisted function declarations
+// in game.js, only called at runtime. Under classic scripts the `typeof x ===
+// "function"` guards below tolerated load-order gaps; as imports the names are
+// always bound, so the guards simply always pass now.
+import {
+    addInterventionWarning,
+    renderCampaignObjectives,
+    showCampaignDebrief,
+    spawnRequest,
+} from "../../game.js";
+
 const CAMPAIGN_STORAGE_KEY = "serverSurvivalCampaignProgress";
 const CAMPAIGN_PROGRESS_VERSION = 1;
 
-class CampaignController {
+export class CampaignController {
     constructor() {
         this.active = false;
         this._tickCounter = 0;

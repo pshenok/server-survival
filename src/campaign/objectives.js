@@ -1,7 +1,7 @@
 // Pure objective-check helpers. All take live STATE and return boolean or number.
 // Stateless and side-effect free.
 
-const CampaignObjectives = {
+export const CampaignObjectives = {
     // ---- counters tracked via STATE.campaign.completedByType (populated in Task 5) ----
 
     completedOfType(state, type) {

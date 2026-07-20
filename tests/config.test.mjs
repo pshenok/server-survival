@@ -1,8 +1,6 @@
 // Config sanity (#155 PR 1): the invariants that past bugs violated.
 import { describe, expect, it } from "vitest";
-import { loadScriptGlobals } from "./helpers/load-globals.mjs";
-
-const { CONFIG, TRAFFIC_TYPES } = loadScriptGlobals("src/config.js");
+import { CONFIG, TRAFFIC_TYPES } from "../src/config.js";
 
 describe("traffic types", () => {
   it("every traffic type has a destination and a reward", () => {

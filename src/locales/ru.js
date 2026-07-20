@@ -1,4 +1,4 @@
-const RU_TRANSLATIONS = {
+export const RU_TRANSLATIONS = {
     "title": "СЕРВЕР: Протокол Выживания",
     "survival": "ВЫЖИВАНИЕ",
     "budget": "БЮДЖЕТ",

@@ -34,7 +34,7 @@ const DIAGRAM_SERVICE_LABELS = {
  * @param {Object<number,string>} highlights e.g. { 3: "critical" }
  * @returns {string} SVG markup
  */
-function renderArchitectureSVG(preBuilt, highlights = {}) {
+export function renderArchitectureSVG(preBuilt, highlights = {}) {
     const services = preBuilt.services || [];
     const connections = preBuilt.connections || [];
 

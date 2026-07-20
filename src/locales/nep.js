@@ -1,4 +1,4 @@
-const NE_TRANSLATIONS = {
+export const NE_TRANSLATIONS = {
     "title": "सर्भर: अस्तित्व प्रोटोकल",
     "survival": "अस्तित्व",
     "budget": "बजेट",

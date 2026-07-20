@@ -5,7 +5,13 @@
 import { describe, expect, it } from "vitest";
 import { LOCALES, loadLocale } from "./helpers/load-globals.mjs";
 
-const en = loadLocale(LOCALES.find((l) => l.code === "en"));
+// Preload every dict with top-level await so the sync describe.each callbacks
+// below can look them up.
+const DICTS = new Map(
+  await Promise.all(LOCALES.map(async (l) => [l.code, await loadLocale(l)]))
+);
+
+const en = DICTS.get("en");
 const enKeys = Object.keys(en).sort();
 
 const PLACEHOLDER = /\{(\w+)\}/g;
@@ -16,7 +22,7 @@ function placeholders(str) {
 describe.each(LOCALES.filter((l) => l.code !== "en"))(
   "locale $code",
   (locale) => {
-    const dict = loadLocale(locale);
+    const dict = DICTS.get(locale.code);
 
     it("has every key that en has (missing keys render as raw key strings)", () => {
       const keys = new Set(Object.keys(dict));

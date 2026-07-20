@@ -1,4 +1,23 @@
-class Service {
+import { CONFIG, TRAFFIC_TYPES } from "../config.js";
+import { STATE } from "../state.js";
+import { i18n } from "../i18n.js";
+// Cyclic import (game.js ⇄ Service.js) is safe: these are hoisted function
+// declarations / top-level consts in game.js, only dereferenced at runtime —
+// long after both modules have finished evaluating.
+import {
+  addInterventionWarning,
+  calculateFailChanceBasedOnLoad,
+  failRequest,
+  finishRequest,
+  flashMoney,
+  getUpkeepMultiplier,
+  removeRequest,
+  serviceGroup,
+  throttleRequest,
+  updateScore,
+} from "../../game.js";
+
+export class Service {
   constructor(type, pos) {
     this.id = "svc_" + Math.random().toString(36).substr(2, 9);
     this.type = type;

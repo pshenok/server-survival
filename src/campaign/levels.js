@@ -21,7 +21,9 @@
 //   failConditions     — { repBelow?, moneyBelow?, timeoutSec? }
 //   debriefTip         — shown on win
 
-const CAMPAIGN_LEVELS = [
+import { CampaignObjectives } from "./objectives.js";
+
+export const CAMPAIGN_LEVELS = [
     // ===== Chapter 1: Basics =====
     {
         id: 1, chapter: 1,

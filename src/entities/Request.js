@@ -1,4 +1,11 @@
-class Request {
+import { CONFIG } from "../config.js";
+import { STATE } from "../state.js";
+// Cyclic import (game.js ⇄ Request.js) is safe: these are hoisted function
+// declarations / top-level consts in game.js, only dereferenced at runtime —
+// long after both modules have finished evaluating.
+import { failRequest, requestGroup } from "../../game.js";
+
+export class Request {
     constructor(type) {
         this.id = Math.random().toString(36);
         this.type = type;

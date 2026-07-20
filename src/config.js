@@ -1,4 +1,4 @@
-const TRAFFIC_TYPES = {
+export const TRAFFIC_TYPES = {
   STATIC: "STATIC",
   READ: "READ",
   WRITE: "WRITE",
@@ -7,7 +7,7 @@ const TRAFFIC_TYPES = {
   MALICIOUS: "MALICIOUS",
 };
 
-const CONFIG = {
+export const CONFIG = {
   gridSize: 30,
   tileSize: 4,
   colors: {

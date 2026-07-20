@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { LOCALES, loadLocale } from "./helpers/load-globals.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const en = loadLocale(LOCALES.find((l) => l.code === "en"));
+const en = await loadLocale(LOCALES.find((l) => l.code === "en"));
 
 function collectSources() {
   const files = ["game.js", "index.html", "src/tutorial.js"];

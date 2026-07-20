@@ -1,4 +1,4 @@
-class SoundService {
+export class SoundService {
     constructor() {
         this.ctx = null;
         // Separate music / SFX channels (#112). Both start muted (autoplay

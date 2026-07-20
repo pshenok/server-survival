@@ -1,4 +1,4 @@
-const PT_BR_TRANSLATIONS = {
+export const PT_BR_TRANSLATIONS = {
     "title": "SERVER: Survival Protocol",
     "survival": "SOBREVIVÊNCIA",
     "budget": "Orçamento",
