@@ -1,21 +1,21 @@
 import { CONFIG, TRAFFIC_TYPES } from "../config.js";
 import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
-// Cyclic import (game.js ⇄ Service.js) is safe: these are hoisted function
-// declarations / top-level consts in game.js, only dereferenced at runtime —
-// long after both modules have finished evaluating.
+// Cyclic imports (game.js / core modules ⇄ Service.js) are safe: these are
+// hoisted function declarations / top-level consts, only dereferenced at
+// runtime — long after all modules have finished evaluating.
 import {
-  addInterventionWarning,
   calculateFailChanceBasedOnLoad,
   failRequest,
   finishRequest,
   flashMoney,
   getUpkeepMultiplier,
   removeRequest,
-  serviceGroup,
   throttleRequest,
   updateScore,
-} from "../../game.js";
+} from "../core/actions.js";
+import { addInterventionWarning } from "../core/events.js";
+import { serviceGroup } from "../../game.js";
 
 export class Service {
   constructor(type, pos) {

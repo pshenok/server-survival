@@ -10,15 +10,15 @@
 
 import { STATE } from "../state.js";
 import { CAMPAIGN_LEVELS } from "./levels.js";
-// Cyclic import (game.js ⇄ campaign.js) is safe: hoisted function declarations
-// in game.js, only called at runtime. Under classic scripts the `typeof x ===
-// "function"` guards below tolerated load-order gaps; as imports the names are
-// always bound, so the guards simply always pass now.
+// Cyclic imports (game.js / core modules ⇄ campaign.js) are safe: hoisted
+// function declarations, only called at runtime. Under classic scripts the
+// `typeof x === "function"` guards below tolerated load-order gaps; as imports
+// the names are always bound, so the guards simply always pass now.
+import { spawnRequest } from "../core/actions.js";
+import { addInterventionWarning } from "../core/events.js";
 import {
-    addInterventionWarning,
     renderCampaignObjectives,
     showCampaignDebrief,
-    spawnRequest,
 } from "../../game.js";
 
 const CAMPAIGN_STORAGE_KEY = "serverSurvivalCampaignProgress";
