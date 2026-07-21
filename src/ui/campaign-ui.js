@@ -9,10 +9,11 @@ import { CAMPAIGN_LEVELS } from "../campaign/levels.js";
 import { renderArchitectureSVG } from "../campaign/diagram.js";
 import { Service } from "../entities/Service.js";
 import { updateRepairCostTable } from "../core/economy.js";
+import { createConnection } from "../sim/topology.js";
 // Runtime-only cycle (game.js ⇄ campaign-ui.js) — established pattern:
-// resetGame/createConnection are hoisted function declarations in game.js,
-// only called at runtime, long after both modules evaluate.
-import { createConnection, resetGame } from "../../game.js";
+// resetGame is a hoisted function declaration in game.js, only called at
+// runtime, long after both modules evaluate.
+import { resetGame } from "../../game.js";
 
 function openCampaignSelect() {
     document.getElementById("main-menu-modal").classList.add("hidden");

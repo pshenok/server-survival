@@ -7,15 +7,14 @@ import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
 import { updateScoreUI } from "../core/actions.js";
 import { updateRepairCostTable } from "../core/economy.js";
+import { createConnection, restoreService } from "../sim/topology.js";
 // Runtime-only cycle (game.js ⇄ save-load.js) — established pattern: these
 // are hoisted function declarations / top-level consts in game.js, only
 // dereferenced at runtime, long after both modules evaluate.
 import {
     animate,
     connectionGroup,
-    createConnection,
     requestGroup,
-    restoreService,
     serviceGroup,
     syncInput,
 } from "../../game.js";
