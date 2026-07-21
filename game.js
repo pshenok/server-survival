@@ -35,6 +35,25 @@ import {
     updateRepairCostTable,
 } from "./src/core/economy.js";
 import { checkSmartHints } from "./src/core/hints.js";
+import {
+    campaignNextLevel,
+    campaignRetryLevel,
+    campaignStartCurrentLevel,
+    exitCampaignToMap,
+    exitCampaignToMenu,
+    hideCampaignLevelTooltip,
+    openCampaignBriefing,
+    openCampaignSelect,
+    showCampaignLevelTooltip,
+    startCampaignLevel,
+} from "./src/ui/campaign-ui.js";
+import {
+    closeSaveModal,
+    onClickContinueGame,
+    onSaveGameFileUpload,
+    saveGameState,
+    showSaveModal,
+} from "./src/persistence/save-load.js";
 
 STATE.sound = new SoundService();
 
@@ -661,326 +680,10 @@ window.startSandbox = () => {
 };
 
 // ===================== CAMPAIGN MODE =====================
-
-window.openCampaignSelect = () => {
-    document.getElementById("main-menu-modal").classList.add("hidden");
-    document.getElementById("campaign-select-modal").classList.remove("hidden");
-    renderCampaignLevels();
-};
-
-window.exitCampaignToMenu = () => {
-    document.getElementById("campaign-select-modal").classList.add("hidden");
-    document.getElementById("campaign-briefing-modal").classList.add("hidden");
-    document.getElementById("campaign-debrief-modal").classList.add("hidden");
-    document.getElementById("main-menu-modal").classList.remove("hidden");
-};
-
-window.exitCampaignToMap = () => {
-    document.getElementById("campaign-briefing-modal").classList.add("hidden");
-    document.getElementById("campaign-debrief-modal").classList.add("hidden");
-    document.getElementById("campaign-select-modal").classList.remove("hidden");
-    renderCampaignLevels();
-    if (window.campaign?.active) window.campaign.exit();
-};
-
-function renderCampaignLevels() {
-    const list = document.getElementById("campaign-levels-list");
-    if (!list) return;
-    const progress = window.campaign.loadProgress();
-    const chapters = { 1: "Chapter 1: Basics", 2: "Chapter 2: Optimization", 3: "Chapter 3: Defense & Mastery" };
-    let html = "";
-    let lastChapter = -1;
-    for (const lvl of CAMPAIGN_LEVELS) {
-        if (lvl.chapter !== lastChapter) {
-            if (lastChapter !== -1) html += "</div>";
-            html += `<div class="text-yellow-400 text-sm font-bold uppercase tracking-wider mt-4 mb-2">${chapters[lvl.chapter]}</div>`;
-            html += `<div class="space-y-2">`;
-            lastChapter = lvl.chapter;
-        }
-        const unlocked = lvl.id <= progress.highestUnlocked;
-        const entry = progress.completed[lvl.id];
-        const stars = entry?.stars || 0;
-        const starStr = unlocked ? ("★".repeat(stars) + "☆".repeat(3 - stars)) : "🔒";
-        const time = entry ? ` · ${Math.round(entry.bestTimeSec)}s` : "";
-        const clickHandler = unlocked ? `onclick="openCampaignBriefing(${lvl.id})"` : "";
-        const cursor = unlocked ? "cursor-pointer hover:bg-gray-800/60" : "opacity-50 cursor-not-allowed";
-        // Hover tooltip works for BOTH locked and unlocked levels — players can peek ahead at what's coming.
-        const hoverHandlers = `onmousemove="showCampaignLevelTooltip(event, ${lvl.id})" onmouseleave="hideCampaignLevelTooltip()"`;
-        html += `
-            <div ${clickHandler} ${hoverHandlers}
-                class="border border-gray-700 rounded-lg p-3 ${cursor} transition flex items-center gap-3">
-                <div class="text-3xl">${lvl.icon}</div>
-                <div class="flex-1">
-                    <div class="text-white font-bold">${lvl.id}. ${lvl.title}</div>
-                    <div class="text-gray-400 text-xs">${lvl.scenario.slice(0, 80)}${lvl.scenario.length > 80 ? "…" : ""}</div>
-                </div>
-                <div class="text-yellow-400 font-mono text-sm">${starStr}${time}</div>
-            </div>`;
-    }
-    html += "</div>";
-    list.innerHTML = html;
-    updateCampaignProgressLabel();
-}
-
-function updateCampaignProgressLabel() {
-    const el = document.getElementById("campaign-progress-label");
-    if (!el) return;
-    const c = window.campaign;
-    el.textContent = `${c.completedCount()}/${CAMPAIGN_LEVELS.length} ★${c.totalStars()}`;
-}
-
-// Mini-briefing tooltip shown when hovering a level card in Level Select.
-// Reuses the existing global #tooltip element (z-index 100 beats the modal's z-50).
-window.showCampaignLevelTooltip = (event, levelId) => {
-    const level = CAMPAIGN_LEVELS.find((l) => l.id === levelId);
-    if (!level) return;
-    const t = document.getElementById("tooltip");
-    if (!t) return;
-
-    const goalsHtml = level.objectives.primary.map((o) => `<li>• ${o.label}</li>`).join("");
-    const bonusHtml = level.objectives.bonus.map((o) => `<li>• ${o.label}</li>`).join("");
-    // Shrink the diagram for tooltip use — viewBox stays the same, only displayed height.
-    const diagram = renderArchitectureSVG(level.preBuilt, level.diagramHighlights)
-        .replace('height="160"', 'height="90"');
-
-    t.innerHTML = `
-        <div class="text-base font-bold text-cyan-400 mb-2">${level.icon} ${level.id}. ${level.title}</div>
-        <p class="text-xs text-gray-300 mb-2">${level.scenario}</p>
-        <div class="bg-blue-900/40 rounded p-2 mb-2 border border-blue-700/30">
-            <div class="text-[10px] text-blue-400 uppercase font-bold mb-1">\u{1F4DA} Learn</div>
-            <p class="text-xs text-gray-200">${level.learn}</p>
-        </div>
-        <div class="text-[10px] text-green-400 uppercase font-bold mb-1">\u{1F3AF} Goals</div>
-        <ul class="text-xs text-gray-200 mb-2">${goalsHtml}</ul>
-        <div class="text-[10px] text-yellow-400 uppercase font-bold mb-1">⭐ Bonus</div>
-        <ul class="text-xs text-gray-200 mb-2">${bonusHtml}</ul>
-        <div class="mt-2 pt-2 border-t border-gray-700">${diagram}</div>
-    `;
-
-    t.style.display = "block";
-    t.style.maxWidth = "440px";
-    t.style.whiteSpace = "normal";
-
-    // Position: prefer right-of-cursor, but clamp to viewport so it never spills off-screen.
-    const margin = 16;
-    const rect = t.getBoundingClientRect();
-    let left = event.clientX + 20;
-    let top = event.clientY + 12;
-    if (left + rect.width + margin > window.innerWidth) {
-        left = event.clientX - rect.width - 20;
-    }
-    if (top + rect.height + margin > window.innerHeight) {
-        top = Math.max(margin, window.innerHeight - rect.height - margin);
-    }
-    t.style.left = `${Math.max(margin, left)}px`;
-    t.style.top = `${Math.max(margin, top)}px`;
-};
-
-window.hideCampaignLevelTooltip = () => {
-    const t = document.getElementById("tooltip");
-    if (!t) return;
-    t.style.display = "none";
-    // Reset overrides so the canvas-hover tooltips work normally afterwards.
-    t.style.maxWidth = "";
-    t.style.whiteSpace = "";
-};
-
-let _pendingCampaignLevelId = null;
-
-window.openCampaignBriefing = (levelId) => {
-    const level = CAMPAIGN_LEVELS.find((l) => l.id === levelId);
-    if (!level) return;
-    _pendingCampaignLevelId = levelId;
-
-    document.getElementById("campaign-select-modal").classList.add("hidden");
-    document.getElementById("campaign-briefing-modal").classList.remove("hidden");
-
-    document.getElementById("campaign-briefing-icon").textContent = level.icon;
-    document.getElementById("campaign-briefing-chapter").textContent =
-        `Chapter ${level.chapter} · Level ${level.id}`;
-    document.getElementById("campaign-briefing-title").textContent = level.title.toUpperCase();
-    document.getElementById("campaign-briefing-scenario").textContent = level.scenario;
-    document.getElementById("campaign-briefing-learn").textContent = level.learn;
-
-    document.getElementById("campaign-briefing-diagram").innerHTML =
-        renderArchitectureSVG(level.preBuilt, level.diagramHighlights);
-
-    document.getElementById("campaign-briefing-goals").innerHTML =
-        level.objectives.primary.map((o) => `<li>• ${o.label}</li>`).join("");
-    document.getElementById("campaign-briefing-bonus").innerHTML =
-        level.objectives.bonus.map((o) => `<li>• ${o.label}</li>`).join("");
-};
-
-window.campaignStartCurrentLevel = () => {
-    const id = _pendingCampaignLevelId;
-    if (!id) return;
-    document.getElementById("campaign-briefing-modal").classList.add("hidden");
-    window.startCampaignLevel(id);
-};
-
-window.startCampaignLevel = (levelId) => {
-    const level = CAMPAIGN_LEVELS.find((l) => l.id === levelId);
-    if (!level) return;
-
-    if (!window.campaign.loadLevel(levelId)) return;
-
-    resetGame("campaign");
-
-    // Pre-place services using survival's existing creation path (bypasses cost check)
-    const placed = [];
-    for (const s of level.preBuilt.services) {
-        const pos = new THREE.Vector3(s.x, 0, s.z);
-        const svc = new Service(s.type, pos);
-        STATE.services.push(svc);
-        placed.push(svc);
-        if (STATE.finances) {
-            STATE.finances.expenses.countByService[s.type] =
-                (STATE.finances.expenses.countByService[s.type] || 0) + 1;
-        }
-    }
-    for (const [from, to] of level.preBuilt.connections) {
-        const fromId = from === "internet" ? "internet" : placed[from].id;
-        const toId = placed[to].id;
-        createConnection(fromId, toId);
-    }
-    updateRepairCostTable();
-
-    // Apply level-specific forced settings
-    STATE.trafficDistribution = { ...level.trafficDistribution };
-    STATE.currentRPS = level.rps;
-    STATE.money = level.budget;
-
-    // Toolbar gating
-    applyCampaignToolbarGating(level.allowedServices, level.forbiddenServices);
-
-    // Start PAUSED — like Survival mode. Player surveys the situation
-    // (pre-built architecture, allowed services, objectives panel) and
-    // presses Play when ready. resetGame already set timeScale=0 and put
-    // pulse-green on btn-play, so nothing else to do here.
-};
-
-function applyCampaignToolbarGating(allowed, forbidden) {
-    // Map service config keys to their toolbar button IDs.
-    // (matches the toolbar typeMap in mousedown handler)
-    const toolMap = {
-        waf: "tool-waf", apigw: "tool-apigw", sqs: "tool-sqs", alb: "tool-alb",
-        lambda: "tool-lambda", serverless: "tool-serverless",
-        db: "tool-db", nosql: "tool-nosql", cache: "tool-cache",
-        cdn: "tool-cdn", s3: "tool-s3", search: "tool-search", replica: "tool-replica",
-    };
-
-    // First clear any prior gating
-    Object.values(toolMap).forEach((id) => {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-        btn.classList.remove("opacity-30", "pointer-events-none");
-        btn.removeAttribute("data-campaign-blocked");
-    });
-
-    const allowSet = allowed && allowed.length ? new Set(allowed) : null;
-    const blockSet = new Set(forbidden || []);
-
-    // The "lambda" tool is a button for compute service.
-    // Normalize: allowSet uses CONFIG keys, but toolMap key for compute is "lambda".
-    // To gate compute, accept both "compute" and "lambda" in allowed/forbidden lists.
-    const isAllowed = (toolKey) => {
-        if (!allowSet) return !blockSet.has(toolKey) && !blockSet.has(toolKey === "lambda" ? "compute" : toolKey);
-        if (allowSet.has(toolKey)) return true;
-        if (toolKey === "lambda" && allowSet.has("compute")) return true;
-        return false;
-    };
-
-    Object.entries(toolMap).forEach(([k, id]) => {
-        if (!isAllowed(k)) {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-            btn.classList.add("opacity-30", "pointer-events-none");
-            btn.setAttribute("data-campaign-blocked", "true");
-        }
-    });
-}
-
-function renderCampaignObjectives(level, primaryResults, bonusResults) {
-    const panel = document.getElementById("objectivesPanel");
-    if (!panel) return;
-    panel.classList.remove("hidden");
-
-    const primaryHtml = level.objectives.primary.map((o) => {
-        const done = primaryResults[o.id];
-        const icon = done ? "☑" : "☐";
-        const color = done ? "text-green-400" : "text-gray-400";
-        return `<li class="${color}"><span class="font-mono">${icon}</span> ${o.label}</li>`;
-    }).join("");
-
-    const bonusHtml = level.objectives.bonus.map((o) => {
-        const done = bonusResults[o.id];
-        const icon = done ? "⭐" : "☆";
-        const color = done ? "text-yellow-300" : "text-gray-500";
-        return `<li class="${color}"><span class="font-mono">${icon}</span> ${o.label}</li>`;
-    }).join("");
-
-    panel.innerHTML = `
-        <div class="flex justify-between items-center mb-2">
-            <h3 class="text-xs font-bold text-yellow-400 uppercase tracking-wider">
-                Level ${level.id}: ${level.title}
-            </h3>
-            <span class="text-[10px] bg-yellow-900/50 px-2 py-0.5 rounded text-yellow-400 border border-yellow-800">${Math.round(STATE.elapsedGameTime)}s / ${level.durationSec}s</span>
-        </div>
-        <ul class="text-xs space-y-1 font-mono mb-2">${primaryHtml}</ul>
-        <div class="text-[10px] text-yellow-500 uppercase mt-2 mb-1">Bonus</div>
-        <ul class="text-[11px] space-y-1 font-mono">${bonusHtml}</ul>`;
-}
-
-function showCampaignDebrief(outcome, reason, level) {
-    document.getElementById("campaign-debrief-modal").classList.remove("hidden");
-
-    const titleEl = document.getElementById("campaign-debrief-title");
-    const iconEl = document.getElementById("campaign-debrief-icon");
-    const starsEl = document.getElementById("campaign-debrief-stars");
-    const reasonEl = document.getElementById("campaign-debrief-reason");
-    const tipEl = document.getElementById("campaign-debrief-tip");
-    const nextBtn = document.getElementById("campaign-debrief-next-btn");
-
-    if (outcome === "win") {
-        const stars = window.campaign._calculateStars();
-        iconEl.textContent = "🎉";
-        titleEl.textContent = "LEVEL COMPLETE";
-        titleEl.className = "text-3xl font-bold mb-2 text-green-400";
-        starsEl.textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
-        reasonEl.textContent = `Completed in ${Math.round(STATE.elapsedGameTime)}s`;
-        tipEl.textContent = level.debriefTip;
-
-        const hasNext = CAMPAIGN_LEVELS.some((l) => l.id === level.id + 1);
-        nextBtn.classList.toggle("hidden", !hasNext);
-        if (typeof STATE.sound?.playSuccess === "function") STATE.sound.playSuccess();
-    } else {
-        iconEl.textContent = "❌";
-        titleEl.textContent = "LEVEL FAILED";
-        titleEl.className = "text-3xl font-bold mb-2 text-red-400";
-        starsEl.textContent = "";
-        reasonEl.textContent = reason || "Objectives not met";
-        tipEl.textContent = level.debriefTip;
-        nextBtn.classList.add("hidden");
-        if (typeof STATE.sound?.playGameOver === "function") STATE.sound.playGameOver();
-    }
-    updateCampaignProgressLabel();
-}
-
-window.campaignRetryLevel = () => {
-    const id = STATE.campaign.currentLevelId;
-    document.getElementById("campaign-debrief-modal").classList.add("hidden");
-    if (id) window.startCampaignLevel(id);
-};
-
-window.campaignNextLevel = () => {
-    const id = STATE.campaign.currentLevelId;
-    document.getElementById("campaign-debrief-modal").classList.add("hidden");
-    if (id) {
-        const next = CAMPAIGN_LEVELS.find((l) => l.id === id + 1);
-        if (next) window.openCampaignBriefing(next.id);
-        else window.exitCampaignToMap();
-    }
-};
+// Campaign UI (level select map, briefing/debrief modals, level tooltips,
+// toolbar gating, objectives panel, level start/navigation) moved to
+// src/ui/campaign-ui.js (#155 PR 6). The window-exposed handlers are
+// re-assigned in the ESM-boundary block below.
 
 function createService(type, pos) {
     if (STATE.money < CONFIG.services[type].cost) {
@@ -2560,387 +2263,8 @@ window.resumeGame = () => {
 };
 
 // ==================== SAVE/LOAD FUNCTIONS ====================
-
-// Function to show save modal (triggered from UI)
-window.showSaveModal = () => {
-    const modal = document.getElementById("save-modal");
-    if (modal) {
-        modal.classList.remove("hidden");
-    }
-}
-
-// Function to close save modal (triggered from UI)
-window.closeSaveModal = () => {
-    const modal = document.getElementById("save-modal");
-    if (modal) {
-        modal.classList.add("hidden");
-    }
-}
-
-// Function to save game state to localStorage or download as file (triggered from UI inside save modal)
-window.saveGameState = (saveAs = "browser") => {
-    try {
-        const saveData = {
-            timestamp: Date.now(),
-            version: "2.0",
-            ...STATE,
-            score: { ...STATE.score },
-            trafficDistribution: { ...STATE.trafficDistribution },
-            services: STATE.services.map((service) => ({
-                id: service.id,
-                type: service.type,
-                position: [service.position.x, service.position.y, service.position.z],
-                connections: [...service.connections],
-                tier: service.tier,
-                cacheHitRate: service.config.cacheHitRate || null,
-            })),
-            connections: STATE.connections.map((conn) => ({
-                from: conn.from,
-                to: conn.to,
-            })),
-            requests: [],
-            internetConnections: [...STATE.internetNode.connections],
-        };
-
-        if(saveAs === "file")
-            downloadSaveFile(saveData);
-        else
-            localStorage.setItem("serverSurvivalSave", JSON.stringify(saveData));
-
-        const saveBtn = document.getElementById("btn-save");
-        const originalColor = saveBtn.classList.contains("hover:border-green-500")
-            ? ""
-            : saveBtn.style.borderColor;
-        saveBtn.style.borderColor = "#10b981"; // green-500
-        saveBtn.style.color = "#10b981";
-        setTimeout(() => {
-            saveBtn.style.borderColor = originalColor;
-            saveBtn.style.color = "";
-        }, 1000);
-
-        STATE.sound.playPlace(); // Use place sound as feedback
-        window.closeSaveModal();
-    } catch (error) {
-        console.error("Failed to save game:", error);
-        alert(i18n.t('save_failed'));
-    }
-};
-
-// Function to download save data as a file
-function downloadSaveFile(saveData) {
-
-    const blob = new Blob([JSON.stringify(saveData)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const dateStr = new Date().toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    }).replace(',', '');
-    a.download = `ServerSurvival-${dateStr}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-}
-
-window.onSaveGameFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (!file) {
-        alert(i18n.t('no_file_selected'));
-        return;
-    }
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            let saveData = JSON.parse(e.target.result);
-            loadGameState(saveData);
-
-            STATE.sound.playPlace(); // Use place sound as feedback
-        } catch (error) {
-            console.error("Failed to load game:", error);
-            alert(i18n.t('load_failed_corrupted'));
-        }
-    };
-    reader.readAsText(file);
-    // Reset the input value to allow uploading the same file again if needed
-    event.target.value = "";
-}
-
-function migrateOldSave(saveData) {
-    if (saveData.trafficDistribution) {
-        const oldDist = saveData.trafficDistribution;
-        if ("WEB" in oldDist || "API" in oldDist || "FRAUD" in oldDist) {
-            saveData.trafficDistribution = {
-                STATIC: oldDist.WEB || 0,
-                READ: (oldDist.API || 0) * 0.5,
-                WRITE: (oldDist.API || 0) * 0.3,
-                UPLOAD: 0.05,
-                SEARCH: (oldDist.API || 0) * 0.2,
-                MALICIOUS: oldDist.FRAUD || 0,
-            };
-        }
-    }
-
-    if (saveData.score) {
-        const oldScore = saveData.score;
-        if ("web" in oldScore || "api" in oldScore || "fraudBlocked" in oldScore) {
-            saveData.score = {
-                total: oldScore.total || 0,
-                storage: oldScore.web || 0,
-                database: oldScore.api || 0,
-                maliciousBlocked: oldScore.fraudBlocked || 0,
-            };
-        }
-    }
-
-    if ("fraudSpikeTimer" in saveData) {
-        saveData.maliciousSpikeTimer = saveData.fraudSpikeTimer;
-        delete saveData.fraudSpikeTimer;
-    }
-    if ("fraudSpikeActive" in saveData) {
-        saveData.maliciousSpikeActive = saveData.fraudSpikeActive;
-        delete saveData.fraudSpikeActive;
-    }
-
-    return saveData;
-}
-
-// Function to load game state from localStorage (triggered from UI) or provided save data (provided from uploaded file)
-window.onClickContinueGame = () => {
-    loadGameState();
-}
-
-function loadGameState(saveData = null) {
-    try {
-        // If saveData is not provided, attempt to load from localStorage
-        if(!saveData){
-            const saveDataStr = localStorage.getItem("serverSurvivalSave");
-            if (!saveDataStr) {
-                alert(i18n.t('no_save_found_msg'));
-                return;
-            }
-    
-            saveData = JSON.parse(saveDataStr);
-    
-        }
-
-        // Migrate old saves if version is missing or 1.0
-        if (!saveData.version || saveData.version === "1.0") {
-            saveData = migrateOldSave(saveData);
-        }
-
-        clearCurrentGame();
-
-        STATE.money = saveData.money || 0;
-        STATE.reputation = saveData.reputation || 100;
-        STATE.requestsProcessed = saveData.requestsProcessed || 0;
-        // A spread of undefined is {} (truthy), so `|| default` never fired —
-        // an old save without this field got {} and NaN'd the score math.
-        STATE.score = saveData.score ? { ...saveData.score } : {
-            total: 0,
-            storage: 0,
-            database: 0,
-            maliciousBlocked: 0,
-        };
-        STATE.activeTool = saveData.activeTool || "select";
-        STATE.selectedNodeId = saveData.selectedNodeId || null;
-        STATE.lastTime = performance.now(); // Reset timing
-        STATE.spawnTimer = saveData.spawnTimer || 0;
-        STATE.currentRPS = saveData.currentRPS || 0.5;
-        STATE.timeScale = saveData.timeScale || 0; // Start paused
-        STATE.elapsedGameTime = saveData.elapsedGameTime ?? 0;
-        STATE.isRunning = saveData.isRunning || false;
-        STATE.gameStartTime = performance.now();
-
-        STATE.gameMode = saveData.gameMode || "survival";
-        STATE.sandboxBudget = saveData.sandboxBudget || 2000;
-        STATE.upkeepEnabled = saveData.upkeepEnabled !== false;
-        // Same dead-fallback pattern as score above: spread of undefined is {}.
-        STATE.trafficDistribution = saveData.trafficDistribution ? { ...saveData.trafficDistribution } : {
-            STATIC: 0.3,
-            READ: 0.2,
-            WRITE: 0.15,
-            UPLOAD: 0.05,
-            SEARCH: 0.1,
-            MALICIOUS: 0.2,
-        };
-        STATE.burstCount = saveData.burstCount || 10;
-        STATE.gameStarted = saveData.gameStarted || true;
-        STATE.previousTimeScale = saveData.previousTimeScale || 1;
-
-        // Initialize intervention state for survival mode mechanics
-        if (STATE.gameMode === "survival") {
-            STATE.intervention = {
-                trafficShiftTimer: 0,
-                trafficShiftActive: false,
-                currentShift: null,
-                originalTrafficDist: null,
-                randomEventTimer: 0,
-                activeEvent: null,
-                eventEndTime: 0,
-                currentMilestoneIndex: 0,
-                rpsMultiplier: 1.0,
-                recentEvents: [],
-                warnings: [],
-                costMultiplier: 1.0,
-                trafficBurstMultiplier: 1.0,
-            };
-            STATE.maliciousSpikeTimer = 0;
-            STATE.maliciousSpikeActive = false;
-            STATE.normalTrafficDist = null;
-            STATE.autoRepairEnabled = saveData.autoRepairEnabled || false;
-        }
-
-        // Restore finances from the save (fall back to zeroed defaults for older
-        // saves that predate finance tracking). Previously this always reset to
-        // zero, so every reload wiped the player's income/expense history even
-        // though saveGameState had written it to disk.
-        const defaultFinances = {
-            income: {
-                byType: { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0 },
-                countByType: { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0, blocked: 0 },
-                requests: 0,
-                blocked: 0,
-                total: 0,
-            },
-            expenses: {
-                services: 0,
-                upkeep: 0,
-                repairs: 0,
-                autoRepair: 0,
-                mitigation: 0,
-                breach: 0,
-                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0 },
-                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0 },
-            },
-        };
-        STATE.finances = saveData.finances
-            ? {
-                income: { ...defaultFinances.income, ...saveData.finances.income },
-                expenses: { ...defaultFinances.expenses, ...saveData.finances.expenses },
-            }
-            : defaultFinances;
-
-        restoreServices(saveData.services);
-
-        const autoRepairBtn = document.getElementById("auto-repair-toggle");
-        if (autoRepairBtn) {
-            if (STATE.autoRepairEnabled) {
-                autoRepairBtn.textContent = i18n.t('upkeep_on');
-                autoRepairBtn.classList.remove("text-gray-400");
-                autoRepairBtn.classList.add("text-green-400");
-            } else {
-                autoRepairBtn.textContent = i18n.t('upkeep_off');
-                autoRepairBtn.classList.remove("text-green-400");
-                autoRepairBtn.classList.add("text-gray-400");
-            }
-        }
-        updateRepairCostTable();
-
-        restoreConnections(
-            saveData.connections,
-            saveData.internetConnections || []
-        );
-
-        updateScoreUI();
-        document.getElementById("money-display").innerText = `$${Math.floor(
-            STATE.money
-        )}`;
-        document.getElementById("rep-bar").style.width = `${Math.max(
-            0,
-            STATE.reputation
-        )}%`;
-        document.getElementById(
-            "rps-display"
-        ).innerText = `${STATE.currentRPS.toFixed(1)} ${i18n.t('req_per_sec')}`;
-
-        const sandboxPanel = document.getElementById("sandboxPanel");
-        const objectivesPanel = document.getElementById("objectivesPanel");
-
-        if (STATE.gameMode === "sandbox") {
-            if (sandboxPanel) sandboxPanel.classList.remove("hidden");
-            if (objectivesPanel) objectivesPanel.classList.add("hidden");
-            syncInput("budget", STATE.sandboxBudget);
-            syncInput("rps", STATE.currentRPS);
-            syncInput("static", (STATE.trafficDistribution.STATIC || 0) * 100);
-            syncInput("read", (STATE.trafficDistribution.READ || 0) * 100);
-            syncInput("write", (STATE.trafficDistribution.WRITE || 0) * 100);
-            syncInput("upload", (STATE.trafficDistribution.UPLOAD || 0) * 100);
-            syncInput("search", (STATE.trafficDistribution.SEARCH || 0) * 100);
-            syncInput("malicious", (STATE.trafficDistribution.MALICIOUS || 0) * 100);
-            syncInput("burst", STATE.burstCount);
-            const upkeepBtn = document.getElementById("upkeep-toggle");
-            if (upkeepBtn) {
-                upkeepBtn.textContent = STATE.upkeepEnabled
-                    ? i18n.t('upkeep_on_label')
-                    : i18n.t('upkeep_off_label');
-                upkeepBtn.classList.toggle("bg-red-900/50", STATE.upkeepEnabled);
-                upkeepBtn.classList.toggle("bg-green-900/50", !STATE.upkeepEnabled);
-            }
-        } else {
-            if (sandboxPanel) sandboxPanel.classList.add("hidden");
-            if (objectivesPanel) objectivesPanel.classList.remove("hidden");
-        }
-
-        document.getElementById("main-menu-modal").classList.add("hidden");
-
-        if (!STATE.animationId) {
-            animate(performance.now());
-        }
-
-        STATE.sound.playPlace();
-    } catch (error) {
-        console.error("Failed to load game:", error);
-        alert(i18n.t('load_failed_corrupted'));
-    }
-};
-
-function clearCurrentGame() {
-    while (serviceGroup.children.length > 0) {
-        serviceGroup.remove(serviceGroup.children[0]);
-    }
-    while (connectionGroup.children.length > 0) {
-        connectionGroup.remove(connectionGroup.children[0]);
-    }
-    while (requestGroup.children.length > 0) {
-        requestGroup.remove(requestGroup.children[0]);
-    }
-
-    STATE.services.forEach((s) => s.destroy());
-    STATE.services = [];
-    STATE.requests = [];
-    STATE.connections = [];
-    STATE.internetNode.connections = [];
-}
-
-function restoreServices(savedServices) {
-    savedServices.forEach((serviceData) => {
-        const position = new THREE.Vector3(
-            serviceData.position[0],
-            serviceData.position[1],
-            serviceData.position[2]
-        );
-
-        restoreService(serviceData, position);
-    });
-}
-
-function restoreConnections(savedConnections, internetConnections) {
-    // internetConnections is an array of service IDs (strings), not objects
-    internetConnections.forEach((serviceId) => {
-        createConnection("internet", serviceId);
-    });
-
-    savedConnections.forEach((connData) => {
-        createConnection(connData.from, connData.to);
-    });
-}
+// Moved to src/persistence/save-load.js (#155 PR 6); the window-exposed
+// handlers are re-assigned in the ESM-boundary block below.
 
 // ==================== ESM BOUNDARY (#155 PR 2) ====================
 
@@ -2951,19 +2275,44 @@ window.restartGame = restartGame;
 window.retryWithSameArchitecture = retryWithSameArchitecture;
 window.toggleAutoRepair = toggleAutoRepair;
 
+// #155 PR 6: the campaign-UI and save/load handlers now live in
+// src/ui/campaign-ui.js and src/persistence/save-load.js; index.html inline
+// on*= handlers (and generated onclick strings) still resolve them on window,
+// so re-expose the imported bindings here — the single window boundary.
+window.openCampaignSelect = openCampaignSelect;
+window.exitCampaignToMenu = exitCampaignToMenu;
+window.exitCampaignToMap = exitCampaignToMap;
+window.showCampaignLevelTooltip = showCampaignLevelTooltip;
+window.hideCampaignLevelTooltip = hideCampaignLevelTooltip;
+window.openCampaignBriefing = openCampaignBriefing;
+window.campaignStartCurrentLevel = campaignStartCurrentLevel;
+window.startCampaignLevel = startCampaignLevel;
+window.campaignRetryLevel = campaignRetryLevel;
+window.campaignNextLevel = campaignNextLevel;
+window.showSaveModal = showSaveModal;
+window.closeSaveModal = closeSaveModal;
+window.saveGameState = saveGameState;
+window.onSaveGameFileUpload = onSaveGameFileUpload;
+window.onClickContinueGame = onClickContinueGame;
+
 // The generated smart-hint dismiss button (showSmartHint) embeds an inline
 // onclick that touches STATE.hints — inline handlers resolve against the
 // global scope, and the old top-level `const STATE` was a global lexical
 // binding. Keep STATE reachable from there.
 window.STATE = STATE;
 
-// Runtime cross-module surface: Request.js, Service.js, campaign.js and
-// core/events.js import these (cyclically — safe, they are hoisted
-// declarations / top-level consts only dereferenced after evaluation).
+// Runtime cross-module surface: Request.js, Service.js, core/events.js,
+// ui/campaign-ui.js and persistence/save-load.js import these (cyclically —
+// safe, they are hoisted declarations / top-level consts only dereferenced
+// after evaluation).
 export {
+    animate,
+    connectionGroup,
+    createConnection,
     formatTime,
-    renderCampaignObjectives,
     requestGroup,
+    resetGame,
+    restoreService,
     serviceGroup,
-    showCampaignDebrief,
+    syncInput,
 };
