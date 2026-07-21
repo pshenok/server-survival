@@ -19,7 +19,7 @@ import { addInterventionWarning } from "../core/events.js";
 import {
     renderCampaignObjectives,
     showCampaignDebrief,
-} from "../../game.js";
+} from "../ui/campaign-ui.js";
 
 const CAMPAIGN_STORAGE_KEY = "serverSurvivalCampaignProgress";
 const CAMPAIGN_PROGRESS_VERSION = 1;
