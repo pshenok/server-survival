@@ -461,4 +461,14 @@ export const PT_BR_TRANSLATIONS = {
     "alert_high_load": "Carga alta: {type}",
     "alert_queue_capacity": "Fila quase cheia: {type}",
     "alert_error_rate": "Taxa de erros crítica: {type}",
+    // Auto-Scaling Group (#195)
+    "compute_full": "Nó de Computação",
+    "compute_desc_long": "Processa todos os tipos de requisição e as encaminha. Os níveis de upgrade escalam verticalmente (capacidade 4/10/18). Ative o AUTO para escalar horizontalmente: um grupo de auto scaling adiciona uma instância sempre que a utilização fica acima de 70% e remove uma abaixo de 30%, entre 1 e 5 instâncias. Uma instância nova leva 3 s para aquecer e não atende tráfego até lá — é esse cold start que faz você escalar antes de picos previstos — e toda instância é cobrada desde o boot. Equivalentes reais: AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.",
+    "compute_flow": "Fluxo: LB / Fila → Computação → Cache / BD / NoSQL / Armazenamento",
+    "asg_label": "AUTO",
+    "asg_off": "DESL",
+    "asg_warming": "+{n} aquecendo",
+    "asg_enable_tip": "Ativar auto scaling neste nó de computação",
+    "asg_disable_tip": "Desativar auto scaling (volta para uma instância)",
+    "hint_enable_asg": "Este nó de computação está no limite há um tempo. Ative o AUTO para escalar horizontalmente sob carga.",
 };

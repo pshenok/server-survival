@@ -461,4 +461,14 @@ export const IT_TRANSLATIONS = {
     "alert_high_load": "Carico elevato: {type}",
     "alert_queue_capacity": "Coda quasi piena: {type}",
     "alert_error_rate": "Tasso di errori critico: {type}",
+    // Auto-Scaling Group (#195)
+    "compute_full": "Nodo di calcolo",
+    "compute_desc_long": "Elabora ogni tipo di richiesta e la inoltra. I livelli di upgrade lo scalano in verticale (capacità 4/10/18). Attiva AUTO per scalarlo in orizzontale: un gruppo di auto-scaling aggiunge un'istanza quando l'utilizzo resta sopra il 70% e ne rimuove una sotto il 30%, tra 1 e 5 istanze. Una nuova istanza impiega 3 s ad avviarsi e fino ad allora non gestisce traffico: proprio questo avvio a freddo è il motivo per cui si scala prima dei picchi noti — e ogni istanza si paga dall'avvio. Equivalenti reali: AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.",
+    "compute_flow": "Flusso: LB / Coda → Calcolo → Cache / DB / NoSQL / Storage",
+    "asg_label": "AUTO",
+    "asg_off": "OFF",
+    "asg_warming": "+{n} in avvio",
+    "asg_enable_tip": "Attiva l'auto-scaling per questo nodo di calcolo",
+    "asg_disable_tip": "Disattiva l'auto-scaling (torna a una sola istanza)",
+    "hint_enable_asg": "Questo nodo di calcolo è al limite da un po'. Attiva AUTO per farlo scalare in orizzontale sotto carico.",
 };

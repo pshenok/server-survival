@@ -19,6 +19,7 @@ import {
     getServiceMetrics,
     hasMonitoring,
 } from "../core/metrics.js";
+import { instanceCount } from "../sim/autoscaling.js";
 
 const SPARK_W = 46;
 const SPARK_H = 16;
@@ -77,8 +78,12 @@ function renderMetricsPanel() {
 
     const services = STATE.services.filter((s) => s.type !== "monitor");
 
-    // Rebuild rows only when the service set changes (low DOM churn).
-    const signature = services.map((s) => s.id).join(",");
+    // Rebuild rows only when the service set changes (low DOM churn). The ASG
+    // fleet size (#195) is part of the signature so the "×n" badge follows a
+    // scaling event — those are rare (cooldown-gated), so this stays cheap.
+    const signature = services
+        .map((s) => (s.asgEnabled ? `${s.id}*${instanceCount(s)}` : s.id))
+        .join(",");
     if (signature !== lastSignature) {
         buildRows(services, rowsEl);
         lastSignature = signature;
@@ -115,6 +120,17 @@ function buildRows(services, rowsEl) {
         name.className = "w-12 flex-shrink-0 text-[9px] font-mono text-gray-300 truncate";
         name.textContent = i18n.t(s.type).substring(0, 10).toUpperCase();
         name.title = i18n.t(s.type);
+        if (s.asgEnabled) {
+            // ASG fleet badge (#195): the whole point of the epic's "scaling
+            // is visible through metrics" goal — util drops as ×n climbs.
+            const n = instanceCount(s);
+            name.textContent = name.textContent.substring(0, 7);
+            const badge = document.createElement("span");
+            badge.className = "text-teal-400";
+            badge.textContent = `×${n}`;
+            badge.title = i18n.t("asg_label");
+            name.appendChild(badge);
+        }
         row.appendChild(name);
 
         for (const col of COLUMNS) {

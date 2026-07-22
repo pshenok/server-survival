@@ -35,6 +35,7 @@ import {
     updateRepairCostTable,
 } from "./src/core/economy.js";
 import { checkSmartHints } from "./src/core/hints.js";
+import { upkeepInstanceFactor } from "./src/sim/autoscaling.js";
 import { metricsTick, resetMetrics } from "./src/core/metrics.js";
 import { renderMetricsPanel } from "./src/ui/metrics-panel.js";
 import {
@@ -938,8 +939,10 @@ function animate(time) {
         STATE.money
     )}`;
 
+    // ASG fleets (#195) bill per instance, so the HUD figure has to use the
+    // same factor Service.update() charges with.
     const baseUpkeep = STATE.services.reduce(
-        (sum, s) => sum + s.config.upkeep / 60,
+        (sum, s) => sum + (s.config.upkeep / 60) * upkeepInstanceFactor(s),
         0
     );
     const multiplier =

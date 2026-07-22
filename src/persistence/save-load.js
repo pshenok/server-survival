@@ -51,6 +51,12 @@ function saveGameState(saveAs = "browser") {
                 connections: [...service.connections],
                 tier: service.tier,
                 cacheHitRate: service.config.cacheHitRate || null,
+                // ASG (#195): the enabled flag and the READY fleet size.
+                // Warming instances are dropped on purpose — see the note in
+                // Service.restore. Old saves lack both and restore as
+                // (false, 1).
+                asgEnabled: !!service.asgEnabled,
+                instances: service.instances || 1,
             })),
             connections: STATE.connections.map((conn) => ({
                 from: conn.from,

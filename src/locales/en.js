@@ -461,4 +461,14 @@ export const EN_TRANSLATIONS = {
     "alert_high_load": "High load: {type}",
     "alert_queue_capacity": "Queue near capacity: {type}",
     "alert_error_rate": "Error rate critical: {type}",
+    // Auto-Scaling Group (#195)
+    "compute_full": "Compute Node",
+    "compute_desc_long": "Processes every request type and routes it onward. Upgrade tiers scale it UP (capacity 4/10/18). Toggle AUTO to scale it OUT instead: an Auto-Scaling Group boots an instance whenever utilization stays above 70% and retires one below 30%, between 1 and 5 instances. A new instance needs 3s to warm up and carries no traffic until it does — that cold start is why you pre-scale ahead of a known peak — and every instance is billed from the moment it boots. Real-world equivalents: AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.",
+    "compute_flow": "Flow: LB / Queue → Compute → Cache / DB / NoSQL / Storage",
+    "asg_label": "AUTO",
+    "asg_off": "OFF",
+    "asg_warming": "+{n} warming",
+    "asg_enable_tip": "Enable auto-scaling for this Compute node",
+    "asg_disable_tip": "Disable auto-scaling (collapses back to one instance)",
+    "hint_enable_asg": "This Compute node has been running hot for a while. Turn on AUTO so it scales out under load.",
 };
