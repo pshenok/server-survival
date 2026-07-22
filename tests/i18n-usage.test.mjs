@@ -13,7 +13,7 @@ const en = await loadLocale(LOCALES.find((l) => l.code === "en"));
 
 function collectSources() {
   const files = ["game.js", "index.html", "src/tutorial.js"];
-  for (const dir of ["src/campaign", "src/core", "src/entities", "src/persistence", "src/services", "src/ui"]) {
+  for (const dir of ["src/campaign", "src/core", "src/entities", "src/input", "src/persistence", "src/services", "src/sim", "src/ui"]) {
     for (const f of readdirSync(join(ROOT, dir))) {
       if (f.endsWith(".js")) files.push(`${dir}/${f}`);
     }
