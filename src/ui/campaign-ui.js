@@ -220,6 +220,7 @@ function applyCampaignToolbarGating(allowed, forbidden) {
         lambda: "tool-lambda", serverless: "tool-serverless",
         db: "tool-db", nosql: "tool-nosql", cache: "tool-cache",
         cdn: "tool-cdn", s3: "tool-s3", search: "tool-search", replica: "tool-replica",
+        monitor: "tool-monitor",
     };
 
     // First clear any prior gating

@@ -195,6 +195,27 @@
         </div>
       </div>
 
+      <!-- Metrics Panel (#194 — Under Service Health, locked until a Monitoring service is placed) -->
+      <div id="metricsPanel" class="glass-panel rounded-xl p-4 w-72 pointer-events-auto transition-all duration-300">
+        <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
+          <h3 data-i18n="metrics" class="text-xs font-bold text-teal-400 uppercase tracking-wider">
+            Metrics
+          </h3>
+          <button onclick="togglePanel('metrics-panel-content', 'metrics-panel-icon')"
+            class="w-6 h-6 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded border border-gray-600 text-gray-400 transition">
+            <span id="metrics-panel-icon" class="text-[10px]">▲</span>
+          </button>
+        </div>
+        <div id="metrics-panel-content">
+          <div id="metrics-locked" class="text-xs space-y-1">
+            <div data-i18n="metrics_locked" class="text-gray-400">Place a Monitoring service to unlock live metrics.</div>
+            <div data-i18n="metrics_locked_providers" class="text-gray-600">Real-world equivalents: AWS CloudWatch · Azure Monitor · Google Cloud Operations.</div>
+            <div data-i18n="metrics_locked_teach" class="text-teal-600 italic">You can't fix what you can't see.</div>
+          </div>
+          <div id="metrics-rows" class="hidden space-y-1"></div>
+        </div>
+      </div>
+
       <!-- Finances Panel (Under Service Health) -->
       <div id="financesPanel" class="glass-panel rounded-xl p-4 w-72 pointer-events-auto transition-all duration-300">
         <div class="flex justify-between items-center mb-2 border-b border-gray-700 pb-1">
@@ -722,6 +743,19 @@
           </div>
           <span data-i18n="replica_short" class="text-[10px] font-bold mt-1">Replica</span>
         </button>
+
+        <!-- Monitoring (#194) -->
+        <button id="tool-monitor"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('monitor')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $75
+          </div>
+          <div
+            class="w-4 h-4 bg-teal-400 rounded-full mb-1 shadow-[0_0_10px_rgba(20,184,166,0.6)] border-2 border-teal-700">
+          </div>
+          <span data-i18n="monitor_short" class="text-[10px] font-bold mt-1">Monitor</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1054,6 +1088,10 @@
               <span data-i18n="read_replica" class="text-pink-400 font-bold">Read Replica</span>
               <span data-i18n="replica_desc_short">Offloads READ from DB ($100)</span>
             </li>
+            <li class="flex justify-between">
+              <span data-i18n="monitor" class="text-teal-400 font-bold">Monitoring</span>
+              <span data-i18n="monitor_desc_short">Live metrics + alerts ($75)</span>
+            </li>
           </ul>
         </div>
       </div>
@@ -1247,6 +1285,16 @@
               Auto-scales with traffic (capacity 30). Very low upkeep ($2/min) but charges $0.03 per completed request. Cheap for bursty / low-volume traffic; expensive at sustained high RPS. Same connection topology as Compute.
             </p>
             <p data-i18n="serverless_flow" class="text-xs text-gray-500 mt-1">Flow: ALB / Queue → Serverless → Cache / DB / NoSQL / S3</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-teal-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="monitor_full" class="text-teal-400">Monitoring</strong>
+              <span class="text-green-400 font-mono text-sm">$75</span>
+            </div>
+            <p data-i18n="monitor_desc_long" class="text-sm text-gray-400 mt-1">
+              Collects utilization, queue depth, error rate and latency from every service and raises alerts before overloads become outages. Never receives traffic — place it anywhere. Real-world equivalents: AWS CloudWatch · Azure Monitor · Google Cloud Operations.
+            </p>
+            <p data-i18n="monitor_flow" class="text-xs text-gray-500 mt-1">Flow: standalone — no connections; watches every service</p>
           </div>
         </div>
       </div>

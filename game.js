@@ -35,6 +35,8 @@ import {
     updateRepairCostTable,
 } from "./src/core/economy.js";
 import { checkSmartHints } from "./src/core/hints.js";
+import { metricsTick, resetMetrics } from "./src/core/metrics.js";
+import { renderMetricsPanel } from "./src/ui/metrics-panel.js";
 import {
     campaignNextLevel,
     campaignRetryLevel,
@@ -332,6 +334,7 @@ function resetGame(mode = "survival") {
     STATE.maliciousSpikeActive = false;
     STATE.normalTrafficDist = null;
     STATE.autoRepairEnabled = false;
+    resetMetrics();
     STATE.hints = {
       lastHintTime: 0,
       dismissedHints: new Set(),
@@ -380,6 +383,7 @@ function resetGame(mode = "survival") {
                 nosql: 0,
                 cdn: 0,
                 serverless: 0,
+                monitor: 0,
             },
             countByService: {
                 // Count of each service purchased
@@ -396,6 +400,7 @@ function resetGame(mode = "survival") {
                 cdn: 0,
                 replica: 0,
                 serverless: 0,
+                monitor: 0,
             },
         },
     };
@@ -906,6 +911,12 @@ function animate(time) {
     updateFinancesDisplay();
     checkSmartHints();
 
+    // Observability (#194): sample service metrics (2 Hz game time, frozen
+    // while paused), then refresh the METRICS panel — cheap by construction,
+    // it only rebuilds rows on service-set changes and redraws on new samples.
+    metricsTick(dt);
+    renderMetricsPanel();
+
     // Live tooltip refresh (#173): while the pointer sits still over a service,
     // replay the last mousemove at ~4 Hz so the tooltip's load/queue/rate stats
     // keep updating. Reuses the full hover pipeline — zero duplicated logic.
@@ -1231,6 +1242,10 @@ function analyzeFailure() {
 
     if (!STATE.services.some((s) => s.type === "apigw")) {
         result.tips.push(i18n.t('tip_apigw'));
+    }
+
+    if (!STATE.services.some((s) => s.type === "monitor")) {
+        result.tips.push(i18n.t('tip_monitor'));
     }
 
     if (!STATE.services.some((s) => s.type === "nosql") &&

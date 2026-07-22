@@ -197,6 +197,12 @@ function updateFinancesDisplay() {
             color: "text-green-400",
             cost: CONFIG.services.cdn.cost,
         },
+        {
+            key: "monitor",
+            label: i18n.t('monitor'),
+            color: "text-teal-400",
+            cost: CONFIG.services.monitor.cost,
+        },
     ];
 
     const repairPercent = CONFIG.survival.degradation?.repairCostPercent || 0.15;

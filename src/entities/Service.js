@@ -127,6 +127,14 @@ export class Service {
           ...materialProps,
         });
         break;
+      case "monitor":
+        // Observability (#194): teal torus — a "lens" watching the grid.
+        geo = new THREE.TorusGeometry(1.3, 0.4, 8, 24);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.monitor,
+          ...materialProps,
+        });
+        break;
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
@@ -144,6 +152,7 @@ export class Service {
     else if (type === "search") this.mesh.position.y += 1.5;
     else if (type === "replica") this.mesh.position.y += 1;
     else if (type === "serverless") this.mesh.position.y += 1.5;
+    else if (type === "monitor") this.mesh.position.y += 1.7;
     else this.mesh.position.y += 1;
 
     this.mesh.castShadow = true;

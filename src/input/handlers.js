@@ -280,6 +280,7 @@ container.addEventListener("mousedown", (e) => {
                 search: "search",
                 replica: "replica",
                 serverless: "serverless",
+                monitor: "monitor",
             };
 
             const serviceType = typeMap[STATE.activeTool];
@@ -583,7 +584,7 @@ function showTooltip(x, y, html) {
 
 // Setup UI tooltips
 function setupUITooltips() {
-    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn", "search", "replica", "serverless"];
+    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn", "search", "replica", "serverless", "monitor"];
     tools.forEach((toolId) => {
         const btn = document.getElementById(`tool-${toolId}`);
         if (!btn) return;

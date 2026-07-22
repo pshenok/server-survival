@@ -14,7 +14,7 @@ export function process(service, job) {
       job.req.cached = true;
       STATE.sound.playSuccess();
       service.flashCacheHit();
-      finishRequest(job.req, service.type);
+      finishRequest(job.req, service.type, service);
       return "next";
     }
   }

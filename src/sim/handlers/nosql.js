@@ -9,7 +9,7 @@ export function process(service, job) {
   if (job.req.type === "SEARCH") {
     failRequest(job.req);
   } else if (job.req.destination === "db") {
-    finishRequest(job.req, service.type);
+    finishRequest(job.req, service.type, service);
   } else {
     failRequest(job.req);
   }
