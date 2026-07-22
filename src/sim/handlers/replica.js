@@ -15,7 +15,7 @@ export function process(service, job) {
     return "next";
   }
   if (job.req.type === "READ" && job.req.destination === "db") {
-    finishRequest(job.req, service.type);
+    finishRequest(job.req, service.type, service);
   } else {
     failRequest(job.req);
   }

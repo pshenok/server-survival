@@ -62,10 +62,12 @@ export function resetWorld({ money = 100000, gameMode = "sandbox" } = {}) {
       byService: {
         waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0,
         search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0,
+        monitor: 0,
       },
       countByService: {
         waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0,
         search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0,
+        monitor: 0,
       },
     },
   };

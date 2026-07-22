@@ -9,6 +9,10 @@ import { requestGroup } from "../../game.js";
 export class Request {
     constructor(type) {
         this.id = Math.random().toString(36);
+        // Spawn stamp for latency metrics (#194) — set here rather than in
+        // spawnRequest so sandbox bursts and test-injected requests get
+        // latency attribution too.
+        this.spawnedAt = performance.now();
         this.type = type;
         this.typeConfig = CONFIG.trafficTypes[type];
         this.value = this.typeConfig.reward;

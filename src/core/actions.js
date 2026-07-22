@@ -7,6 +7,11 @@ import { STATE } from "../state.js";
 // Cyclic import (actions.js <-> Request.js) is safe: Request is only
 // constructed at runtime (spawnRequest), long after both modules evaluate.
 import { Request } from "../entities/Request.js";
+// Observability attribution (#194): error/success/latency counters feed the
+// metrics ring buffers. Runtime-only cycle (actions.js -> metrics.js ->
+// events.js -> game.js -> actions.js) — established pattern, hoisted
+// function declarations only dereferenced at runtime.
+import { recordServiceError, recordServiceSuccess } from "./metrics.js";
 
 function getUpkeepMultiplier() {
     if (STATE.gameMode !== "survival") return 1.0;
@@ -193,8 +198,19 @@ function updateScore(req, outcome) {
     updateScoreUI();
 }
 
-function finishRequest(req, viaServiceType) {
+// `service` (optional third param, #194) is the finishing Service instance —
+// every handler has it in scope and passes it, so completions and their
+// latency (wall-clock since the request's spawnedAt stamp) are attributed
+// per-instance. Callers without a service ref just skip attribution.
+function finishRequest(req, viaServiceType, service) {
     STATE.requestsProcessed++;
+    if (service) {
+        const latency =
+            typeof req.spawnedAt === "number"
+                ? performance.now() - req.spawnedAt
+                : null;
+        recordServiceSuccess(service, latency);
+    }
     updateScore(req, "COMPLETED");
     if (window.campaign?.active) {
         window.campaign.onRequestCompleted(req, viaServiceType);
@@ -203,6 +219,12 @@ function finishRequest(req, viaServiceType) {
 }
 
 function failRequest(req) {
+    // Observability (#194): attribute the failure to the service the request
+    // was headed to / sitting on. Entry-routing failures with no target (no
+    // Internet connections at all) stay unattributed by design.
+    if (req.target && req.target.id && req.target.id !== "internet") {
+        recordServiceError(req.target);
+    }
     const failType =
         req.type === TRAFFIC_TYPES.MALICIOUS ? "MALICIOUS_PASSED" : "FAILED";
     updateScore(req, failType);

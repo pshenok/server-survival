@@ -28,6 +28,7 @@ export const CONFIG = {
     search: 0x06b6d4, // Cyan-500 for Search Engine
     replica: 0xf472b6, // Pink-400 for Read Replica
     serverless: 0xfbbf24, // amber - lambda style
+    monitor: 0x14b8a6, // Teal for Monitoring
   },
   trafficTypes: {
     STATIC: {
@@ -298,6 +299,23 @@ export const CONFIG = {
       tooltip: {
         upkeep: "Very Low",
         desc: "<b>Serverless Function.</b> Auto-scales with traffic. Very low upkeep but pays $0.03 per completed request. Great for spiky / low-volume traffic, expensive at high RPS.",
+      },
+    },
+    monitor: {
+      // Observability service (#194). Never receives traffic: it has no
+      // entry in the connection-validity table and no handler in the
+      // registry — placing it anywhere unlocks the METRICS dashboard and
+      // threshold alerts (see src/core/metrics.js). Capacity 1 is a dummy
+      // (keeps totalLoad finite); processingTime is never used.
+      name: "Monitoring",
+      cost: 75,
+      type: "monitor",
+      processingTime: 100,
+      capacity: 1,
+      upkeep: 8,
+      tooltip: {
+        upkeep: "Medium",
+        desc: "<b>Monitoring.</b> Unlocks the live METRICS dashboard and alerts.",
       },
     },
   },

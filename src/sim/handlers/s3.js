@@ -7,7 +7,7 @@ import { failRequest, finishRequest } from "../../core/actions.js";
 
 export function process(service, job) {
   if (job.req.destination === "s3" || job.req.destination === "cdn") {
-    finishRequest(job.req, service.type);
+    finishRequest(job.req, service.type, service);
   } else {
     failRequest(job.req);
   }
