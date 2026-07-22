@@ -7,14 +7,17 @@ import { i18n } from "../i18n.js";
 import {
   calculateFailChanceBasedOnLoad,
   failRequest,
-  finishRequest,
   flashMoney,
   getUpkeepMultiplier,
   removeRequest,
-  throttleRequest,
   updateScore,
 } from "../core/actions.js";
 import { addInterventionWarning } from "../core/events.js";
+// Per-type job processing lives in the handler registry (#155 PR 9):
+// one file per service type + the shared fallback. See the control-flow
+// contract in src/sim/handlers/index.js.
+import { SERVICE_HANDLERS, genericForward } from "../sim/handlers/index.js";
+import { chargeServerlessInvocation } from "../sim/handlers/serverless.js";
 import { serviceGroup } from "../../game.js";
 
 export class Service {
@@ -419,344 +422,31 @@ export class Service {
         const totalFailChance = Math.min(1, failChance + healthPenalty);
         if (Math.random() < totalFailChance) {
           // Serverless pays per invocation even when the function errors out
-          if (this.type === "serverless") {
-            const cost = this.config.perRequestCost || 0;
-            STATE.money -= cost;
-            if (STATE.finances) {
-              STATE.finances.expenses.upkeep += cost;
-              STATE.finances.expenses.byService.serverless =
-                (STATE.finances.expenses.byService.serverless || 0) + cost;
-            }
-          }
+          // (no-op for every other type)
+          chargeServerlessInvocation(this);
           failRequest(job.req);
           continue;
         }
 
-        if (this.type === "db") {
-          if (job.req.destination === "db") {
-            finishRequest(job.req, this.type);
-          } else {
-            failRequest(job.req);
-          }
+        // Per-type job dispatch (#155 PR 9): the strategy registry replaces
+        // the old inline if-chain. Handler return values map back onto the
+        // exact control flow the chain used — see the contract in
+        // src/sim/handlers/index.js.
+        const handler = SERVICE_HANDLERS[this.type] || genericForward;
+        const outcome = handler(this, job);
+        if (outcome === "requeue-next") {
+          // Job not consumed (SQS waiting for a compute pull) — put it back
+          // at its old index and move on to the next job.
+          this.processing.splice(i, 0, job);
           continue;
         }
-
-        if (this.type === "nosql") {
-          // NoSQL handles READ and WRITE, but NOT SEARCH
-          if (job.req.type === "SEARCH") {
-            failRequest(job.req);
-          } else if (job.req.destination === "db") {
-            finishRequest(job.req, this.type);
-          } else {
-            failRequest(job.req);
-          }
-          continue;
+        if (outcome === "requeue-stop") {
+          // Backpressure — put the job back and stop processing this frame.
+          this.processing.splice(i, 0, job);
+          break;
         }
-
-        if (this.type === "search") {
-          if (job.req.type === "SEARCH") {
-            finishRequest(job.req, this.type);
-          } else {
-            failRequest(job.req);
-          }
-          continue;
-        }
-
-        if (this.type === "replica") {
-          const hasMaster = this.connections.some(id => {
-            const s = STATE.services.find(svc => svc.id === id);
-            return s && (s.type === "db" || s.type === "nosql");
-          });
-          if (!hasMaster) {
-            failRequest(job.req);
-            continue;
-          }
-          if (job.req.type === "READ" && job.req.destination === "db") {
-            finishRequest(job.req, this.type);
-          } else {
-            failRequest(job.req);
-          }
-          continue;
-        }
-
-        if (this.type === "s3") {
-          if (job.req.destination === "s3" || job.req.destination === "cdn") {
-            finishRequest(job.req, this.type);
-          } else {
-            failRequest(job.req);
-          }
-          continue;
-        }
-
-        if (this.type === "cache") {
-          if (job.req.isCacheable) {
-            const hitRate = job.req.cacheHitRate;
-
-            if (Math.random() < hitRate) {
-              job.req.cached = true;
-              STATE.sound.playSuccess();
-              this.flashCacheHit();
-              finishRequest(job.req, this.type);
-              continue;
-            }
-          }
-
-          const destType = job.req.destination;
-
-          // Cache miss routing: prefer specialized services
-          if (destType === "db") {
-            if (job.req.type === "SEARCH") {
-              const searchTarget = this.findConnectedService("search");
-              if (searchTarget) { job.req.flyTo(searchTarget); continue; }
-            }
-            if (job.req.type === "READ") {
-              const replicaTarget = this.findConnectedService("replica");
-              if (replicaTarget) { job.req.flyTo(replicaTarget); continue; }
-            }
-            if (job.req.type !== "SEARCH") {
-              const nosqlTarget = this.findConnectedService("nosql");
-              if (nosqlTarget) { job.req.flyTo(nosqlTarget); continue; }
-            }
-            const sqlTarget = this.findConnectedService("db");
-            if (sqlTarget) { job.req.flyTo(sqlTarget); continue; }
-            failRequest(job.req);
-          } else {
-            // Storage-family destinations are interchangeable on a miss (#88):
-            // STATIC's destination is "cdn" but a Cache wired to S3 should still
-            // deliver it — both are static-content origins.
-            let target = this.findConnectedService(destType);
-            if (!target && (destType === "cdn" || destType === "s3")) {
-              target = this.findConnectedService(destType === "cdn" ? "s3" : "cdn");
-            }
-            if (target) {
-              job.req.flyTo(target);
-            } else {
-              failRequest(job.req);
-            }
-          }
-          continue;
-        }
-
-        // CDN processing logic - High cache hit rate for static content
-        if (this.type === "cdn") {
-          if (job.req.type === "STATIC") {
-            const hitRate = this.config.cacheHitRate || 0.95;
-
-            // CDN Cache Hit
-            if (Math.random() < hitRate) {
-              job.req.cached = true;
-              STATE.sound.playSuccess();
-              this.flashCacheHit();
-              finishRequest(job.req, this.type);
-              continue;
-            }
-          }
-
-          // Cache Miss - Forward to Origin (S3 or whatever is connected)
-          // We look for any connected service that isn't Internet
-          const connectedServices = this.connections
-            .map((id) => STATE.services.find((s) => s.id === id))
-            .filter((s) => s && s.type !== "internet" && !s.isDisabled);
-
-          if (connectedServices.length > 0) {
-            // Simple round robin or just pick first
-            const target = connectedServices[0];
-            job.req.flyTo(target);
-          } else {
-            // Configuring Miss but no origin = Fail
-            failRequest(job.req);
-          }
-          continue;
-        }
-
-        // SQS processing logic
-        if (this.type === "sqs") {
-          // SQS just forwards requests with backpressure check
-          // MODIFIED: Filter out compute nodes, they will PULL from us instead
-          const downstreamTypes = ["alb"];
-          // We intentionally excluded "compute" from the automatic push list.
-          // Compute nodes must actively pull from SQS.
-
-          const candidates = this.connections
-            .map((id) => STATE.services.find((s) => s.id === id))
-            .filter((s) => s && downstreamTypes.includes(s.type) && !s.isDisabled);
-
-          // If no candidates (e.g. only connected to compute), we just wait.
-          // The request remains in 'processing' (it was spliced out, so we need to put it back if we don't send it)
-          if (candidates.length === 0) {
-            // Put it back so it's not lost, and can be popped by compute
-            this.processing.splice(i, 0, job);
-            continue;
-          }
-
-
-
-          // Round-robin with backpressure check
-          let sent = false;
-          for (let attempt = 0; attempt < candidates.length; attempt++) {
-            const target = candidates[this.rrIndex % candidates.length];
-            this.rrIndex++;
-
-            const targetMaxQueue = target.config.maxQueueSize || 20;
-            if (target.queue.length + target.incomingCount < targetMaxQueue) {
-              job.req.flyTo(target);
-              sent = true;
-              break;
-            }
-          }
-
-          if (!sent) {
-            // Downstream busy - keep in processing to retry next frame
-            // Since it was removed at the start of the block, we put it back
-            this.processing.splice(i, 0, job);
-            break;
-          }
-          continue;
-        }
-
-        // API Gateway processing logic - rate limiting
-        if (this.type === "apigw") {
-          this.rateCounter = (this.rateCounter || 0) + 1;
-          const rateLimit = this.config.rateLimit || 20;
-
-          if (this.rateCounter > rateLimit) {
-            // Rate limited - soft fail
-            throttleRequest(job.req);
-            continue;
-          }
-
-          // Forward to downstream (ALB, SQS, Compute)
-          const candidates = this.connections
-            .map((id) => STATE.services.find((s) => s.id === id))
-            .filter((s) => s && !s.isDisabled);
-
-          if (candidates.length > 0) {
-            const target = candidates[this.rrIndex % candidates.length];
-            this.rrIndex++;
-            job.req.flyTo(target);
-          } else {
-            failRequest(job.req);
-          }
-          continue;
-        }
-
-        if (this.type === "compute" || this.type === "serverless") {
-          // Per-request cost for serverless (AWS Lambda style - charged per invocation,
-          // including failed ones since you still pay for execution time)
-          const chargePerRequest = () => {
-            if (this.type !== "serverless") return;
-            const cost = this.config.perRequestCost || 0;
-            STATE.money -= cost;
-            if (STATE.finances) {
-              STATE.finances.expenses.upkeep += cost;
-              STATE.finances.expenses.byService.serverless =
-                (STATE.finances.expenses.byService.serverless || 0) + cost;
-            }
-          };
-
-          const destType = job.req.destination;
-
-          if (destType === "blocked") {
-            chargePerRequest();
-            failRequest(job.req);
-            continue;
-          }
-
-          if (job.req.isCacheable) {
-            // Prefer specialized services over Cache when they're a better fit (#167):
-            // - SEARCH cache hit rate is only 15%, so routing through Cache is mostly
-            //   wasted latency. If a Search Engine is connected, use it directly.
-            // - READ hit rate is 40%, but if Cache is heavily loaded, its queue delay
-            //   outweighs the savings — prefer Read Replica when both are connected
-            //   and Cache is >60% loaded.
-            if (job.req.type === "SEARCH") {
-              const searchDirect = this.findConnectedService("search");
-              if (searchDirect) {
-                chargePerRequest();
-                job.req.flyTo(searchDirect);
-                continue;
-              }
-            }
-            const cacheTarget = this.findConnectedService("cache");
-            if (job.req.type === "READ" && cacheTarget && cacheTarget.totalLoad > 0.6) {
-              const replicaDirect = this.findConnectedService("replica");
-              if (replicaDirect) {
-                chargePerRequest();
-                job.req.flyTo(replicaDirect);
-                continue;
-              }
-            }
-            // Only route through Cache if a miss can still reach its destination
-            // from there (#88). A Cache wired only to the DB must not swallow
-            // STATIC traffic whose destination is Storage — those requests
-            // should use Compute's direct S3 link instead.
-            if (cacheTarget) {
-              const dest = job.req.destination;
-              const cacheCanDeliver =
-                dest === "db"
-                  ? true // cache-miss cascade handles search/replica/nosql/db
-                  : !!(cacheTarget.findConnectedService("s3") ||
-                       cacheTarget.findConnectedService("cdn"));
-              if (cacheCanDeliver) {
-                chargePerRequest();
-                job.req.flyTo(cacheTarget);
-                continue;
-              }
-            }
-          }
-
-          // Routing: prefer specialized services, fallback to general
-          if (destType === "db") {
-            if (job.req.type === "SEARCH") {
-              const searchTarget = this.findConnectedService("search");
-              if (searchTarget) { chargePerRequest(); job.req.flyTo(searchTarget); continue; }
-              const sqlTarget = this.findConnectedService("db");
-              if (sqlTarget) { chargePerRequest(); job.req.flyTo(sqlTarget); continue; }
-            } else if (job.req.type === "READ") {
-              const replicaTarget = this.findConnectedService("replica");
-              if (replicaTarget) { chargePerRequest(); job.req.flyTo(replicaTarget); continue; }
-              const nosqlTarget = this.findConnectedService("nosql");
-              if (nosqlTarget) { chargePerRequest(); job.req.flyTo(nosqlTarget); continue; }
-              const sqlTarget = this.findConnectedService("db");
-              if (sqlTarget) { chargePerRequest(); job.req.flyTo(sqlTarget); continue; }
-            } else {
-              const nosqlTarget = this.findConnectedService("nosql");
-              if (nosqlTarget) { chargePerRequest(); job.req.flyTo(nosqlTarget); continue; }
-              const sqlTarget = this.findConnectedService("db");
-              if (sqlTarget) { chargePerRequest(); job.req.flyTo(sqlTarget); continue; }
-            }
-            chargePerRequest();
-            failRequest(job.req);
-            continue;
-          }
-
-          // Storage-family destinations are interchangeable (#88): STATIC's
-          // destination is "cdn" but a Compute wired directly to S3 must still
-          // deliver it — both are static-content origins.
-          let directTarget = this.findConnectedService(destType);
-          if (!directTarget && (destType === "cdn" || destType === "s3")) {
-            directTarget = this.findConnectedService(destType === "cdn" ? "s3" : "cdn");
-          }
-          if (directTarget) {
-            chargePerRequest();
-            job.req.flyTo(directTarget);
-          } else {
-            chargePerRequest();
-            failRequest(job.req);
-          }
-        } else {
-          const candidates = this.connections
-            .map((id) => STATE.services.find((s) => s.id === id))
-            .filter((s) => s !== undefined && !s.isDisabled); // Skip offline nodes
-
-          if (candidates.length > 0) {
-            const target = candidates[this.rrIndex % candidates.length];
-            this.rrIndex++;
-            job.req.flyTo(target);
-          } else {
-            failRequest(job.req);
-          }
-        }
+        // "next": job consumed or forwarded — fall through to the next job.
+        continue;
       }
     }
 
