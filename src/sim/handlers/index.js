@@ -34,6 +34,7 @@
 
 import { STATE } from "../../state.js";
 import { failRequest } from "../../core/actions.js";
+import { isRoutable } from "../circuit-breaker.js";
 import { process as apigw } from "./apigw.js";
 import { process as cache } from "./cache.js";
 import { process as cdn } from "./cdn.js";
@@ -47,11 +48,12 @@ import { process as serverless } from "./serverless.js";
 import { process as sqs } from "./sqs.js";
 
 // Shared fallback: round-robin the job to any live connected service.
-// Logic lifted unchanged from the final `else` of the old if-chain.
+// Logic lifted unchanged from the final `else` of the old if-chain, except
+// that "live" now means isRoutable (#196): offline OR breaker-open.
 export function genericForward(service, job) {
   const candidates = service.connections
     .map((id) => STATE.services.find((s) => s.id === id))
-    .filter((s) => s !== undefined && !s.isDisabled); // Skip offline nodes
+    .filter(isRoutable); // Skip offline / tripped nodes
 
   if (candidates.length > 0) {
     const target = candidates[service.rrIndex % candidates.length];

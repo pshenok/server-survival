@@ -4,6 +4,7 @@
 
 import { STATE } from "../../state.js";
 import { failRequest, finishRequest } from "../../core/actions.js";
+import { isRoutable } from "../circuit-breaker.js";
 
 export function process(service, job) {
   if (job.req.type === "STATIC") {
@@ -23,7 +24,7 @@ export function process(service, job) {
   // We look for any connected service that isn't Internet
   const connectedServices = service.connections
     .map((id) => STATE.services.find((s) => s.id === id))
-    .filter((s) => s && s.type !== "internet" && !s.isDisabled);
+    .filter((s) => s && s.type !== "internet" && isRoutable(s));
 
   if (connectedServices.length > 0) {
     // Simple round robin or just pick first

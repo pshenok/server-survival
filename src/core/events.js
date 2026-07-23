@@ -358,6 +358,9 @@ function triggerRandomEvent(
             }
             if (target) {
                 STATE.intervention.outageServiceId = target.id;
+                // Resilience (#196): the session counter behind the
+                // "survived a node failure" objective helper.
+                if (STATE.resilience) STATE.resilience.outages++;
                 target.isDisabled = true;
                 target.mesh.material.opacity = 0.3;
                 target.mesh.material.transparent = true;

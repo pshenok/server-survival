@@ -562,6 +562,16 @@ container.addEventListener("mousemove", (e) => {
                 content += `${i18n.t('queue_label')} <span class="${loadColor}">${s.queue.length}</span><br>
                 ${i18n.t('load_label')} <span class="${loadColor}">${s.processing.length}/${s.getEffectiveCapacity()}</span>`;
             }
+            // Circuit-breaker line (#196) — shown whenever the breaker is not
+            // closed, and deliberately NOT gated on the Monitoring service:
+            // the breaker changes where traffic goes, so the player has to be
+            // able to see it acting even without the metrics dashboard.
+            if (s.breakerState === "open" || s.breakerState === "half-open") {
+                const open = s.breakerState === "open";
+                const color = open ? "text-red-400" : "text-amber-300";
+                const label = open ? i18n.t('breaker_open') : i18n.t('breaker_half');
+                content += `<br>${i18n.t('breaker_label')} <span class="${color} font-bold">${label}</span>`;
+            }
             // ASG fleet line (#195) — only once the group is actually on.
             if (s.asgEnabled) {
                 const warming = warmingCount(s);

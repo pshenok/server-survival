@@ -28,6 +28,18 @@ import {
   updateAutoscaling,
   upkeepInstanceFactor,
 } from "../sim/autoscaling.js";
+// Resilience (#196): breaker state lives on the service, the state machine
+// lives in src/sim/circuit-breaker.js, and the one-retry hook in
+// src/sim/retry.js. Service seeds the state, ticks the breaker once per frame,
+// and records exactly one outcome per dispatched job.
+import {
+    initBreaker,
+    isRoutable,
+    recordBreakerFailure,
+    recordBreakerSuccess,
+    updateBreaker,
+} from "../sim/circuit-breaker.js";
+import { retryRequest } from "../sim/retry.js";
 import { serviceGroup } from "../../game.js";
 
 export class Service {
@@ -190,6 +202,10 @@ export class Service {
     // formula below a no-op for them.
     initAutoscaling(this);
 
+    // Circuit-breaker state (#196). Seeded for every type — a closed breaker
+    // is invisible, and it keeps isRoutable() free of null checks.
+    initBreaker(this);
+
     // Service health for degradation mechanic
     this.health = 100;
     this.originalColor = mat.color.getHex();
@@ -305,12 +321,14 @@ export class Service {
   }
 
   findConnectedService(serviceType) {
-    // Skip disabled services (e.g. during a SERVICE_OUTAGE event) so routing
-    // falls through to a healthy alternative instead of stalling traffic on a
-    // node with 0 effective capacity — otherwise the redundancy the player
-    // built (the whole point of the High Availability level) does nothing.
+    // Skip services that are not routable — disabled (e.g. during a
+    // SERVICE_OUTAGE event) or with an open circuit breaker (#196) — so
+    // routing falls through to a healthy alternative instead of stalling
+    // traffic on a node with 0 effective capacity or a dying one. Otherwise
+    // the redundancy the player built (the whole point of the High
+    // Availability level) does nothing.
     return STATE.services.find(
-      (s) => this.connections.includes(s.id) && s.type === serviceType && !s.isDisabled
+      (s) => this.connections.includes(s.id) && s.type === serviceType && isRoutable(s)
     );
   }
 
@@ -362,6 +380,10 @@ export class Service {
     // The type/enabled gate lives inside updateAutoscaling.
     updateAutoscaling(this, dt);
 
+    // Circuit breaker (#196): only the open -> half-open cooldown needs a
+    // clock; every other transition is event-driven. Gate lives inside.
+    updateBreaker(this, dt);
+
     if (STATE.upkeepEnabled) {
       const multiplier =
         typeof getUpkeepMultiplier === "function" ? getUpkeepMultiplier() : 1.0;
@@ -402,7 +424,7 @@ export class Service {
         const upstreamSQS = STATE.services.filter(s =>
           s.type === 'sqs' &&
           s.connections.includes(this.id) &&
-          !s.isDisabled
+          isRoutable(s)
         );
 
         if (upstreamSQS.length > 0) {
@@ -455,7 +477,16 @@ export class Service {
           // Serverless pays per invocation even when the function errors out
           // (no-op for every other type)
           chargeServerlessInvocation(this);
-          failRequest(job.req);
+          // Resilience (#196): this is the sim's one genuinely TRANSIENT
+          // failure — the node was too loaded or too damaged to finish work it
+          // could otherwise have done. So it is both the one signal the
+          // breaker trips on and the one place a retry makes sense. The
+          // REQUEST is counted only when it finally terminates; retryRequest()
+          // returns false unless a healthy alternate route provably exists.
+          recordBreakerFailure(this);
+          if (!retryRequest(job.req, this)) {
+            failRequest(job.req);
+          }
           continue;
         }
 
@@ -477,6 +508,16 @@ export class Service {
           break;
         }
         // "next": job consumed or forwarded — fall through to the next job.
+        //
+        // Breaker bookkeeping (#196): this is the single success site. A job
+        // that left this node without being failed (failRequest) or shed
+        // (throttleRequest) is a healthy outcome, whether it was completed
+        // here or forwarded onward — which is the only way a pure forwarding
+        // node (ALB, WAF) can ever earn a non-error event and avoid tripping
+        // on nothing but routing dead ends.
+        if (!job.req.failed && !job.req.throttled) {
+          recordBreakerSuccess(this);
+        }
         continue;
       }
     }

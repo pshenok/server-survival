@@ -347,6 +347,27 @@ export const CONFIG = {
     // warms up. Kept as the tuning lever if Serverless is ever repriced.
     instanceUpkeepFactor: 1.0,
   },
+  // Resilience tuning (#196). Times are in seconds of GAME time (fast-forward
+  // scales the whole mechanic), rates are fractions of the rolling event
+  // window the breaker keeps per service.
+  //
+  // Calibrated against the #194 alert thresholds and the load-failure curve:
+  // calculateFailChanceBasedOnLoad only starts producing errors above 50%
+  // utilization and reaches 50% error rate at full saturation, so a breaker at
+  // tripErrorRate 0.5 over tripMinEvents 8 fires for a node that is genuinely
+  // drowning (or outright broken) and never for a healthy one riding a spike.
+  // openSec 5 matches the ASG cooldown — long enough for a peer to absorb the
+  // traffic, short enough that the player sees recovery inside one burst.
+  resilience: {
+    tripErrorRate: 0.5, // error rate over the window that trips the breaker
+    tripMinEvents: 8, // ...but never on fewer events than this (rate is noise)
+    windowSize: 20, // rolling window of recorded job outcomes per service
+    openSec: 5, // time skipped by routing before the first probe
+    probeCount: 3, // half-open probes that must all succeed to close
+    retryEnabled: true,
+    maxRetries: 1, // hard cap — one retry, never a storm
+    retryBackoffSec: 0.3, // backoff before the retry flies to the peer
+  },
   survival: {
     startBudget: 500,
     baseRPS: 1.0,

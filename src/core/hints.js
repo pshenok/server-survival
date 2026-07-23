@@ -4,6 +4,7 @@
 
 import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
+import { findSPOFs } from "../sim/topology.js";
 
 function checkSmartHints() {
   if (STATE.gameMode !== "survival") return;
@@ -53,6 +54,21 @@ function checkSmartHints() {
     !s.connections.some(id => ["db", "nosql"].includes(STATE.services.find(x => x.id === id)?.type))
   );
 
+  // Single point of failure (#196). Held back until the topology has had time
+  // to settle — every first minute of every run is one-of-everything, and
+  // saying so immediately would just be noise — and only for a SPOF that is
+  // actually carrying traffic, which is the node whose loss would hurt. It
+  // sits LAST in the chain on purpose: an overload the player can fix right
+  // now outranks an architecture warning they cannot act on in one click.
+  const SPOF_HINT_AFTER = 60; // seconds of game time
+  const SPOF_HINT_LOAD = 0.4;
+  const spof =
+    now >= SPOF_HINT_AFTER
+      ? findSPOFs(STATE)
+          .filter((s) => s.type !== "monitor" && (s.totalLoad || 0) >= SPOF_HINT_LOAD)
+          .sort((a, b) => (b.totalLoad || 0) - (a.totalLoad || 0))[0]
+      : null;
+
   let hint = null;
 
   if (asgCandidate && !STATE.hints.dismissedHints.has("autoscaling")) {
@@ -84,6 +100,8 @@ function checkSmartHints() {
     !STATE.hints.dismissedHints.has("serverless_expensive")
   ) {
     hint = { key: "hint_serverless_expensive", id: "serverless_expensive" };
+  } else if (spof && !STATE.hints.dismissedHints.has("spof")) {
+    hint = { key: "hint_spof", id: "spof", params: { type: i18n.t(spof.type) } };
   }
 
   if (hint) {
@@ -100,7 +118,7 @@ function showSmartHint(hint) {
   warning.className = "intervention-warning warning-info border-2 rounded-lg px-6 py-3 mb-2 shadow-lg";
   warning.innerHTML = `
     <div class="flex items-center gap-3">
-      <span class="font-bold text-sm">${i18n.t(hint.key)}</span>
+      <span class="font-bold text-sm">${i18n.t(hint.key, hint.params)}</span>
       <button onclick="this.parentElement.parentElement.remove(); STATE.hints.dismissedHints.add('${hint.id}')"
         class="pointer-events-auto text-xs bg-blue-800 hover:bg-blue-700 px-2 py-1 rounded ml-2">${i18n.t('hint_dismiss')}</button>
     </div>

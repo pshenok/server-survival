@@ -162,6 +162,10 @@ function checkAlerts(service, m, util, queueDepth, errorRate, events) {
     }
 }
 
+// Shared alert emitter. Also called from src/sim/circuit-breaker.js (#196) so
+// breaker trips/recoveries reuse this cooldown map — note it is deliberately
+// NOT gated on hasMonitoring(): only the threshold rules in checkAlerts() are
+// an observability feature, a breaker trip is a routing event.
 function fireAlert(service, rule, i18nKey, severity) {
     const key = service.id + ":" + rule;
     const now = STATE.elapsedGameTime || 0;
@@ -194,6 +198,7 @@ function resetMetrics() {
 }
 
 export {
+    fireAlert,
     getSampleCount,
     getServiceMetrics,
     hasMonitoring,

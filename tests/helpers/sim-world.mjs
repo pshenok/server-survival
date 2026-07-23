@@ -5,6 +5,7 @@
 import { STATE } from "../../src/state.js";
 import { CONFIG } from "../../src/config.js";
 import { createConnection, createService } from "../../src/sim/topology.js";
+import { resetResilience } from "../../src/sim/circuit-breaker.js";
 
 export { STATE, CONFIG };
 
@@ -40,6 +41,8 @@ export function resetWorld({ money = 100000, gameMode = "sandbox" } = {}) {
   STATE.currentRPS = 0;
   STATE.selectedNodeId = null;
   STATE.activeTool = "select";
+
+  resetResilience(); // mirrors resetGame() (#196 session counters)
 
   STATE.campaign.active = false;
   if (globalThis.window?.campaign) globalThis.window.campaign.active = false;

@@ -12,6 +12,9 @@ import { Request } from "../entities/Request.js";
 // events.js -> game.js -> actions.js) — established pattern, hoisted
 // function declarations only dereferenced at runtime.
 import { recordServiceError, recordServiceSuccess } from "./metrics.js";
+// Resilience (#196): routing skips tripped nodes exactly like disabled ones.
+// The breaker's counters are NOT fed from here — see the note on failRequest.
+import { isRoutable } from "../sim/circuit-breaker.js";
 
 function getUpkeepMultiplier() {
     if (STATE.gameMode !== "survival") return 1.0;
@@ -62,12 +65,21 @@ function getTrafficType() {
 const entryRRIndex = {};
 
 function pickEntryNode(entryNodes, type) {
-    // Filter for live (non-disabled) nodes of the requested type.
+    // Filter for live nodes of the requested type.
     // Type "any" means "any live entry node" (last-resort path).
-    const candidates = entryNodes.filter((s) => {
+    const ofType = entryNodes.filter((s) => {
         if (!s || s.isDisabled) return false;
         return type === "any" ? true : s.type === type;
     });
+    // Resilience (#196): prefer entry points whose breaker is closed, so two
+    // firewalls fail over for each other. But if EVERY entry point of the type
+    // is tripped we fall back to the plain live set instead of returning null:
+    // the front door has no alternative path, and black-holing all traffic
+    // there would punish the player far harder than the overload the breaker
+    // was trying to shed. A breaker only helps where there is somewhere else
+    // to go.
+    const routable = ofType.filter(isRoutable);
+    const candidates = routable.length > 0 ? routable : ofType;
     if (candidates.length === 0) return null;
     if (candidates.length === 1) return candidates[0];
 
@@ -221,7 +233,19 @@ function finishRequest(req, viaServiceType, service) {
 function failRequest(req) {
     // Observability (#194): attribute the failure to the service the request
     // was headed to / sitting on. Entry-routing failures with no target (no
-    // Internet connections at all) stay unattributed by design.
+    // Internet connections at all) stay unattributed by design. `failed` marks
+    // the request so Service.update() does not count this job as a breaker
+    // success.
+    //
+    // The CIRCUIT BREAKER (#196) is deliberately NOT fed from here. Most
+    // failRequest calls are routing verdicts — "no path to this destination",
+    // "a Replica cannot serve a WRITE", "MALICIOUS has nowhere to go" — and
+    // those say nothing about the node's health: an identical peer would fail
+    // them identically, so tripping only takes the node away from the traffic
+    // it CAN still serve. The breaker is fed from the two sites where a node
+    // genuinely drops work it should have handled: the load/health failure
+    // roll in Service.update() and the queue-overflow drop in Request.update().
+    req.failed = true;
     if (req.target && req.target.id && req.target.id !== "internet") {
         recordServiceError(req.target);
     }
@@ -234,6 +258,10 @@ function failRequest(req) {
 }
 
 function throttleRequest(req) {
+    // Throttling is load shedding working as designed, not a service error:
+    // it feeds neither the metrics error rate nor the breaker window. The flag
+    // keeps Service.update() from scoring it as a breaker success either.
+    req.throttled = true;
     updateScore(req, "THROTTLED");
     STATE.sound.playFail();
     req.mesh.material.color.setHex(CONFIG.colors.apigw); // Pink flash for throttled

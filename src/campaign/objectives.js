@@ -64,6 +64,35 @@ export const CampaignObjectives = {
         return (state.services || []).reduce((sum, s) => sum + (s.config.upkeep || 0) / 60, 0);
     },
 
+    // ---- resilience (#196) ----
+
+    /**
+     * True when the architecture took a real node failure — a SERVICE_OUTAGE
+     * event or a circuit breaker tripping — AND the player's reputation was
+     * still above `minReputation` afterwards. That pairing is the whole
+     * lesson: surviving is not "nothing broke", it is "something broke and
+     * traffic kept flowing".
+     *
+     * Not wired into a shipped level yet: level 12 (High Availability) already
+     * scores redundancy through its own objectives, and adding this one would
+     * re-balance a level that ships today. Reserved for a Wave-2 level.
+     */
+    survivedNodeFailure(state, minReputation = 60) {
+        const r = state.resilience || {};
+        const failures = (r.outages || 0) + (r.trips || 0);
+        return failures > 0 && (state.reputation || 0) >= minReputation;
+    },
+
+    /** Circuit breakers that opened this session. */
+    breakerTrips(state) {
+        return state.resilience?.trips || 0;
+    },
+
+    /** Requests that were retried via a healthy peer this session. */
+    retriedRequests(state) {
+        return state.resilience?.retries || 0;
+    },
+
     // ---- request-type counters (need campaign.tick() to bump these — see Task 5) ----
 
     replicaShareOfReads(state) {

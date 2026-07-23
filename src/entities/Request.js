@@ -4,6 +4,11 @@ import { STATE } from "../state.js";
 // hoisted function declarations / top-level consts, only dereferenced at
 // runtime — long after all modules have finished evaluating.
 import { failRequest } from "../core/actions.js";
+// Retry backoff (#196) is ticked here, inside the existing flight model, so a
+// pending retry freezes with the game and dies with a reset — see the note in
+// src/sim/retry.js.
+import { tickRetry } from "../sim/retry.js";
+import { recordBreakerFailure } from "../sim/circuit-breaker.js";
 import { requestGroup } from "../../game.js";
 
 export class Request {
@@ -29,6 +34,14 @@ export class Request {
         requestGroup.add(this.mesh);
 
         this.target = null;
+        // Resilience (#196): retry bookkeeping. `retries` is capped by
+        // CONFIG.resilience.maxRetries; retryDelay > 0 means the request is
+        // sitting out its backoff and is not in flight.
+        this.retries = 0;
+        this.retryDelay = 0;
+        this.retryTarget = null;
+        this.failed = false;
+        this.throttled = false;
         this.origin = STATE.internetNode.position.clone();
         this.origin.y = 2;
         this.progress = 0;
@@ -63,6 +76,11 @@ export class Request {
     }
 
     update(dt) {
+        // Backoff before a retry (#196): the request hovers at the node that
+        // dropped it until the delay expires, then flies to the peer (or is
+        // failed if that peer is gone). Always terminates — see retry.js.
+        if (tickRetry(this, dt)) return;
+
         if (this.isMoving && this.target) {
             this.progress += dt * 2;
             if (this.progress >= 1) {
@@ -80,6 +98,10 @@ export class Request {
                 if (this.target.queue.length < maxQueue) {
                     this.target.queue.push(this);
                 } else {
+                    // Overflow drop (#196): one of the two genuine "this node
+                    // is failing" signals the breaker listens to — the target
+                    // is so backed up it cannot even accept the request.
+                    recordBreakerFailure(this.target);
                     failRequest(this);
                 }
             } else {

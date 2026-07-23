@@ -12,6 +12,7 @@ import { i18n } from "../i18n.js";
 import { Service } from "../entities/Service.js";
 import { flashMoney, removeRequest } from "../core/actions.js";
 import { updateRepairCostTable } from "../core/economy.js";
+import { isRoutable } from "./circuit-breaker.js";
 // Runtime-only cycle (game.js ⇄ topology.js) — established pattern: these
 // are top-level consts in game.js (scene groups + raycasting singletons),
 // only dereferenced at runtime, long after both modules evaluate.
@@ -288,6 +289,48 @@ function updateConnectionsForNode(nodeId) {
     });
 }
 
+// Single-point-of-failure detection (#196). Deliberately simple and
+// deliberately explained, because the player is going to be told about it:
+//
+//   a service is a SPOF when it is the ONLY routable service of its type that
+//   traffic can reach from the Internet.
+//
+// Reachability is a plain forward walk from the Internet node over the
+// connection graph, so services the player parked off the active path are
+// ignored, as are nodes that never take traffic (Monitoring is unreachable by
+// construction — it has no valid edges). "Only one of its type" is what makes
+// the N+1 lesson land: with a second instance of that type wired to the same
+// upstream, routing (findConnectedService / genericForward / the entry picker,
+// all of which skip a disabled or breaker-open node) fails over on its own.
+//
+// Not modelled: partial redundancy, where a second instance exists but hangs
+// off a different upstream. That is a "your redundancy is not wired up" lesson
+// and needs its own hint text rather than a false negative here.
+function findSPOFs(state = STATE) {
+    const byId = new Map((state.services || []).map((s) => [s.id, s]));
+    const reachable = new Set();
+    const frontier = [...(state.internetNode?.connections || [])];
+
+    while (frontier.length > 0) {
+        const id = frontier.pop();
+        if (reachable.has(id)) continue;
+        const svc = byId.get(id);
+        if (!svc) continue;
+        reachable.add(id);
+        for (const next of svc.connections) frontier.push(next);
+    }
+
+    const countByType = {};
+    for (const s of state.services || []) {
+        if (!isRoutable(s)) continue;
+        countByType[s.type] = (countByType[s.type] || 0) + 1;
+    }
+
+    return [...reachable]
+        .map((id) => byId.get(id))
+        .filter((s) => s && isRoutable(s) && countByType[s.type] === 1);
+}
+
 function clearAllServices() {
     STATE.services.forEach((s) => s.destroy());
     STATE.services = [];
@@ -309,6 +352,7 @@ export {
     createService,
     deleteConnection,
     deleteObject,
+    findSPOFs,
     getConnectionAtPoint,
     restoreService,
     snapToGrid,
