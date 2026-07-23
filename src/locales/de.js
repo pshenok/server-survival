@@ -461,4 +461,14 @@ export const DE_TRANSLATIONS = {
     "alert_high_load": "Hohe Last: {type}",
     "alert_queue_capacity": "Warteschlange fast voll: {type}",
     "alert_error_rate": "Kritische Fehlerrate: {type}",
+    // Auto-Scaling Group (#195)
+    "compute_full": "Compute-Knoten",
+    "compute_desc_long": "Verarbeitet alle Anfragetypen und leitet sie weiter. Upgrade-Stufen skalieren ihn nach oben (Kapazität 4/10/18). Mit AUTO skaliert er stattdessen in die Breite: Eine Auto-Scaling-Gruppe startet eine Instanz, sobald die Auslastung über 70 % bleibt, und entfernt eine unter 30 % – zwischen 1 und 5 Instanzen. Eine neue Instanz braucht 3 s zum Hochfahren und übernimmt bis dahin keinen Verkehr; genau dieser Kaltstart ist der Grund, vor bekannten Lastspitzen vorzuskalieren – und jede Instanz kostet ab dem Start. Reale Entsprechungen: AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.",
+    "compute_flow": "Fluss: LB / Warteschlange → Compute → Cache / DB / NoSQL / Speicher",
+    "asg_label": "AUTO",
+    "asg_off": "AUS",
+    "asg_warming": "+{n} startet",
+    "asg_enable_tip": "Auto-Skalierung für diesen Compute-Knoten aktivieren",
+    "asg_disable_tip": "Auto-Skalierung deaktivieren (zurück auf eine Instanz)",
+    "hint_enable_asg": "Dieser Compute-Knoten läuft schon länger am Limit. Aktiviere AUTO, damit er unter Last in die Breite skaliert.",
 };

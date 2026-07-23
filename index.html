@@ -773,6 +773,22 @@
     </div>
   </div>
 
+  <!-- Auto-Scaling toggle (#195) — floats under the hovered Compute node -->
+  <div id="asg-indicator"
+    class="hidden absolute z-30 pointer-events-auto cursor-pointer flex flex-col items-center transform -translate-x-1/2 transition-transform hover:scale-110">
+    <div id="asg-badge"
+      class="flex items-center gap-1 bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded font-bold font-mono shadow-lg border border-gray-500">
+      <svg viewBox="0 0 16 16" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M8 12.5V3.5" />
+        <path d="M4.5 7 8 3.5 11.5 7" />
+        <path d="M2.5 14.5h11" />
+      </svg>
+      <span id="asg-label">AUTO</span>
+    </div>
+    <div id="asg-warming" class="hidden mt-1 text-[10px] font-mono text-amber-300"></div>
+  </div>
+
   <!-- Game Canvas -->
   <div id="canvas-container"></div>
 
@@ -1285,6 +1301,16 @@
               Auto-scales with traffic (capacity 30). Very low upkeep ($2/min) but charges $0.03 per completed request. Cheap for bursty / low-volume traffic; expensive at sustained high RPS. Same connection topology as Compute.
             </p>
             <p data-i18n="serverless_flow" class="text-xs text-gray-500 mt-1">Flow: ALB / Queue → Serverless → Cache / DB / NoSQL / S3</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-orange-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="compute_full" class="text-orange-400">Compute Node</strong>
+              <span class="text-green-400 font-mono text-sm">$60</span>
+            </div>
+            <p data-i18n="compute_desc_long" class="text-sm text-gray-400 mt-1">
+              Processes every request type and routes it onward. Upgrade tiers scale it UP (capacity 4/10/18). Toggle AUTO to scale it OUT instead: an Auto-Scaling Group boots an instance whenever utilization stays above 70% and retires one below 30%, between 1 and 5 instances. A new instance needs 3s to warm up and carries no traffic until it does — that cold start is why you pre-scale ahead of a known peak — and every instance is billed from the moment it boots. Real-world equivalents: AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.
+            </p>
+            <p data-i18n="compute_flow" class="text-xs text-gray-500 mt-1">Flow: LB / Queue → Compute → Cache / DB / NoSQL / Storage</p>
           </div>
           <div class="bg-gray-800/50 p-3 rounded border border-teal-900/50">
             <div class="flex justify-between items-center">

@@ -319,6 +319,34 @@ export const CONFIG = {
       },
     },
   },
+  // Auto-Scaling Group tuning (#195). Only Compute can run an ASG; every
+  // knob here is expressed in seconds of GAME time (so fast-forward scales
+  // the whole mechanic consistently) and in fractions of totalLoad.
+  //
+  // The numbers survived the economics pass in #195 (single Compute vs ASG
+  // Compute vs Serverless over four traffic profiles): warmup and sustain are
+  // long enough that a burst still hurts (the cold-start lesson), and at
+  // targetUtil 0.7 the fleet stays right-sized — ~2 instances at 10 RPS —
+  // instead of over-provisioning. Serverless still wins idle and spiky
+  // traffic, a fixed Compute wins steady mid-range traffic, and the ASG is
+  // the only option that survives past Serverless's capacity ceiling.
+  autoscaling: {
+    targetUtil: 0.7, // scale out above this sustained utilization
+    scaleInUtil: 0.3, // scale in below this (hysteresis gap prevents flapping)
+    cooldownSec: 5, // minimum game-time between two scaling actions
+    warmupSec: 3, // cold start: a new instance carries no traffic until then
+    minInstances: 1,
+    maxInstances: 5,
+    sustainSec: 2, // util must hold past the threshold this long
+    // Per-instance upkeep premium: instance #1 costs the base upkeep, every
+    // further instance costs base * instanceUpkeepFactor. Left at 1.0 (plain
+    // per-instance billing) — the #195 sweep showed this knob cannot flip any
+    // profile's winner in either direction: Serverless's $0.03/request has the
+    // same marginal cost per RPS as a saturated Compute instance, so even free
+    // extra instances would not buy back the requests an ASG drops while it
+    // warms up. Kept as the tuning lever if Serverless is ever repriced.
+    instanceUpkeepFactor: 1.0,
+  },
   survival: {
     startBudget: 500,
     baseRPS: 1.0,

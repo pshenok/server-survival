@@ -18,6 +18,16 @@ import { addInterventionWarning } from "../core/events.js";
 // contract in src/sim/handlers/index.js.
 import { SERVICE_HANDLERS, genericForward } from "../sim/handlers/index.js";
 import { chargeServerlessInvocation } from "../sim/handlers/serverless.js";
+// Auto-Scaling Group (#195): fleet state, the scaling loop and the satellite
+// meshes live in src/sim/autoscaling.js — Service only seeds the state, calls
+// the loop once per frame, and folds the instance count into capacity/upkeep.
+import {
+  disposeSatellites,
+  initAutoscaling,
+  refreshSatellites,
+  updateAutoscaling,
+  upkeepInstanceFactor,
+} from "../sim/autoscaling.js";
 import { serviceGroup } from "../../game.js";
 
 export class Service {
@@ -174,6 +184,11 @@ export class Service {
     this.tier = 1;
     this.tierRings = [];
     this.rrIndex = 0;
+
+    // ASG state (#195). Seeded for every type: non-compute services keep
+    // asgEnabled false / instances 1, which makes every instance-aware
+    // formula below a no-op for them.
+    initAutoscaling(this);
 
     // Service health for degradation mechanic
     this.health = 100;
@@ -343,10 +358,17 @@ export class Service {
       }
     }
 
+    // ASG (#195): grow/shrink the fleet before capacity is read this frame.
+    // The type/enabled gate lives inside updateAutoscaling.
+    updateAutoscaling(this, dt);
+
     if (STATE.upkeepEnabled) {
       const multiplier =
         typeof getUpkeepMultiplier === "function" ? getUpkeepMultiplier() : 1.0;
-      const upkeepCost = (this.config.upkeep / 60) * dt * multiplier;
+      // Every instance is billed, warming ones included — clouds charge from
+      // boot, not from readiness.
+      const upkeepCost =
+        (this.config.upkeep / 60) * dt * multiplier * upkeepInstanceFactor(this);
       STATE.money -= upkeepCost;
       if (STATE.finances) {
         STATE.finances.expenses.upkeep += upkeepCost;
@@ -515,13 +537,20 @@ export class Service {
   }
 
   get totalLoad() {
+    // Utilization of the READY fleet (#195). With one instance — every
+    // service except a scaled-out ASG Compute — this is the original
+    // capacity*2 denominator, unchanged.
     return (
-      (this.processing.length + this.queue.length) / (this.config.capacity * 2)
+      (this.processing.length + this.queue.length) /
+      (this.config.capacity * (this.instances || 1) * 2)
     );
   }
 
   destroy() {
     serviceGroup.remove(this.mesh);
+    // ASG satellites (#195) are children of this.mesh — drop and dispose them
+    // explicitly, the parent's dispose() below does not recurse.
+    disposeSatellites(this);
     if (this.tierRings) {
       this.tierRings.forEach((r) => {
         r.geometry.dispose();
@@ -675,8 +704,12 @@ export class Service {
   }
 
   getEffectiveCapacity() {
-    // Reduce capacity when health is low
-    let capacity = this.config.capacity;
+    // Fleet size first (#195): READY instances only — a warming instance
+    // contributes nothing until its cold start finishes. Applied before the
+    // health / event reductions so those still scale the whole fleet
+    // proportionally. instances is 1 for every non-ASG service, so this is a
+    // no-op there.
+    let capacity = this.config.capacity * (this.instances || 1);
 
     // Apply health-based reduction
     const criticalHealth = CONFIG.survival.degradation?.criticalHealth || 30;
@@ -703,6 +736,19 @@ export class Service {
     const service = new Service(serviceData.type, pos);
     service.id = serviceData.id;
     service.mesh.userData.id = serviceData.id;
+
+    // ASG (#195): enabled flag + ready fleet size round-trip; warming
+    // instances deliberately do NOT — a load is a cold boot of the whole
+    // fleet, and resuming a half-finished warmup would be invisible state.
+    // Saves that predate ASG have neither field and load as (false, 1).
+    if (service.type === "compute" && serviceData.asgEnabled) {
+      service.asgEnabled = true;
+      const max = CONFIG.autoscaling.maxInstances;
+      const min = CONFIG.autoscaling.minInstances;
+      const saved = Number(serviceData.instances) || 1;
+      service.instances = Math.max(min, Math.min(max, Math.floor(saved)));
+      refreshSatellites(service);
+    }
 
     if (serviceData.tier && serviceData.tier > 1) {
       const tiers = CONFIG.services[serviceData.type]?.tiers;

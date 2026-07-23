@@ -12,6 +12,23 @@ function checkSmartHints() {
   if (STATE.timeScale === 0) return;
 
   const now = STATE.elapsedGameTime;
+
+  // ASG candidate tracking (#195). Runs BEFORE the cooldown return so the
+  // "sat hot for a while" streak keeps accumulating between hints instead of
+  // resetting every time another hint holds the floor. asgHintSince is the
+  // game time the node first crossed 85% util without an ASG.
+  const ASG_HINT_SUSTAIN = 8; // seconds of game time
+  let asgCandidate = false;
+  for (const s of STATE.services) {
+    if (s.type !== "compute") continue;
+    if (!s.asgEnabled && s.totalLoad > 0.85) {
+      if (s.asgHintSince === undefined) s.asgHintSince = now;
+      if (now - s.asgHintSince >= ASG_HINT_SUSTAIN) asgCandidate = true;
+    } else {
+      s.asgHintSince = undefined;
+    }
+  }
+
   if (now - STATE.hints.lastHintTime < STATE.hints.hintCooldown) return;
 
   const dbServices = STATE.services.filter(s => s.type === "db");
@@ -38,7 +55,9 @@ function checkSmartHints() {
 
   let hint = null;
 
-  if (replicaNoMaster && (STATE.failures.WRITE || 0) + (STATE.failures.SEARCH || 0) > 3 &&
+  if (asgCandidate && !STATE.hints.dismissedHints.has("autoscaling")) {
+    hint = { key: "hint_enable_asg", id: "autoscaling" };
+  } else if (replicaNoMaster && (STATE.failures.WRITE || 0) + (STATE.failures.SEARCH || 0) > 3 &&
       !STATE.hints.dismissedHints.has("replica_write")) {
     hint = { key: "hint_replica_write", id: "replica_write" };
   } else if (dbOverloaded && !hasSearch && STATE.trafficDistribution.SEARCH > 0.05 &&

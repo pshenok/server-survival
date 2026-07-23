@@ -13,6 +13,12 @@ import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
 import { addInterventionWarning } from "../core/events.js";
 import {
+    canAutoscale,
+    instanceCount,
+    toggleAutoscaling,
+    warmingCount,
+} from "../sim/autoscaling.js";
+import {
     createConnection,
     createService,
     deleteConnection,
@@ -148,6 +154,96 @@ if (upgradeIndicator) {
             }, 300);
         }
     });
+}
+
+// Auto-Scaling toggle (#195). Same hover/hide-timer pattern as the upgrade
+// indicator above, but for Compute only: it floats UNDER the node, shows
+// "AUTO n/max" while the group is on, and pulses with a "+n warming" hint
+// while instances are cold-starting. The animate loop replays the last
+// mousemove at ~4 Hz (#173), so the counters tick live without extra wiring.
+let hoveredAsgService = null;
+let hideAsgTimer = null;
+const asgIndicator = document.getElementById("asg-indicator");
+const asgBadge = document.getElementById("asg-badge");
+const asgLabel = document.getElementById("asg-label");
+const asgWarmingEl = document.getElementById("asg-warming");
+
+const ASG_ON_CLASSES = ["bg-teal-900/80", "text-teal-200", "border-teal-400"];
+const ASG_OFF_CLASSES = ["bg-gray-800", "text-gray-300", "border-gray-500"];
+
+function hideAsgIndicator() {
+    hoveredAsgService = null;
+    if (asgIndicator) asgIndicator.classList.add("hidden");
+    hideAsgTimer = null;
+}
+
+function scheduleAsgHide() {
+    if (hoveredAsgService && !hideAsgTimer) {
+        hideAsgTimer = setTimeout(hideAsgIndicator, 300);
+    }
+}
+
+function paintAsgIndicator(service) {
+    if (!asgIndicator || !asgBadge || !asgLabel || !asgWarmingEl) return;
+    const max = CONFIG.autoscaling.maxInstances;
+    const warming = warmingCount(service);
+
+    asgLabel.textContent = service.asgEnabled
+        ? `${i18n.t("asg_label")} ${instanceCount(service)}/${max}`
+        : `${i18n.t("asg_label")} ${i18n.t("asg_off")}`;
+    asgIndicator.title = service.asgEnabled
+        ? i18n.t("asg_disable_tip")
+        : i18n.t("asg_enable_tip");
+
+    asgBadge.classList.remove(...ASG_ON_CLASSES, ...ASG_OFF_CLASSES);
+    asgBadge.classList.add(...(service.asgEnabled ? ASG_ON_CLASSES : ASG_OFF_CLASSES));
+    asgBadge.classList.toggle("animate-pulse", warming > 0);
+
+    asgWarmingEl.textContent = warming > 0 ? i18n.t("asg_warming", { n: warming }) : "";
+    asgWarmingEl.classList.toggle("hidden", warming === 0);
+}
+
+function showAsgIndicator(service) {
+    if (!asgIndicator) return;
+    if (hideAsgTimer) {
+        clearTimeout(hideAsgTimer);
+        hideAsgTimer = null;
+    }
+    hoveredAsgService = service;
+
+    // Project the node's base to screen space so the badge sits below it.
+    const pos = service.mesh.position.clone();
+    pos.y -= 1.5;
+    pos.project(camera);
+    asgIndicator.style.left = `${(pos.x * 0.5 + 0.5) * container.clientWidth}px`;
+    asgIndicator.style.top = `${(pos.y * -0.5 + 0.5) * container.clientHeight}px`;
+    asgIndicator.classList.remove("hidden");
+
+    paintAsgIndicator(service);
+}
+
+if (asgIndicator) {
+    asgIndicator.addEventListener("click", (e) => {
+        e.stopPropagation(); // don't let the map handler place/select behind it
+        if (!hoveredAsgService) return;
+        // The node may have been deleted while the badge was still up.
+        if (!STATE.services.includes(hoveredAsgService)) {
+            hideAsgIndicator();
+            return;
+        }
+        toggleAutoscaling(hoveredAsgService);
+        STATE.sound?.playPlace();
+        paintAsgIndicator(hoveredAsgService);
+    });
+
+    asgIndicator.addEventListener("mouseenter", () => {
+        if (hideAsgTimer) {
+            clearTimeout(hideAsgTimer);
+            hideAsgTimer = null;
+        }
+    });
+
+    asgIndicator.addEventListener("mouseleave", scheduleAsgHide);
 }
 
 // Keyboard navigation
@@ -464,7 +560,15 @@ container.addEventListener("mousemove", (e) => {
                 ${i18n.t('status_label')} <span class="${statusColor}">${status}</span>`;
             } else {
                 content += `${i18n.t('queue_label')} <span class="${loadColor}">${s.queue.length}</span><br>
-                ${i18n.t('load_label')} <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span>`;
+                ${i18n.t('load_label')} <span class="${loadColor}">${s.processing.length}/${s.getEffectiveCapacity()}</span>`;
+            }
+            // ASG fleet line (#195) — only once the group is actually on.
+            if (s.asgEnabled) {
+                const warming = warmingCount(s);
+                content += `<br>${i18n.t('asg_label')} <span class="text-teal-300">${instanceCount(s)}/${CONFIG.autoscaling.maxInstances}</span>`;
+                if (warming > 0) {
+                    content += ` <span class="text-amber-300">${i18n.t('asg_warming', { n: warming })}</span>`;
+                }
             }
             content += `</div>`;
 
@@ -544,6 +648,13 @@ container.addEventListener("mousemove", (e) => {
                 }
             }
 
+            // AUTO toggle (#195): Compute only.
+            if (canAutoscale(s)) {
+                showAsgIndicator(s);
+            } else {
+                scheduleAsgHide();
+            }
+
             showTooltip(e.clientX + 15, e.clientY + 15, content);
 
             // Reset previous highlights
@@ -568,6 +679,9 @@ container.addEventListener("mousemove", (e) => {
                 hideUpgradeTimer = null;
             }, 300);
         }
+
+        // Same for the AUTO toggle (#195).
+        scheduleAsgHide();
     }
 
     container.style.cursor = cursor;

@@ -461,4 +461,14 @@ export const ZH_TRANSLATIONS = {
     "alert_high_load": "负载过高：{type}",
     "alert_queue_capacity": "队列接近容量：{type}",
     "alert_error_rate": "错误率危急：{type}",
+    // Auto-Scaling Group (#195)
+    "compute_full": "计算节点",
+    "compute_desc_long": "处理所有类型的请求并转发。升级层级是纵向扩容（容量 4/10/18）。开启 AUTO 则改为横向扩容：当利用率持续高于 70% 时，自动伸缩组会新增一个实例；低于 30% 时移除一个，实例数保持在 1 到 5 之间。新实例需要 3 秒预热，在此之前不承担任何流量——这就是冷启动，也是要在已知高峰前提前扩容的原因——而且实例从启动那一刻起就开始计费。现实对应：AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group。",
+    "compute_flow": "流程：负载均衡 / 队列 → 计算 → 缓存 / 数据库 / NoSQL / 存储",
+    "asg_label": "AUTO",
+    "asg_off": "关闭",
+    "asg_warming": "+{n} 预热中",
+    "asg_enable_tip": "为该计算节点启用自动伸缩",
+    "asg_disable_tip": "关闭自动伸缩（恢复为单个实例）",
+    "hint_enable_asg": "这个计算节点已经满载一段时间了。开启 AUTO，让它在高负载时自动扩容。",
 };

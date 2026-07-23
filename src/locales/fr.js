@@ -461,4 +461,14 @@ export const FR_TRANSLATIONS = {
     "alert_high_load": "Charge élevée : {type}",
     "alert_queue_capacity": "File presque pleine : {type}",
     "alert_error_rate": "Taux d'erreurs critique : {type}",
+    // Auto-Scaling Group (#195)
+    "compute_full": "Nœud de calcul",
+    "compute_desc_long": "Traite tous les types de requêtes et les achemine. Les niveaux d'amélioration l'agrandissent verticalement (capacité 4/10/18). Activez AUTO pour le faire évoluer horizontalement : un groupe d'auto-scaling ajoute une instance dès que l'utilisation reste au-dessus de 70 % et en retire une sous 30 %, entre 1 et 5 instances. Une nouvelle instance met 3 s à démarrer et ne traite aucun trafic avant : ce démarrage à froid explique pourquoi on anticipe les pics connus — et chaque instance est facturée dès son démarrage. Équivalents réels : AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.",
+    "compute_flow": "Flux : LB / File → Calcul → Cache / BDD / NoSQL / Stockage",
+    "asg_label": "AUTO",
+    "asg_off": "ARRÊT",
+    "asg_warming": "+{n} en démarrage",
+    "asg_enable_tip": "Activer l'auto-scaling pour ce nœud de calcul",
+    "asg_disable_tip": "Désactiver l'auto-scaling (retour à une seule instance)",
+    "hint_enable_asg": "Ce nœud de calcul sature depuis un moment. Activez AUTO pour qu'il évolue horizontalement sous la charge.",
 };
