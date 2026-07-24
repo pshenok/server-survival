@@ -40,6 +40,7 @@ import { process as cache } from "./cache.js";
 import { process as cdn } from "./cdn.js";
 import { process as compute } from "./compute.js";
 import { process as db } from "./db.js";
+import { process as dns } from "./dns.js";
 import { process as nosql } from "./nosql.js";
 import { process as notify } from "./notify.js";
 import { process as pubsub } from "./pubsub.js";
@@ -48,6 +49,7 @@ import { process as s3 } from "./s3.js";
 import { process as search } from "./search.js";
 import { process as serverless } from "./serverless.js";
 import { process as sqs } from "./sqs.js";
+import { process as warehouse } from "./warehouse.js";
 
 // Shared fallback: round-robin the job to any live connected service.
 // Logic lifted unchanged from the final `else` of the old if-chain, except
@@ -75,7 +77,13 @@ export const SERVICE_HANDLERS = {
   cache,
   cdn,
   compute,
+  // Container Cluster (#198) processes exactly like Compute — same routing
+  // brain, same handler. Its distinguishing behavior is economic (dense fixed
+  // capacity at a flat per-cluster fee) + operational (a longer ASG warmup),
+  // not a different job path, so it deliberately reuses the compute handler.
+  container: compute,
   db,
+  dns,
   nosql,
   notify,
   pubsub,
@@ -84,4 +92,5 @@ export const SERVICE_HANDLERS = {
   search,
   serverless,
   sqs,
+  warehouse,
 };

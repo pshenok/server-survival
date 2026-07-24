@@ -34,6 +34,10 @@ export const CONFIG = {
     auth: 0xeab308, // Gold — identity / key (#197)
     scheduler: 0x38bdf8, // Sky — clock / cron (#197)
     notify: 0xfb7185, // Rose — notification bell (#197)
+    container: 0x326ce5, // Kubernetes blue — dense box cluster (#198)
+    stream: 0x2dd4bf, // Teal — an ordered flow of records (#198)
+    dns: 0xa3e635, // Lime — global routing / a resolver globe (#198)
+    warehouse: 0xb45309, // Amber — a big cold analytics store (#198)
   },
   trafficTypes: {
     STATIC: {
@@ -426,6 +430,96 @@ export const CONFIG = {
         desc: "<b>Notification.</b> Terminal 'send': success earns reputation, failures are silent.",
       },
     },
+    // ===== Sandbox archetypes, batch 2 (#198) — the "complex" set =====
+    // Each still clears the #193 bar: distinguishable simulation behavior no
+    // existing service replicates. Sandbox + Survival only — no campaign level
+    // is gated behind them. Their distinguishing behaviors touch the CORE
+    // systems (capacity model, ordering, entry point, traffic classes) rather
+    // than bolting on beside them, which is what makes this batch "complex".
+    container: {
+      // Container Cluster. The economic ANTI-TWIN of Serverless: a big block
+      // of fixed capacity at a flat per-CLUSTER price (no per-request charge),
+      // where Serverless is tiny fixed upkeep + a per-request bleed. It packs
+      // far denser than a single Compute (capacity 12 vs 4) and shares
+      // Compute's processing brain (same handler), so on paper it "does the
+      // same thing" — the DIFFERENT CHOICE is entirely economic: it wins
+      // steady high-throughput, where the flat cluster price beats Serverless's
+      // per-request cost AND its density beats paying upkeep for N Compute
+      // instances. It reuses the #195 autoscaling engine (canAutoscale) but
+      // with a NOTABLY LONGER warmup than ASG Compute (a node-pool boot, not a
+      // VM boot — see CONFIG.autoscaling.containerWarmupSec), so its cold start
+      // hurts more and pre-scaling matters more.
+      name: "Container Cluster",
+      cost: 120,
+      type: "container",
+      processingTime: 600, // same per-request cost as Compute — it IS compute
+      capacity: 12, // 3× a Tier-1 Compute: denser packing
+      upkeep: 16,
+      tooltip: {
+        upkeep: "High",
+        desc: "<b>Container Cluster.</b> Dense fixed capacity at a flat fee. Slow node-pool warmup on scale-out.",
+      },
+    },
+    stream: {
+      // Stream. The ONLY node that models HEAD-OF-LINE BLOCKING: records are
+      // spread across `partitions` independent partitions, each of which
+      // processes STRICTLY in order. If a partition's head cannot forward
+      // (its downstream is saturated) the whole partition waits behind it —
+      // it never skips ahead — while the OTHER partitions keep flowing. That
+      // ordered-but-blockable behavior is the lesson (ordering vs throughput),
+      // and it lives in src/sim/stream.js (ticked from update(), not a handler).
+      name: "Stream",
+      cost: 90,
+      type: "stream",
+      processingTime: 100, // fast per-record append; the delay is the ordering, not the work
+      capacity: 40, // high throughput ceiling (feeds the totalLoad denominator)
+      maxQueueSize: 200, // deep ingress buffer before the per-partition split
+      upkeep: 10,
+      partitions: 3, // independent ordered partitions
+      tooltip: {
+        upkeep: "Medium",
+        desc: "<b>Stream.</b> High throughput, strictly ordered per partition. A stalled partition backs up its tail.",
+      },
+    },
+    dns: {
+      // DNS / GeoDNS. The ONLY entry node that sits IN FRONT of the internet-
+      // facing tier and fans traffic across 2+ INDEPENDENT front-door stacks
+      // (each its own WAF→ALB→… region). Where an ALB balances workers WITHIN
+      // one stack, DNS balances whole stacks at the very front — the basis for
+      // multi-region. It is chosen as the entry (see routeRequestToEntry), then
+      // round-robins across its own routable downstream front-doors
+      // (src/sim/handlers/dns.js). Cheap and fast — it is just a resolver.
+      name: "GeoDNS",
+      cost: 50,
+      type: "dns",
+      processingTime: 20, // a resolver lookup, not real work
+      capacity: 60,
+      upkeep: 4,
+      tooltip: {
+        upkeep: "Low",
+        desc: "<b>GeoDNS.</b> Front-door for the whole site: splits traffic across independent regional stacks.",
+      },
+    },
+    warehouse: {
+      // Data Warehouse. The ONLY store that ACCEPTS write-derived analytics and
+      // REJECTS realtime READ (OLAP, not OLTP): a WRITE/UPLOAD copy completes
+      // here — slowly and cheaply at volume — but a READ/SEARCH that reaches it
+      // FAILS, because a warehouse is not a serving database. High capacity +
+      // very low upkeep-per-capacity is the "cheap at volume" half; the very
+      // high processingTime is the "slow" half. Fed by an analytics fan-out
+      // (Pub/Sub copy) or a scheduled batch load (Scheduler ETL); it is a pure
+      // terminal sink (src/sim/handlers/warehouse.js).
+      name: "Data Warehouse",
+      cost: 90,
+      type: "warehouse",
+      processingTime: 1200, // OLAP is slow
+      capacity: 40, // cheap at volume: big and low-upkeep
+      upkeep: 8,
+      tooltip: {
+        upkeep: "Low",
+        desc: "<b>Data Warehouse.</b> Stores analytics WRITES cheaply and slowly. Cannot serve realtime READ.",
+      },
+    },
   },
   // Auto-Scaling Group tuning (#195). Only Compute can run an ASG; every
   // knob here is expressed in seconds of GAME time (so fast-forward scales
@@ -443,6 +537,11 @@ export const CONFIG = {
     scaleInUtil: 0.3, // scale in below this (hysteresis gap prevents flapping)
     cooldownSec: 5, // minimum game-time between two scaling actions
     warmupSec: 3, // cold start: a new instance carries no traffic until then
+    // Container Cluster (#198) reuses this whole engine but boots a NODE POOL,
+    // not a single VM — a notably longer cold start than ASG Compute's 3s, so
+    // its scale-out lag is the distinguishing pain and pre-scaling matters
+    // more. Only updateAutoscaling reads this, gated on service.type.
+    containerWarmupSec: 8,
     minInstances: 1,
     maxInstances: 5,
     sustainSec: 2, // util must hold past the threshold this long

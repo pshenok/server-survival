@@ -35,11 +35,22 @@ const SAT_WIDTH = 0.9;
 const SAT_HEIGHT = 1.4;
 const SAT_WARMING_OPACITY = 0.35;
 
-// ASG is a Compute-only mode: it is the "scale out instead of scale up"
-// counterpart to the tier upgrades, and Serverless already auto-scales by
-// construction.
+// ASG is the "scale out instead of scale up" counterpart to the tier upgrades.
+// Compute runs it (Serverless already auto-scales by construction), and so does
+// the Container Cluster (#198) — the same fleet mechanic, but with a longer
+// node-pool warmup (see warmupFor / CONFIG.autoscaling.containerWarmupSec).
 function canAutoscale(service) {
-    return service.type === "compute";
+    return service.type === "compute" || service.type === "container";
+}
+
+// Cold-start duration for a booting instance. Container's node pool warms
+// notably longer than an ASG Compute's VM, so its scale-out lag is the
+// distinguishing pain (#198).
+function warmupFor(service) {
+    const cfg = CONFIG.autoscaling;
+    return service.type === "container"
+        ? (cfg.containerWarmupSec ?? cfg.warmupSec)
+        : cfg.warmupSec;
 }
 
 // Seeded from the Service constructor for EVERY type. Non-compute services
@@ -127,7 +138,7 @@ function updateAutoscaling(service, dt) {
     if (service.asgCooldown <= 0) {
         const total = instanceCount(service);
         if (service.asgAbove >= cfg.sustainSec && total < cfg.maxInstances) {
-            service.warming.push({ remaining: cfg.warmupSec });
+            service.warming.push({ remaining: warmupFor(service) });
             service.asgAbove = 0;
             service.asgCooldown = cfg.cooldownSec;
             service.lastScaleAt = STATE.elapsedGameTime || 0;
@@ -160,7 +171,9 @@ function upkeepInstanceFactor(service) {
 function makeSatellite(service) {
     const geo = new THREE.BoxGeometry(SAT_WIDTH, SAT_HEIGHT, SAT_WIDTH);
     const mat = new THREE.MeshStandardMaterial({
-        color: CONFIG.colors.compute,
+        // Match the fleet to its parent so a Container's node pool reads as
+        // Container-blue, not Compute-orange (#198).
+        color: CONFIG.colors[service.type] ?? CONFIG.colors.compute,
         roughness: 0.2,
         transparent: true,
         opacity: 1,

@@ -47,6 +47,10 @@ import { retryRequest } from "../sim/retry.js";
 // SQS pull loop and the API Gateway rate-counter reset already here.
 import { tickDLQ } from "../sim/dlq.js";
 import { tickScheduler } from "../sim/scheduler.js";
+// Stream (#198): the ordered-partition / head-of-line-blocking mechanic. Like
+// the DLQ drain and Scheduler source, it is ticked directly from update()
+// rather than run through the job-dispatch registry.
+import { tickStream } from "../sim/stream.js";
 import { serviceGroup } from "../../game.js";
 
 export class Service {
@@ -205,6 +209,39 @@ export class Service {
           ...materialProps,
         });
         break;
+      // ===== Sandbox archetypes, batch 2 (#198) — distinct shapes =====
+      case "container":
+        // Kubernetes-blue solid cube — a dense box of packed capacity.
+        geo = new THREE.BoxGeometry(2.6, 2.6, 2.6);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.container,
+          ...materialProps,
+        });
+        break;
+      case "stream":
+        // Teal flat ribbon — an ordered flow of records.
+        geo = new THREE.BoxGeometry(4.6, 0.7, 1.5);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.stream,
+          ...materialProps,
+        });
+        break;
+      case "dns":
+        // Lime solid globe — a resolver in front of the world.
+        geo = new THREE.SphereGeometry(1.5, 16, 16);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.dns,
+          ...materialProps,
+        });
+        break;
+      case "warehouse":
+        // Amber wide low block — a big cold analytics store.
+        geo = new THREE.BoxGeometry(3.6, 1.5, 3.4);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.warehouse,
+          roughness: 0.4,
+        });
+        break;
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
@@ -228,6 +265,10 @@ export class Service {
     else if (type === "auth") this.mesh.position.y += 1.25;
     else if (type === "scheduler") this.mesh.position.y += 0.2;
     else if (type === "notify") this.mesh.position.y += 0.9;
+    else if (type === "container") this.mesh.position.y += 1.3;
+    else if (type === "stream") this.mesh.position.y += 0.35;
+    else if (type === "dns") this.mesh.position.y += 1.5;
+    else if (type === "warehouse") this.mesh.position.y += 0.75;
     else this.mesh.position.y += 1;
 
     this.mesh.castShadow = true;
@@ -352,6 +393,12 @@ export class Service {
   }
 
   processQueue() {
+    // Stream (#198) manages its own queue entirely in tickStream (queue ->
+    // partitions -> heads forward), so it must NOT feed the normal processing
+    // pipeline — otherwise records would be pulled out of order into
+    // this.processing behind the partition model's back.
+    if (this.type === "stream") return;
+
     const effectiveCapacity = this.getEffectiveCapacity();
     while (
       this.processing.length < effectiveCapacity &&
@@ -457,6 +504,10 @@ export class Service {
     // freeze at timeScale 0 exactly like every other timer here.
     if (this.type === "dlq") tickDLQ(this, dt);
     else if (this.type === "scheduler") tickScheduler(this, dt);
+    // Stream (#198): the ordered-partition mechanic. It drains this.queue into
+    // its partitions and forwards heads itself, entirely outside the
+    // processQueue/processing pipeline (which processQueue skips for a stream).
+    else if (this.type === "stream") tickStream(this, dt);
 
     if (STATE.upkeepEnabled) {
       const multiplier =
@@ -473,8 +524,10 @@ export class Service {
       }
     }
 
-    // COMPUTE / SERVERLESS PULL LOGIC
-    if (this.type === "compute" || this.type === "serverless") {
+    // COMPUTE / SERVERLESS / CONTAINER PULL LOGIC
+    // Container (#198) is Compute's sibling — it pulls from an upstream Queue
+    // the same way so a SQS→Container topology never starves.
+    if (this.type === "compute" || this.type === "serverless" || this.type === "container") {
       // Keep the local pipeline full. The upstream SQS does the long-term
       // buffering, but Compute must pull aggressively enough to saturate its
       // own processing slots.
@@ -531,7 +584,7 @@ export class Service {
       let job = this.processing[i];
 
       const processingTime =
-        this.type === "compute" || this.type === "serverless"
+        this.type === "compute" || this.type === "serverless" || this.type === "container"
           ? this.config.processingTime * job.req.processingWeight
           : this.config.processingTime;
 
@@ -660,10 +713,17 @@ export class Service {
 
   get totalLoad() {
     // Utilization of the READY fleet (#195). With one instance — every
-    // service except a scaled-out ASG Compute — this is the original
+    // service except a scaled-out ASG Compute/Container — this is the original
     // capacity*2 denominator, unchanged.
+    //
+    // Stream (#198) keeps its backlog in partitions, not in processing/queue,
+    // so fold the partition depth in — otherwise a badly backed-up stream would
+    // read as idle and never degrade / colour its load ring.
+    const partitionDepth = this.partitions
+      ? this.partitions.reduce((n, p) => n + p.length, 0)
+      : 0;
     return (
-      (this.processing.length + this.queue.length) /
+      (this.processing.length + this.queue.length + partitionDepth) /
       (this.config.capacity * (this.instances || 1) * 2)
     );
   }
@@ -863,7 +923,7 @@ export class Service {
     // instances deliberately do NOT — a load is a cold boot of the whole
     // fleet, and resuming a half-finished warmup would be invisible state.
     // Saves that predate ASG have neither field and load as (false, 1).
-    if (service.type === "compute" && serviceData.asgEnabled) {
+    if ((service.type === "compute" || service.type === "container") && serviceData.asgEnabled) {
       service.asgEnabled = true;
       const max = CONFIG.autoscaling.maxInstances;
       const min = CONFIG.autoscaling.minInstances;
