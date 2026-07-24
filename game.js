@@ -387,6 +387,11 @@ function resetGame(mode = "survival") {
                 cdn: 0,
                 serverless: 0,
                 monitor: 0,
+                dlq: 0,
+                pubsub: 0,
+                auth: 0,
+                scheduler: 0,
+                notify: 0,
             },
             countByService: {
                 // Count of each service purchased
@@ -404,6 +409,11 @@ function resetGame(mode = "survival") {
                 replica: 0,
                 serverless: 0,
                 monitor: 0,
+                dlq: 0,
+                pubsub: 0,
+                auth: 0,
+                scheduler: 0,
+                notify: 0,
             },
         },
     };

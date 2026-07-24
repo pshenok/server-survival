@@ -332,7 +332,7 @@ container.addEventListener("mousedown", (e) => {
             new Audio("assets/sounds/click-5.mp3").play();
         }
     } else if (
-        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw", "search", "replica", "serverless"].includes(
+        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw", "search", "replica", "serverless", "dlq", "pubsub", "auth", "scheduler", "notify"].includes(
             STATE.activeTool
         )
     ) {
@@ -377,6 +377,11 @@ container.addEventListener("mousedown", (e) => {
                 replica: "replica",
                 serverless: "serverless",
                 monitor: "monitor",
+                dlq: "dlq",
+                pubsub: "pubsub",
+                auth: "auth",
+                scheduler: "scheduler",
+                notify: "notify",
             };
 
             const serviceType = typeMap[STATE.activeTool];
@@ -708,7 +713,7 @@ function showTooltip(x, y, html) {
 
 // Setup UI tooltips
 function setupUITooltips() {
-    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn", "search", "replica", "serverless", "monitor"];
+    const tools = ["waf", "apigw", "sqs", "alb", "lambda", "db", "nosql", "cache", "s3", "cdn", "search", "replica", "serverless", "monitor", "dlq", "pubsub", "auth", "scheduler", "notify"];
     tools.forEach((toolId) => {
         const btn = document.getElementById(`tool-${toolId}`);
         if (!btn) return;

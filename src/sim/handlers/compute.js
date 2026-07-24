@@ -8,7 +8,7 @@
 // Runtime-only cycle (compute.js ⇄ serverless.js) — established pattern:
 // hoisted function declarations, dereferenced long after both evaluate.
 
-import { failRequest } from "../../core/actions.js";
+import { failOrPark } from "../../core/actions.js";
 import { chargeServerlessInvocation } from "./serverless.js";
 
 export function process(service, job) {
@@ -20,7 +20,7 @@ export function process(service, job) {
 
   if (destType === "blocked") {
     chargePerRequest();
-    failRequest(job.req);
+    failOrPark(job.req, service);
     return "next";
   }
 
@@ -88,7 +88,7 @@ export function process(service, job) {
       if (sqlTarget) { chargePerRequest(); job.req.flyTo(sqlTarget); return "next"; }
     }
     chargePerRequest();
-    failRequest(job.req);
+    failOrPark(job.req, service);
     return "next";
   }
 
@@ -104,7 +104,7 @@ export function process(service, job) {
     job.req.flyTo(directTarget);
   } else {
     chargePerRequest();
-    failRequest(job.req);
+    failOrPark(job.req, service);
   }
   return "next";
 }

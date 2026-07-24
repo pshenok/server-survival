@@ -114,6 +114,7 @@ class Geometry {
   dispose() {}
 }
 export class BoxGeometry extends Geometry {}
+export class ConeGeometry extends Geometry {}
 export class CylinderGeometry extends Geometry {}
 export class SphereGeometry extends Geometry {}
 export class RingGeometry extends Geometry {}
@@ -278,6 +279,7 @@ export const THREE_STUB = {
   MeshLambertMaterial,
   LineBasicMaterial,
   BoxGeometry,
+  ConeGeometry,
   CylinderGeometry,
   SphereGeometry,
   RingGeometry,
