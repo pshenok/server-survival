@@ -148,6 +148,27 @@ function createConnection(fromId, toId) {
     // Notification — a terminal sink for WRITE-ish events, fed by a balancer,
     // a fan-out topic, or a scheduler.
     else if ((t1 === "alb" || t1 === "pubsub" || t1 === "scheduler") && t2 === "notify") valid = true;
+    // ===== Sandbox archetypes, batch 2 (#198) =====
+    // Reverse-edge guard (#192) covers 2-cycles; longer loops are ruled out
+    // because every edge below forwards strictly "downward": Container mirrors
+    // Compute's fan-in/out, Stream and DNS only forward to nodes that never
+    // route back up to them, and the Warehouse is a pure terminal sink.
+    //
+    // Container Cluster — Compute's economic sibling: fed the same way (LB /
+    // Queue / API GW) and forwarding to the same data tier.
+    else if ((t1 === "alb" || t1 === "sqs" || t1 === "apigw") && t2 === "container") valid = true;
+    else if (t1 === "container" && (t2 === "cache" || t2 === "db" || t2 === "s3" || t2 === "nosql" || t2 === "search" || t2 === "replica")) valid = true;
+    // Stream — high-throughput ordered ingestion: fed from the front tier,
+    // forwarding each partition to its own processor / sink downstream.
+    else if ((t1 === "alb" || t1 === "apigw") && t2 === "stream") valid = true;
+    else if (t1 === "stream" && (t2 === "compute" || t2 === "serverless" || t2 === "container" || t2 === "s3" || t2 === "notify" || t2 === "warehouse")) valid = true;
+    // GeoDNS — the front-most entry: a valid Internet target, fanning out to
+    // the independent regional front-doors (WAF / ALB / API GW).
+    else if (t1 === "internet" && t2 === "dns") valid = true;
+    else if (t1 === "dns" && (t2 === "waf" || t2 === "alb" || t2 === "apigw")) valid = true;
+    // Data Warehouse — analytics sink: fed by a fan-out copy (Pub/Sub), a
+    // scheduled batch load (Scheduler), or a Stream. Pure terminal, no outgoing.
+    else if ((t1 === "pubsub" || t1 === "scheduler" || t1 === "stream") && t2 === "warehouse") valid = true;
 
     if (!valid) {
         new Audio("assets/sounds/click-9.mp3").play();
@@ -279,6 +300,9 @@ function deleteObject(id) {
     const orphaned = new Set([
         ...svc.queue,
         ...svc.processing.map((job) => job.req),
+        // Stream (#198) holds records in its partitions, not queue/processing —
+        // re-home them too or deleting a stream node would strand them.
+        ...(svc.partitions ? svc.partitions.flat() : []),
         ...STATE.requests.filter((r) => r.target === svc),
     ]);
     orphaned.forEach((r) => removeRequest(r));

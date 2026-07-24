@@ -392,6 +392,10 @@ function resetGame(mode = "survival") {
                 auth: 0,
                 scheduler: 0,
                 notify: 0,
+                container: 0,
+                stream: 0,
+                dns: 0,
+                warehouse: 0,
             },
             countByService: {
                 // Count of each service purchased
@@ -414,6 +418,10 @@ function resetGame(mode = "survival") {
                 auth: 0,
                 scheduler: 0,
                 notify: 0,
+                container: 0,
+                stream: 0,
+                dns: 0,
+                warehouse: 0,
             },
         },
     };

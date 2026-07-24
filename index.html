@@ -821,6 +821,73 @@
           </div>
           <span data-i18n="notify_short" class="text-[10px] font-bold mt-1">Notify</span>
         </button>
+
+        <!-- Container Cluster (#198) -->
+        <button id="tool-container"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('container')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $120
+          </div>
+          <svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-blue-400" fill="none" stroke="currentColor"
+            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="1.5" y="6" width="5" height="4.5" rx="0.5" />
+            <rect x="9.5" y="6" width="5" height="4.5" rx="0.5" />
+            <rect x="5.5" y="1.5" width="5" height="4.5" rx="0.5" />
+          </svg>
+          <span data-i18n="container_short" class="text-[10px] font-bold mt-1">Cluster</span>
+        </button>
+
+        <!-- Stream (#198) -->
+        <button id="tool-stream"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('stream')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $90
+          </div>
+          <svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-teal-400" fill="none" stroke="currentColor"
+            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1.5 4h13" />
+            <path d="M1.5 8h13" />
+            <path d="M1.5 12h13" />
+            <circle cx="5" cy="4" r="0.4" fill="currentColor" />
+            <circle cx="10" cy="8" r="0.4" fill="currentColor" />
+            <circle cx="7" cy="12" r="0.4" fill="currentColor" />
+          </svg>
+          <span data-i18n="stream_short" class="text-[10px] font-bold mt-1">Stream</span>
+        </button>
+
+        <!-- GeoDNS (#198) -->
+        <button id="tool-dns"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('dns')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $50
+          </div>
+          <svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-lime-400" fill="none" stroke="currentColor"
+            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.2" />
+            <path d="M1.8 8h12.4" />
+            <path d="M8 1.8c2 2 2 10.4 0 12.4-2-2-2-10.4 0-12.4Z" />
+          </svg>
+          <span data-i18n="dns_short" class="text-[10px] font-bold mt-1">GeoDNS</span>
+        </button>
+
+        <!-- Data Warehouse (#198) -->
+        <button id="tool-warehouse"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('warehouse')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $90
+          </div>
+          <svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-amber-500" fill="none" stroke="currentColor"
+            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1.5 6.5 8 2l6.5 4.5" />
+            <path d="M2.5 6.5v7.5h11V6.5" />
+            <path d="M5 14v-4h6v4" />
+          </svg>
+          <span data-i18n="warehouse_short" class="text-[10px] font-bold mt-1">Warehouse</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1193,6 +1260,22 @@
               <span data-i18n="notify" class="text-rose-400 font-bold">Notification</span>
               <span data-i18n="notify_desc_short">Sends events, earns rep ($40)</span>
             </li>
+            <li class="flex justify-between">
+              <span data-i18n="container" class="text-blue-400 font-bold">Container Cluster</span>
+              <span data-i18n="container_desc_short">Dense flat-fee compute ($120)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="stream" class="text-teal-400 font-bold">Stream</span>
+              <span data-i18n="stream_desc_short">Ordered partitions ($90)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="dns" class="text-lime-400 font-bold">GeoDNS</span>
+              <span data-i18n="dns_desc_short">Multi-region front door ($50)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="warehouse" class="text-amber-500 font-bold">Data Warehouse</span>
+              <span data-i18n="warehouse_desc_short">Cheap analytics store ($90)</span>
+            </li>
           </ul>
         </div>
       </div>
@@ -1457,6 +1540,47 @@
               A terminal 'send': it completes an event and, unlike Storage or the database, its success earns bonus reputation (user goodwill), so it is valuable even when the money reward is small. Its overload failures are silent — no alarm, only a quiet drip of dissatisfaction rather than a scored, sonified drop. Real-world equivalents: AWS SES/SNS · SendGrid-class email/SMS senders.
             </p>
             <p data-i18n="notify_flow" class="text-xs text-gray-500 mt-1">Flow: LB / Pub/Sub / Scheduler → Notification (terminal 'send')</p>
+          </div>
+          <!-- Sandbox archetypes, batch 2 (#198) -->
+          <div class="bg-gray-800/50 p-3 rounded border border-blue-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="container_full" class="text-blue-400">Container Cluster</strong>
+              <span class="text-green-400 font-mono text-sm">$120</span>
+            </div>
+            <p data-i18n="container_desc_long" class="text-sm text-gray-400 mt-1">
+              The economic anti-twin of Serverless: dense fixed capacity (12, three times a Tier-1 Compute) at a flat per-cluster fee with no per-request charge. It shares Compute's processing brain, so the different choice is purely economic — it wins steady high-throughput, where the flat price beats Serverless's per-request bleed and its density beats paying upkeep for many Compute instances. Toggle AUTO to scale it out, but its node pool warms up far slower than an ASG Compute VM, so pre-scale before a known peak. Real-world equivalents: Amazon EKS · Azure AKS · Google GKE.
+            </p>
+            <p data-i18n="container_flow" class="text-xs text-gray-500 mt-1">Flow: LB / Queue / API GW → Container Cluster → Cache / DB / NoSQL / Storage</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-teal-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="stream_full" class="text-teal-400">Stream</strong>
+              <span class="text-green-400 font-mono text-sm">$90</span>
+            </div>
+            <p data-i18n="stream_desc_long" class="text-sm text-gray-400 mt-1">
+              High-throughput ingestion split across independent partitions, each processed in strict order. It is the only node that models head-of-line blocking: if a partition's head cannot forward because its consumer is saturated, the whole partition waits behind it — it never skips ahead — while the other partitions keep flowing. That is the ordering-vs-throughput lesson: order is preserved per partition, but one slow consumer stalls its partition's tail. Real-world equivalents: Amazon Kinesis · Azure Event Hubs · Apache Kafka.
+            </p>
+            <p data-i18n="stream_flow" class="text-xs text-gray-500 mt-1">Flow: LB / API GW → Stream (partitioned) → Compute / Serverless / Storage / Warehouse</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-lime-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="dns_full" class="text-lime-400">GeoDNS</strong>
+              <span class="text-green-400 font-mono text-sm">$50</span>
+            </div>
+            <p data-i18n="dns_desc_long" class="text-sm text-gray-400 mt-1">
+              The front-most entry point: it sits in front of the internet-facing tier and splits traffic across two or more independent regional stacks, each its own WAF → ALB → … pipeline. Where a Load Balancer distributes workers within one stack, GeoDNS distributes whole stacks at the very front — the basis for multi-region and regional failover. Wire the Internet to it, then wire it out to the front door (WAF / ALB / API Gateway) of each region. Real-world equivalents: AWS Route 53 · Azure Traffic Manager · Google Cloud DNS.
+            </p>
+            <p data-i18n="dns_flow" class="text-xs text-gray-500 mt-1">Flow: Internet → GeoDNS → WAF / ALB / API GW of each region (×N)</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-amber-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="warehouse_full" class="text-amber-500">Data Warehouse</strong>
+              <span class="text-green-400 font-mono text-sm">$90</span>
+            </div>
+            <p data-i18n="warehouse_desc_long" class="text-sm text-gray-400 mt-1">
+              An analytics store with the inverse profile of a database: it completes WRITE and UPLOAD traffic — slowly and cheaply at high volume — but fails any realtime READ or SEARCH that reaches it, because a warehouse is OLAP, not OLTP. You load it, you do not serve user reads from it. Feed it an analytics copy from a Pub/Sub fan-out, a scheduled batch load from the Scheduler, or a Stream. That read-rejection plus cheap-high-capacity is the OLTP-vs-OLAP lesson. Real-world equivalents: Amazon Redshift · Azure Synapse · Google BigQuery.
+            </p>
+            <p data-i18n="warehouse_flow" class="text-xs text-gray-500 mt-1">Flow: Pub/Sub / Scheduler / Stream → Data Warehouse (analytics terminal)</p>
           </div>
         </div>
       </div>

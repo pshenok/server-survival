@@ -117,22 +117,32 @@ function routeRequestToEntry(req, type) {
 
     let target;
 
-    // 1. Prefer CDN for STATIC traffic
+    // 1. Prefer CDN for STATIC traffic (edge cache sits even in front of DNS
+    //    for static content).
     if (type === "STATIC") {
         target = pickEntryNode(entryNodes, "cdn");
     }
 
-    // 2. Fallback to WAF (Security Best Practice)
+    // 2. GeoDNS (#198) is the front-most distributor: if one is wired to the
+    //    Internet, everything else enters through it and it fans the record out
+    //    across its own independent regional stacks (see the dns handler). This
+    //    sits ABOVE WAF/API-GW on purpose — DNS resolves before any single
+    //    stack's front door is reached.
+    if (!target) {
+        target = pickEntryNode(entryNodes, "dns");
+    }
+
+    // 3. Fallback to WAF (Security Best Practice)
     if (!target) {
         target = pickEntryNode(entryNodes, "waf");
     }
 
-    // 3. Fallback to API Gateway (Rate Limiting)
+    // 4. Fallback to API Gateway (Rate Limiting)
     if (!target) {
         target = pickEntryNode(entryNodes, "apigw");
     }
 
-    // 4. Last Resort: any live entry point (also round-robin)
+    // 5. Last Resort: any live entry point (also round-robin)
     if (!target) {
         target = pickEntryNode(entryNodes, "any");
     }
