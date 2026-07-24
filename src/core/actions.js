@@ -15,6 +15,10 @@ import { recordServiceError, recordServiceSuccess } from "./metrics.js";
 // Resilience (#196): routing skips tripped nodes exactly like disabled ones.
 // The breaker's counters are NOT fed from here — see the note on failRequest.
 import { isRoutable } from "../sim/circuit-breaker.js";
+// Dead-Letter Queue (#197): a final failure at a node wired to a DLQ is parked
+// there instead of dropped. Runtime-only cycle (actions.js ⇄ dlq.js) — hoisted
+// declarations, dereferenced long after both modules evaluate.
+import { parkInDLQ } from "../sim/dlq.js";
 
 function getUpkeepMultiplier() {
     if (STATE.gameMode !== "survival") return 1.0;
@@ -257,6 +261,36 @@ function failRequest(req) {
     setTimeout(() => removeRequest(req), 500);
 }
 
+// Dead-Letter Queue interception (#197). The single choke point every "this
+// request finally failed AT a node" site funnels through: if the failing
+// service has a connected DLQ with room, the request is PARKED there (recovered
+// later at a cost) instead of failed. Otherwise it fails normally. `service` is
+// the node that ran out of options — handlers pass themselves, and
+// Service.update()'s load-failure roll passes `this`. Failure sites with no
+// service context (entry routing with no Internet link, queue overflow in
+// Request.update) keep calling failRequest directly: there is no node to hang a
+// DLQ off. MALICIOUS is never parked (see parkInDLQ).
+function failOrPark(req, service) {
+    if (parkInDLQ(req, service)) return;
+    failRequest(req);
+}
+
+// Notification silent failure (#197). A Notification node's overload drops are
+// SILENT: no fail sound, only a fraction of the normal reputation hit accrued
+// as "dissatisfaction", and NOT counted as a scored failure. The request still
+// terminates, and the drop still feeds the metrics error rate so the dashboard
+// reflects a struggling Notification node. `req.failed` keeps Service.update()
+// from scoring this dispatch as a breaker success.
+function notifySilentFail(req, service) {
+    req.failed = true;
+    if (service && service.id) recordServiceError(service);
+    STATE.reputation -= service?.config?.dissatisfaction || 0;
+    if (service) {
+        service.dissatisfactionCount = (service.dissatisfactionCount || 0) + 1;
+    }
+    removeRequest(req);
+}
+
 function throttleRequest(req) {
     // Throttling is load shedding working as designed, not a service error:
     // it feeds neither the metrics error rate nor the breaker window. The flag
@@ -299,10 +333,12 @@ function calculateFailChanceBasedOnLoad(load) {
 
 export {
     calculateFailChanceBasedOnLoad,
+    failOrPark,
     failRequest,
     finishRequest,
     flashMoney,
     getUpkeepMultiplier,
+    notifySilentFail,
     removeRequest,
     routeRequestToEntry,
     spawnRequest,

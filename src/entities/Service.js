@@ -6,9 +6,10 @@ import { i18n } from "../i18n.js";
 // runtime — long after all modules have finished evaluating.
 import {
   calculateFailChanceBasedOnLoad,
-  failRequest,
+  failOrPark,
   flashMoney,
   getUpkeepMultiplier,
+  notifySilentFail,
   removeRequest,
   updateScore,
 } from "../core/actions.js";
@@ -40,6 +41,12 @@ import {
     updateBreaker,
 } from "../sim/circuit-breaker.js";
 import { retryRequest } from "../sim/retry.js";
+// Sandbox archetypes, batch 1 (#197). The DLQ auto-drain and the Scheduler
+// self-injection are source/sink behaviors that do not fit the job-dispatch
+// registry, so they are ticked directly from update() — same pattern as the
+// SQS pull loop and the API Gateway rate-counter reset already here.
+import { tickDLQ } from "../sim/dlq.js";
+import { tickScheduler } from "../sim/scheduler.js";
 import { serviceGroup } from "../../game.js";
 
 export class Service {
@@ -157,6 +164,47 @@ export class Service {
           ...materialProps,
         });
         break;
+      // ===== Sandbox archetypes, batch 1 (#197) — distinct shapes =====
+      case "dlq":
+        // Stone slab, sunk low — a bin where dead letters pile up.
+        geo = new THREE.BoxGeometry(3, 1, 2);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.dlq,
+          roughness: 0.6,
+        });
+        break;
+      case "pubsub":
+        // Indigo broadcast horn (cone) — fan-out to many subscribers.
+        geo = new THREE.ConeGeometry(1.6, 2.4, 4);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.pubsub,
+          ...materialProps,
+        });
+        break;
+      case "auth":
+        // Gold shield slab — an identity gate on the path.
+        geo = new THREE.BoxGeometry(2.5, 2.5, 0.6);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.auth,
+          ...materialProps,
+        });
+        break;
+      case "scheduler":
+        // Sky-blue clock face (flat disc).
+        geo = new THREE.CylinderGeometry(1.5, 1.5, 0.4, 24);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.scheduler,
+          ...materialProps,
+        });
+        break;
+      case "notify":
+        // Rose bell (inverted cone).
+        geo = new THREE.ConeGeometry(1.4, 1.8, 16);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.notify,
+          ...materialProps,
+        });
+        break;
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
@@ -175,6 +223,11 @@ export class Service {
     else if (type === "replica") this.mesh.position.y += 1;
     else if (type === "serverless") this.mesh.position.y += 1.5;
     else if (type === "monitor") this.mesh.position.y += 1.7;
+    else if (type === "dlq") this.mesh.position.y += 0.5;
+    else if (type === "pubsub") this.mesh.position.y += 1.2;
+    else if (type === "auth") this.mesh.position.y += 1.25;
+    else if (type === "scheduler") this.mesh.position.y += 0.2;
+    else if (type === "notify") this.mesh.position.y += 0.9;
     else this.mesh.position.y += 1;
 
     this.mesh.castShadow = true;
@@ -316,6 +369,20 @@ export class Service {
         continue;
       }
 
+      // Auth / Identity (#197): a second security layer on the pass-through
+      // path. It catches a FRACTION (catchRate) of the MALICIOUS traffic that
+      // reached it — the session-based attacks a WAF alone misses. What it does
+      // NOT catch falls through to processing and is forwarded downstream, where
+      // it eventually breaches (that is the "slips past" lesson). The latency
+      // cost is the node's high processingTime, paid by every request it passes.
+      if (this.type === "auth" && req.type === TRAFFIC_TYPES.MALICIOUS) {
+        if (Math.random() < (this.config.catchRate ?? 0.5)) {
+          updateScore(req, "MALICIOUS_BLOCKED");
+          removeRequest(req);
+          continue;
+        }
+      }
+
       this.processing.push({ req: req, timer: 0 });
     }
   }
@@ -383,6 +450,13 @@ export class Service {
     // Circuit breaker (#196): only the open -> half-open cooldown needs a
     // clock; every other transition is event-driven. Gate lives inside.
     updateBreaker(this, dt);
+
+    // Sandbox archetypes (#197): source/sink behaviors that sit OUTSIDE the
+    // job-dispatch pipeline. The DLQ drains its parked backlog; the Scheduler
+    // injects its own timed traffic. Both use the game-scaled dt, so both
+    // freeze at timeScale 0 exactly like every other timer here.
+    if (this.type === "dlq") tickDLQ(this, dt);
+    else if (this.type === "scheduler") tickScheduler(this, dt);
 
     if (STATE.upkeepEnabled) {
       const multiplier =
@@ -484,8 +558,15 @@ export class Service {
           // REQUEST is counted only when it finally terminates; retryRequest()
           // returns false unless a healthy alternate route provably exists.
           recordBreakerFailure(this);
-          if (!retryRequest(job.req, this)) {
-            failRequest(job.req);
+          if (this.type === "notify") {
+            // Notification overload is SILENT (#197): dissatisfaction, not a
+            // scored/sonified failure. No retry, no DLQ — a dropped send is
+            // just gone.
+            notifySilentFail(job.req, this);
+          } else if (!retryRequest(job.req, this)) {
+            // Final failure: park it in a wired DLQ (#197) if one exists,
+            // otherwise drop it normally.
+            failOrPark(job.req, this);
           }
           continue;
         }

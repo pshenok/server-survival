@@ -280,8 +280,8 @@ function loadGameState(saveData = null) {
                 autoRepair: 0,
                 mitigation: 0,
                 breach: 0,
-                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0 },
-                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0 },
+                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0, monitor: 0, dlq: 0, pubsub: 0, auth: 0, scheduler: 0, notify: 0 },
+                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0, monitor: 0, dlq: 0, pubsub: 0, auth: 0, scheduler: 0, notify: 0 },
             },
         };
         STATE.finances = saveData.finances

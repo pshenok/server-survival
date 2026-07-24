@@ -122,6 +122,32 @@ function createConnection(fromId, toId) {
     else if (t1 === "serverless" && t2 === "s3") valid = true;
     else if (t1 === "serverless" && t2 === "search") valid = true;
     else if (t1 === "serverless" && t2 === "replica") valid = true;
+    // ===== Sandbox archetypes, batch 1 (#197) =====
+    // Every edge below was checked against the reverse-edge guard (#192, covers
+    // 2-cycles) AND for longer loops: the DLQ and Notification are pure sinks
+    // (no outgoing edges), the Scheduler is a pure source (no incoming edges),
+    // and Pub/Sub / Auth only forward "downward" to nodes that never route back
+    // up to them — so no request can loop.
+    //
+    // Dead-Letter Queue — a failure SINK, wired FROM the nodes whose final
+    // failures it should catch. It has no outgoing edges and is never a normal
+    // forward target (genericForward / apigw exclude it); the edge is used only
+    // by failOrPark's lookup.
+    else if ((t1 === "compute" || t1 === "serverless" || t1 === "alb" || t1 === "apigw") && t2 === "dlq") valid = true;
+    // Pub/Sub Topic — fed by a load balancer or API gateway, fans out to
+    // independent subscribers (processors, a terminal sink, or storage).
+    else if ((t1 === "alb" || t1 === "apigw") && t2 === "pubsub") valid = true;
+    else if (t1 === "pubsub" && (t2 === "compute" || t2 === "serverless" || t2 === "notify" || t2 === "s3")) valid = true;
+    // Auth / Identity — sits in-line: fed from the edge (Internet or WAF),
+    // forwards survivors to the load balancer / gateway / compute tier.
+    else if ((t1 === "internet" || t1 === "waf") && t2 === "auth") valid = true;
+    else if (t1 === "auth" && (t2 === "alb" || t2 === "apigw" || t2 === "compute" || t2 === "serverless")) valid = true;
+    // Scheduler / Cron — a traffic SOURCE: no incoming edges, injects its bursts
+    // into a queue / balancer / compute / serverless downstream.
+    else if (t1 === "scheduler" && (t2 === "sqs" || t2 === "alb" || t2 === "compute" || t2 === "serverless")) valid = true;
+    // Notification — a terminal sink for WRITE-ish events, fed by a balancer,
+    // a fan-out topic, or a scheduler.
+    else if ((t1 === "alb" || t1 === "pubsub" || t1 === "scheduler") && t2 === "notify") valid = true;
 
     if (!valid) {
         new Audio("assets/sounds/click-9.mp3").play();

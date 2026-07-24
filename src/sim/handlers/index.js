@@ -33,7 +33,7 @@
 // become processing jobs), outside the job-dispatch chain this registry owns.
 
 import { STATE } from "../../state.js";
-import { failRequest } from "../../core/actions.js";
+import { failOrPark } from "../../core/actions.js";
 import { isRoutable } from "../circuit-breaker.js";
 import { process as apigw } from "./apigw.js";
 import { process as cache } from "./cache.js";
@@ -41,6 +41,8 @@ import { process as cdn } from "./cdn.js";
 import { process as compute } from "./compute.js";
 import { process as db } from "./db.js";
 import { process as nosql } from "./nosql.js";
+import { process as notify } from "./notify.js";
+import { process as pubsub } from "./pubsub.js";
 import { process as replica } from "./replica.js";
 import { process as s3 } from "./s3.js";
 import { process as search } from "./search.js";
@@ -49,18 +51,21 @@ import { process as sqs } from "./sqs.js";
 
 // Shared fallback: round-robin the job to any live connected service.
 // Logic lifted unchanged from the final `else` of the old if-chain, except
-// that "live" now means isRoutable (#196): offline OR breaker-open.
+// that "live" now means isRoutable (#196): offline OR breaker-open, and a
+// Dead-Letter Queue (#197) is never a normal forward target — it is a failure
+// SINK reached only via failOrPark, so it is excluded here; with no other
+// candidate the request falls through to failOrPark and can still be parked.
 export function genericForward(service, job) {
   const candidates = service.connections
     .map((id) => STATE.services.find((s) => s.id === id))
-    .filter(isRoutable); // Skip offline / tripped nodes
+    .filter((s) => s && s.type !== "dlq" && isRoutable(s));
 
   if (candidates.length > 0) {
     const target = candidates[service.rrIndex % candidates.length];
     service.rrIndex++;
     job.req.flyTo(target);
   } else {
-    failRequest(job.req);
+    failOrPark(job.req, service);
   }
   return "next";
 }
@@ -72,6 +77,8 @@ export const SERVICE_HANDLERS = {
   compute,
   db,
   nosql,
+  notify,
+  pubsub,
   replica,
   s3,
   search,

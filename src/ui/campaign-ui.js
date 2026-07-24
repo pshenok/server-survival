@@ -221,6 +221,11 @@ function applyCampaignToolbarGating(allowed, forbidden) {
         db: "tool-db", nosql: "tool-nosql", cache: "tool-cache",
         cdn: "tool-cdn", s3: "tool-s3", search: "tool-search", replica: "tool-replica",
         monitor: "tool-monitor",
+        // Sandbox archetypes, batch 1 (#197). Campaign levels use an allow-list,
+        // so these are simply never offered by existing levels — no existing
+        // level is gated behind them.
+        dlq: "tool-dlq", pubsub: "tool-pubsub", auth: "tool-auth",
+        scheduler: "tool-scheduler", notify: "tool-notify",
     };
 
     // First clear any prior gating

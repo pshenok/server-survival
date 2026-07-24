@@ -29,6 +29,11 @@ export const CONFIG = {
     replica: 0xf472b6, // Pink-400 for Read Replica
     serverless: 0xfbbf24, // amber - lambda style
     monitor: 0x14b8a6, // Teal for Monitoring
+    dlq: 0x78716c, // Stone — "dead" letters parked for recovery (#197)
+    pubsub: 0x818cf8, // Indigo — fan-out broadcast (#197)
+    auth: 0xeab308, // Gold — identity / key (#197)
+    scheduler: 0x38bdf8, // Sky — clock / cron (#197)
+    notify: 0xfb7185, // Rose — notification bell (#197)
   },
   trafficTypes: {
     STATIC: {
@@ -316,6 +321,109 @@ export const CONFIG = {
       tooltip: {
         upkeep: "Medium",
         desc: "<b>Monitoring.</b> Unlocks the live METRICS dashboard and alerts.",
+      },
+    },
+    // ===== Sandbox archetypes, batch 1 (#197) =====
+    // Each clears the bar from #193: distinguishable simulation behavior no
+    // existing service replicates. Sandbox + Survival only — no campaign level
+    // is gated behind them (levels with an allow-list simply do not offer them).
+    dlq: {
+      // Dead-Letter Queue. The ONLY node that holds already-failed requests
+      // instead of dropping them: when a connected upstream would FINALLY fail
+      // a request (retry exhausted / no route), it is parked here instead of
+      // failed. Parked requests are neither success nor failure until the DLQ
+      // auto-drains them — a slow recovery that costs money per drained request
+      // and refunds a little reputation. Overflow past `capacity` drops
+      // normally plus an extra reputation penalty (an unmanaged DLQ is worse
+      // than none). `capacity` is the parked cap, not a processing capacity;
+      // processingTime is unused (requests never enter its job pipeline).
+      name: "Dead-Letter Queue",
+      cost: 55,
+      type: "dlq",
+      processingTime: 100,
+      capacity: 25,
+      upkeep: 4,
+      drainIntervalSec: 0.6, // game-time between two automatic drains
+      drainCost: 0.5, // $ spent recovering one parked request
+      drainRepRefund: 0.4, // reputation refunded per recovered request
+      overflowRepPenalty: 1, // extra reputation hit when full and a drop spills
+      tooltip: {
+        upkeep: "Low",
+        desc: "<b>Dead-Letter Queue.</b> Parks requests that finally failed, draining them back for a cost.",
+      },
+    },
+    pubsub: {
+      // Pub/Sub Topic. The ONLY node that MULTIPLIES requests: one inbound
+      // request fans out to a copy per connected subscriber (capped at the
+      // subscriber count so it can never explode). The original is delivered to
+      // the first subscriber, one clone is minted per additional subscriber,
+      // and every copy is an independent request that must terminate on its own.
+      name: "Pub/Sub Topic",
+      cost: 65,
+      type: "pubsub",
+      processingTime: 40,
+      capacity: 30,
+      upkeep: 6,
+      tooltip: {
+        upkeep: "Medium",
+        desc: "<b>Pub/Sub Topic.</b> Fan-out: one event becomes one delivery per subscriber.",
+      },
+    },
+    auth: {
+      // Auth / Identity. The ONLY node that trades latency for security on the
+      // pass-through path: every request routed through it pays an extra
+      // processing delay (processingTime deliberately high), and a share of the
+      // MALICIOUS traffic that slips past the edge is caught here (session-based
+      // attacks a WAF alone misses). Forwards survivors downstream generically.
+      name: "Identity Provider",
+      cost: 55,
+      type: "auth",
+      processingTime: 150, // the latency trade — far above ALB's 50ms
+      capacity: 20,
+      upkeep: 6,
+      catchRate: 0.5, // fraction of MALICIOUS caught on the pass-through path
+      tooltip: {
+        upkeep: "Medium",
+        desc: "<b>Identity Provider.</b> Adds latency but catches session-based attacks a WAF misses.",
+      },
+    },
+    scheduler: {
+      // Scheduler / Cron. The ONLY node that is a traffic SOURCE, not a
+      // processor: every `intervalSec` of game time it injects a burst of
+      // `burstSize` batch jobs into its downstream, independent of external RPS.
+      // Ticked from the update loop (never setTimeout, #183) so it freezes with
+      // the game at timeScale 0. capacity is a dummy (it processes nothing).
+      name: "Scheduler",
+      cost: 50,
+      type: "scheduler",
+      processingTime: 100,
+      capacity: 1,
+      upkeep: 5,
+      intervalSec: 8, // game-time between scheduled bursts
+      burstSize: 6, // jobs injected per burst
+      burstType: "WRITE", // batch jobs are write-ish
+      tooltip: {
+        upkeep: "Low",
+        desc: "<b>Scheduler.</b> Injects its own scheduled batch-job bursts on a timer.",
+      },
+    },
+    notify: {
+      // Notification. A terminal sink whose SUCCESS grants reputation (user
+      // goodwill), not just money — the only terminal like that. Its overload
+      // failures are SILENT: no fail sound and a much smaller reputation hit
+      // than a normal drop, accrued as "dissatisfaction" rather than a counted
+      // failure.
+      name: "Notification",
+      cost: 40,
+      type: "notify",
+      processingTime: 80,
+      capacity: 20,
+      upkeep: 4,
+      repBonus: 0.5, // extra reputation on a successful send (on top of the base)
+      dissatisfaction: 0.3, // quiet reputation cost of a dropped send
+      tooltip: {
+        upkeep: "Low",
+        desc: "<b>Notification.</b> Terminal 'send': success earns reputation, failures are silent.",
       },
     },
   },
