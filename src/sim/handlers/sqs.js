@@ -6,6 +6,7 @@
 // Logic lifted unchanged from the per-type if-chain in Service.update().
 
 import { STATE } from "../../state.js";
+import { isRoutable } from "../circuit-breaker.js";
 
 export function process(service, job) {
   // SQS just forwards requests with backpressure check
@@ -16,7 +17,7 @@ export function process(service, job) {
 
   const candidates = service.connections
     .map((id) => STATE.services.find((s) => s.id === id))
-    .filter((s) => s && downstreamTypes.includes(s.type) && !s.isDisabled);
+    .filter((s) => s && downstreamTypes.includes(s.type) && isRoutable(s));
 
   // If no candidates (e.g. only connected to compute), we just wait.
   // The request stays in 'processing' so it can be popped by compute.

@@ -6,6 +6,7 @@
 
 import { STATE } from "../../state.js";
 import { failRequest, throttleRequest } from "../../core/actions.js";
+import { isRoutable } from "../circuit-breaker.js";
 
 export function process(service, job) {
   service.rateCounter = (service.rateCounter || 0) + 1;
@@ -17,10 +18,11 @@ export function process(service, job) {
     return "next";
   }
 
-  // Forward to downstream (ALB, SQS, Compute)
+  // Forward to downstream (ALB, SQS, Compute) — skipping offline and
+  // breaker-open nodes (#196).
   const candidates = service.connections
     .map((id) => STATE.services.find((s) => s.id === id))
-    .filter((s) => s && !s.isDisabled);
+    .filter(isRoutable);
 
   if (candidates.length > 0) {
     const target = candidates[service.rrIndex % candidates.length];

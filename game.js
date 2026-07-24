@@ -36,6 +36,7 @@ import {
 } from "./src/core/economy.js";
 import { checkSmartHints } from "./src/core/hints.js";
 import { upkeepInstanceFactor } from "./src/sim/autoscaling.js";
+import { resetResilience } from "./src/sim/circuit-breaker.js";
 import { metricsTick, resetMetrics } from "./src/core/metrics.js";
 import { renderMetricsPanel } from "./src/ui/metrics-panel.js";
 import {
@@ -336,6 +337,7 @@ function resetGame(mode = "survival") {
     STATE.normalTrafficDist = null;
     STATE.autoRepairEnabled = false;
     resetMetrics();
+    resetResilience();
     STATE.hints = {
       lastHintTime: 0,
       dismissedHints: new Set(),

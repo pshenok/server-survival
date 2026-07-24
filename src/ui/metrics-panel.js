@@ -81,8 +81,10 @@ function renderMetricsPanel() {
     // Rebuild rows only when the service set changes (low DOM churn). The ASG
     // fleet size (#195) is part of the signature so the "×n" badge follows a
     // scaling event — those are rare (cooldown-gated), so this stays cheap.
+    // The breaker state joins the signature too (#196): a trip has to repaint
+    // the badge immediately, and trips are rare enough to keep this cheap.
     const signature = services
-        .map((s) => (s.asgEnabled ? `${s.id}*${instanceCount(s)}` : s.id))
+        .map((s) => (s.asgEnabled ? `${s.id}*${instanceCount(s)}` : s.id) + "!" + s.breakerState)
         .join(",");
     if (signature !== lastSignature) {
         buildRows(services, rowsEl);
@@ -129,6 +131,20 @@ function buildRows(services, rowsEl) {
             badge.className = "text-teal-400";
             badge.textContent = `×${n}`;
             badge.title = i18n.t("asg_label");
+            name.appendChild(badge);
+        }
+        // Circuit-breaker badge (#196): nothing while closed (the normal
+        // state should be invisible), red OPEN while traffic is being skipped,
+        // amber HALF while it is probing its way back.
+        if (s.breakerState === "open" || s.breakerState === "half-open") {
+            const open = s.breakerState === "open";
+            const badge = document.createElement("span");
+            badge.className = open ? "text-red-400 font-bold" : "text-amber-400 font-bold";
+            badge.textContent = open ? i18n.t("breaker_open") : i18n.t("breaker_half");
+            badge.title = i18n.t("breaker_label");
+            // The name column is a fixed 48px of 9px mono — trim hard enough
+            // that "OPEN"/"HALF" is never the part that gets clipped.
+            name.textContent = name.textContent.substring(0, 4);
             name.appendChild(badge);
         }
         row.appendChild(name);

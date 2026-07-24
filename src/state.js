@@ -98,6 +98,15 @@ export const STATE = {
         warnings: []
     },
 
+    // Resilience session counters (#196). Reset by resetResilience() from
+    // resetGame(); read by the campaign objective helpers, which stay pure
+    // functions over STATE.
+    resilience: {
+        trips: 0,       // circuit breakers opened this session
+        retries: 0,     // requests retried via a healthy peer
+        outages: 0,     // SERVICE_OUTAGE events (random or campaign-forced)
+    },
+
     // Campaign mode runtime state. Populated by CampaignController when active.
     campaign: {
         active: false,

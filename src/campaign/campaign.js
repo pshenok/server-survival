@@ -134,6 +134,9 @@ export class CampaignController {
             STATE.campaign.outageFired = true;
             const target = (STATE.services || []).find((s) => s.type === "waf");
             if (target) {
+                // Resilience (#196): same session counter the random outage
+                // event bumps — a forced outage is still a node failure.
+                if (STATE.resilience) STATE.resilience.outages++;
                 target.isDisabled = true;
                 target.mesh.material.opacity = 0.3;
                 target.mesh.material.transparent = true;
