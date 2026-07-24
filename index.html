@@ -756,6 +756,71 @@
           </div>
           <span data-i18n="monitor_short" class="text-[10px] font-bold mt-1">Monitor</span>
         </button>
+
+        <!-- Dead-Letter Queue (#197) -->
+        <button id="tool-dlq"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('dlq')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $55
+          </div>
+          <div
+            class="w-4 h-4 bg-stone-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(120,113,108,0.6)] border-b-2 border-stone-700">
+          </div>
+          <span data-i18n="dlq_short" class="text-[10px] font-bold mt-1">DLQ</span>
+        </button>
+
+        <!-- Pub/Sub Topic (#197) -->
+        <button id="tool-pubsub"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('pubsub')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $65
+          </div>
+          <div
+            class="w-4 h-4 bg-indigo-400 mb-1 shadow-[0_0_10px_rgba(129,140,248,0.6)]" style="clip-path: polygon(50% 0, 100% 100%, 0 100%)">
+          </div>
+          <span data-i18n="pubsub_short" class="text-[10px] font-bold mt-1">Pub/Sub</span>
+        </button>
+
+        <!-- Identity Provider (#197) -->
+        <button id="tool-auth"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('auth')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $55
+          </div>
+          <div
+            class="w-3 h-4 bg-yellow-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(234,179,8,0.6)] border border-yellow-700">
+          </div>
+          <span data-i18n="auth_short" class="text-[10px] font-bold mt-1">Auth</span>
+        </button>
+
+        <!-- Scheduler / Cron (#197) -->
+        <button id="tool-scheduler"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('scheduler')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $50
+          </div>
+          <div
+            class="w-4 h-4 bg-sky-400 rounded-full mb-1 shadow-[0_0_10px_rgba(56,189,248,0.6)] border border-sky-700">
+          </div>
+          <span data-i18n="scheduler_short" class="text-[10px] font-bold mt-1">Cron</span>
+        </button>
+
+        <!-- Notification (#197) -->
+        <button id="tool-notify"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
+          onclick="setTool('notify')">
+          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
+            $40
+          </div>
+          <div
+            class="w-4 h-4 bg-rose-400 mb-1 shadow-[0_0_10px_rgba(251,113,133,0.6)]" style="clip-path: polygon(0 100%, 100% 100%, 50% 0)">
+          </div>
+          <span data-i18n="notify_short" class="text-[10px] font-bold mt-1">Notify</span>
+        </button>
       </div>
     </div>
   </div>
@@ -1108,6 +1173,26 @@
               <span data-i18n="monitor" class="text-teal-400 font-bold">Monitoring</span>
               <span data-i18n="monitor_desc_short">Live metrics + alerts ($75)</span>
             </li>
+            <li class="flex justify-between">
+              <span data-i18n="dlq" class="text-stone-400 font-bold">Dead-Letter Queue</span>
+              <span data-i18n="dlq_desc_short">Catches failed requests ($55)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="pubsub" class="text-indigo-400 font-bold">Pub/Sub Topic</span>
+              <span data-i18n="pubsub_desc_short">Fan-out to subscribers ($65)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="auth" class="text-yellow-400 font-bold">Identity Provider</span>
+              <span data-i18n="auth_desc_short">Auth + attack catch ($55)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="scheduler" class="text-sky-400 font-bold">Scheduler</span>
+              <span data-i18n="scheduler_desc_short">Timed batch bursts ($50)</span>
+            </li>
+            <li class="flex justify-between">
+              <span data-i18n="notify" class="text-rose-400 font-bold">Notification</span>
+              <span data-i18n="notify_desc_short">Sends events, earns rep ($40)</span>
+            </li>
           </ul>
         </div>
       </div>
@@ -1321,6 +1406,57 @@
               Collects utilization, queue depth, error rate and latency from every service and raises alerts before overloads become outages. Never receives traffic — place it anywhere. Real-world equivalents: AWS CloudWatch · Azure Monitor · Google Cloud Operations.
             </p>
             <p data-i18n="monitor_flow" class="text-xs text-gray-500 mt-1">Flow: standalone — no connections; watches every service</p>
+          </div>
+          <!-- Sandbox archetypes, batch 1 (#197) -->
+          <div class="bg-gray-800/50 p-3 rounded border border-stone-700/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="dlq_full" class="text-stone-400">Dead-Letter Queue</strong>
+              <span class="text-green-400 font-mono text-sm">$55</span>
+            </div>
+            <p data-i18n="dlq_desc_long" class="text-sm text-gray-400 mt-1">
+              Catches requests that finally failed (retry exhausted or no route) at any connected upstream, parking them instead of dropping them. It then drains slowly on its own, recovering each parked request for a small money cost and refunding a little reputation. If it overflows its cap, further dead requests fail normally plus an extra reputation penalty — an unmanaged DLQ is worse than none. Real-world equivalents: AWS SQS dead-letter queue · Azure Service Bus dead-letter queue.
+            </p>
+            <p data-i18n="dlq_flow" class="text-xs text-gray-500 mt-1">Flow: Compute / Serverless / LB / API GW → DLQ (drains automatically)</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-indigo-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="pubsub_full" class="text-indigo-400">Pub/Sub Topic</strong>
+              <span class="text-green-400 font-mono text-sm">$65</span>
+            </div>
+            <p data-i18n="pubsub_desc_long" class="text-sm text-gray-400 mt-1">
+              Fan-out: one inbound event is delivered to every connected subscriber — one copy each, capped at the number of subscribers. It is the only node that multiplies traffic, so a single event becomes N independent deliveries that each run their own path. Wire it after a Load Balancer or API Gateway and out to processors, storage, or a Notification sink. Real-world equivalents: AWS SNS · Azure Event Grid · Google Cloud Pub/Sub.
+            </p>
+            <p data-i18n="pubsub_flow" class="text-xs text-gray-500 mt-1">Flow: LB / API GW → Pub/Sub → Compute / Serverless / Notification / Storage (×N)</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-yellow-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="auth_full" class="text-yellow-400">Identity Provider</strong>
+              <span class="text-green-400 font-mono text-sm">$55</span>
+            </div>
+            <p data-i18n="auth_desc_long" class="text-sm text-gray-400 mt-1">
+              Sits in-line on the request path and trades latency for security: every request through it pays an extra processing delay, and half the Malicious traffic that reaches it is caught — the session-based attacks a WAF alone misses. What it does not catch slips through and breaches downstream, so it is a second layer, not a replacement for the firewall. Real-world equivalents: AWS Cognito · Microsoft Entra ID · AWS IAM.
+            </p>
+            <p data-i18n="auth_flow" class="text-xs text-gray-500 mt-1">Flow: Internet / WAF → Auth → Load Balancer / API Gateway / Compute</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-sky-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="scheduler_full" class="text-sky-400">Scheduler</strong>
+              <span class="text-green-400 font-mono text-sm">$50</span>
+            </div>
+            <p data-i18n="scheduler_desc_long" class="text-sm text-gray-400 mt-1">
+              A traffic source, not a processor: every 8 seconds it injects its own burst of batch jobs into its downstream, independent of the external request rate. It teaches capacity planning for known peaks — provision for the wave before it lands. It freezes when the game is paused and never leaks jobs. Real-world equivalents: AWS EventBridge Scheduler · Google Cloud Scheduler.
+            </p>
+            <p data-i18n="scheduler_flow" class="text-xs text-gray-500 mt-1">Flow: Scheduler → Queue / Load Balancer / Compute / Serverless</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-rose-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="notify_full" class="text-rose-400">Notification</strong>
+              <span class="text-green-400 font-mono text-sm">$40</span>
+            </div>
+            <p data-i18n="notify_desc_long" class="text-sm text-gray-400 mt-1">
+              A terminal 'send': it completes an event and, unlike Storage or the database, its success earns bonus reputation (user goodwill), so it is valuable even when the money reward is small. Its overload failures are silent — no alarm, only a quiet drip of dissatisfaction rather than a scored, sonified drop. Real-world equivalents: AWS SES/SNS · SendGrid-class email/SMS senders.
+            </p>
+            <p data-i18n="notify_flow" class="text-xs text-gray-500 mt-1">Flow: LB / Pub/Sub / Scheduler → Notification (terminal 'send')</p>
           </div>
         </div>
       </div>

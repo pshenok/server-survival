@@ -4,7 +4,7 @@
 // the per-type if-chain in Service.update().
 
 import { STATE } from "../../state.js";
-import { failRequest, finishRequest } from "../../core/actions.js";
+import { failOrPark, finishRequest } from "../../core/actions.js";
 
 export function process(service, job) {
   if (job.req.isCacheable) {
@@ -37,7 +37,7 @@ export function process(service, job) {
     }
     const sqlTarget = service.findConnectedService("db");
     if (sqlTarget) { job.req.flyTo(sqlTarget); return "next"; }
-    failRequest(job.req);
+    failOrPark(job.req, service);
   } else {
     // Storage-family destinations are interchangeable on a miss (#88):
     // STATIC's destination is "cdn" but a Cache wired to S3 should still
@@ -49,7 +49,7 @@ export function process(service, job) {
     if (target) {
       job.req.flyTo(target);
     } else {
-      failRequest(job.req);
+      failOrPark(job.req, service);
     }
   }
   return "next";
