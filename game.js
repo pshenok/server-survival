@@ -82,8 +82,16 @@ import {
     lastPointerPos,
     resetCamera,
 } from "./src/input/handlers.js";
+// Service palette (toolbar categories, 2026-07-24): index.html ships only the
+// empty shell, so the tab strip and the active category's buttons are drawn
+// from here. The call sits in the body, not in toolbar.js's own evaluation,
+// so that handlers.js is fully evaluated first — it listens for the
+// "toolbarRendered" event to re-wire the button tooltips.
+import { applyToolbarGating, renderToolbar } from "./src/ui/toolbar.js";
 
 STATE.sound = new SoundService();
+
+renderToolbar();
 
 // ==================== UTILITY FUNCTIONS ====================
 
@@ -278,6 +286,12 @@ function resetGame(mode = "survival") {
     STATE.sound.init();
     STATE.sound.playGameBGM();
     STATE.gameMode = mode;
+
+    // Campaign gating is applied when a level starts but nothing ever cleared
+    // it, so leaving a level for sandbox or survival left most of the toolbar
+    // dead (reproduced on the pre-toolbar build too — this is an old bug, not
+    // a side effect of the category tabs). Any non-campaign mode starts ungated.
+    if (mode !== "campaign") applyToolbarGating([], []);
 
     // Set budget based on mode
     if (mode === "campaign") {

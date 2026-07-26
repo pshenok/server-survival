@@ -18,6 +18,7 @@ import {
     toggleAutoscaling,
     warmingCount,
 } from "../sim/autoscaling.js";
+import { SERVICE_CATEGORIES, setToolbarCategory } from "../ui/toolbar.js";
 import {
     createConnection,
     createService,
@@ -745,8 +746,13 @@ function setupUITooltips() {
     });
 }
 
-// Call setup
+// Call setup. The service buttons are re-created every time the player
+// switches category (toolbar categories, 2026-07-24), and listeners die with
+// the nodes they were attached to — so re-run the wiring on every render.
+// The toolbar module cannot call this directly: it is imported BY this file
+// (for the 1-5 shortcuts below), so the signal travels back as an event.
 setupUITooltips();
+window.addEventListener("toolbarRendered", setupUITooltips);
 
 container.addEventListener("mouseup", (e) => {
     if (e.button === 2 || e.button === 1) {
@@ -798,7 +804,35 @@ window.addEventListener("resize", () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// True while the player is typing into one of the sandbox panel's fields —
+// the digit shortcuts below must not steal those keystrokes. (The older
+// Esc/H/R/T shortcuts have never had this guard; left exactly as they were,
+// widening them is not this change's business.)
+function isTypingTarget(el) {
+    if (!el || !el.tagName) return false;
+    return (
+        el.tagName === "INPUT" ||
+        el.tagName === "TEXTAREA" ||
+        el.tagName === "SELECT" ||
+        el.isContentEditable === true
+    );
+}
+
 document.addEventListener("keydown", (event) => {
+    // Keys 1-5 switch service-palette categories. Bare digits only: Cmd/Ctrl+1
+    // is the browser's own tab switch, and Alt-digits are OS shortcuts.
+    if (
+        event.key >= "1" &&
+        event.key <= "5" &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !isTypingTarget(event.target)
+    ) {
+        const category = SERVICE_CATEGORIES[Number(event.key) - 1];
+        if (category) setToolbarCategory(category.id);
+        return;
+    }
     if (event.key === "Escape") {
         // Toggle main menu
         const menu = document.getElementById("main-menu-modal");

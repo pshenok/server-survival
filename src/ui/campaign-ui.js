@@ -10,6 +10,7 @@ import { renderArchitectureSVG } from "../campaign/diagram.js";
 import { Service } from "../entities/Service.js";
 import { updateRepairCostTable } from "../core/economy.js";
 import { createConnection } from "../sim/topology.js";
+import { applyToolbarGating } from "./toolbar.js";
 // Runtime-only cycle (game.js ⇄ campaign-ui.js) — established pattern:
 // resetGame is a hoisted function declaration in game.js, only called at
 // runtime, long after both modules evaluate.
@@ -212,55 +213,15 @@ function startCampaignLevel(levelId) {
     // pulse-green on btn-play, so nothing else to do here.
 }
 
+// Grey out the services a level does not offer. The buttons themselves moved
+// into the service palette (toolbar categories, 2026-07-24), which re-creates
+// them on every tab switch, so the gate has to OUTLIVE a single DOM pass —
+// src/ui/toolbar.js stores it and re-paints on each render, and also switches
+// the player to a tab that actually holds one of this level's services. That
+// makes the order irrelevant: a gate set before the toolbar's first render is
+// remembered and painted by it, one set after paints the buttons on screen.
 function applyCampaignToolbarGating(allowed, forbidden) {
-    // Map service config keys to their toolbar button IDs.
-    // (matches the toolbar typeMap in mousedown handler)
-    const toolMap = {
-        waf: "tool-waf", apigw: "tool-apigw", sqs: "tool-sqs", alb: "tool-alb",
-        lambda: "tool-lambda", serverless: "tool-serverless",
-        db: "tool-db", nosql: "tool-nosql", cache: "tool-cache",
-        cdn: "tool-cdn", s3: "tool-s3", search: "tool-search", replica: "tool-replica",
-        monitor: "tool-monitor",
-        // Sandbox archetypes, batch 1 (#197). Campaign levels use an allow-list,
-        // so these are simply never offered by existing levels — no existing
-        // level is gated behind them.
-        dlq: "tool-dlq", pubsub: "tool-pubsub", auth: "tool-auth",
-        scheduler: "tool-scheduler", notify: "tool-notify",
-        // Sandbox archetypes, batch 2 (#198) — same story: allow-list levels
-        // never offer them, so no existing level is gated behind them.
-        container: "tool-container", stream: "tool-stream",
-        dns: "tool-dns", warehouse: "tool-warehouse",
-    };
-
-    // First clear any prior gating
-    Object.values(toolMap).forEach((id) => {
-        const btn = document.getElementById(id);
-        if (!btn) return;
-        btn.classList.remove("opacity-30", "pointer-events-none");
-        btn.removeAttribute("data-campaign-blocked");
-    });
-
-    const allowSet = allowed && allowed.length ? new Set(allowed) : null;
-    const blockSet = new Set(forbidden || []);
-
-    // The "lambda" tool is a button for compute service.
-    // Normalize: allowSet uses CONFIG keys, but toolMap key for compute is "lambda".
-    // To gate compute, accept both "compute" and "lambda" in allowed/forbidden lists.
-    const isAllowed = (toolKey) => {
-        if (!allowSet) return !blockSet.has(toolKey) && !blockSet.has(toolKey === "lambda" ? "compute" : toolKey);
-        if (allowSet.has(toolKey)) return true;
-        if (toolKey === "lambda" && allowSet.has("compute")) return true;
-        return false;
-    };
-
-    Object.entries(toolMap).forEach(([k, id]) => {
-        if (!isAllowed(k)) {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-            btn.classList.add("opacity-30", "pointer-events-none");
-            btn.setAttribute("data-campaign-blocked", "true");
-        }
-    });
+    applyToolbarGating(allowed, forbidden);
 }
 
 function renderCampaignObjectives(level, primaryResults, bonusResults) {

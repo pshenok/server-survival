@@ -158,6 +158,13 @@ export const RU_TRANSLATIONS = {
     "link": "Соединить",
     "demolish": "Удалить",
     "unlink": "Разорвать связь",
+
+    // Service-palette category tabs (toolbar categories, 2026-07-24)
+    "cat_frontdoor": "Вход",
+    "cat_compute": "Вычисления",
+    "cat_data": "Данные",
+    "cat_async": "Асинхрон",
+    "cat_ops": "Эксплуатация",
     "fw": "FW",
     "queue": "Очередь",
     "lb": "LB",

@@ -158,6 +158,13 @@ export const NE_TRANSLATIONS = {
     "link": "लिंक",
     "demolish": "भत्काउनुहोस्",
     "unlink": "अनलिंक",
+
+    // Service-palette category tabs (toolbar categories, 2026-07-24)
+    "cat_frontdoor": "प्रवेशद्वार",
+    "cat_compute": "गणना",
+    "cat_data": "डाटा",
+    "cat_async": "एसिन्क्रोनस",
+    "cat_ops": "सञ्चालन",
     "fw": "FW",
     "queue": "क्यू",
     "lb": "LB",
