@@ -158,6 +158,13 @@ export const FR_TRANSLATIONS = {
     "link": "Lien",
     "demolish": "Démolir",
     "unlink": "Délier",
+
+    // Service-palette category tabs (toolbar categories, 2026-07-24)
+    "cat_frontdoor": "Entrée",
+    "cat_compute": "Calcul",
+    "cat_data": "Données",
+    "cat_async": "Asynchrone",
+    "cat_ops": "Exploitation",
     "fw": "PF",
     "queue": "File",
     "lb": "RC",

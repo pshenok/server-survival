@@ -158,6 +158,13 @@ export const PT_BR_TRANSLATIONS = {
     "link": "Conectar",
     "demolish": "Demolir",
     "unlink": "Desconectar",
+
+    // Service-palette category tabs (toolbar categories, 2026-07-24)
+    "cat_frontdoor": "Entrada",
+    "cat_compute": "Computação",
+    "cat_data": "Dados",
+    "cat_async": "Assíncrono",
+    "cat_ops": "Operações",
     "fw": "Firewall",
     "queue": "Fila",
     "lb": "Load Balancer",

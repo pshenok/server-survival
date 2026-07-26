@@ -158,6 +158,13 @@ export const KO_TRANSLATIONS = {
     "link": "연결",
     "demolish": "철거",
     "unlink": "연결 해제",
+
+    // Service-palette category tabs (toolbar categories, 2026-07-24)
+    "cat_frontdoor": "진입점",
+    "cat_compute": "컴퓨트",
+    "cat_data": "데이터",
+    "cat_async": "비동기",
+    "cat_ops": "운영",
     "fw": "방화벽",
     "queue": "큐",
     "lb": "LB",

@@ -158,6 +158,13 @@ export const IT_TRANSLATIONS = {
     "link": "Collega",
     "demolish": "Demolisci",
     "unlink": "Scollega",
+
+    // Service-palette category tabs (toolbar categories, 2026-07-24)
+    "cat_frontdoor": "Ingresso",
+    "cat_compute": "Calcolo",
+    "cat_data": "Dati",
+    "cat_async": "Asincrono",
+    "cat_ops": "Operazioni",
     "fw": "FW",
     "queue": "Coda",
     "lb": "LB",

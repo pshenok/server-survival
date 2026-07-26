@@ -515,39 +515,15 @@
   </div>
 
   <!-- UI Overlay: Bottom Toolbar -->
-  <div class="absolute bottom-6 left-0 w-full z-10 pointer-events-none flex justify-center">
-    <div class="glass-panel rounded-2xl p-2 pointer-events-auto overflow-y-auto flex items-center gap-2 shadow-2xl">
-      <!-- Help Button -->
-      <button id="tool-help"
-        class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center mr-2 border border-gray-600"
-        onclick="showFAQ()">
-        <div class="text-xl">?</div>
-        <span data-i18n="help" class="text-[9px] font-bold mt-1 uppercase">Help</span>
-      </button>
-
-      <!-- Music / SFX toggles (#112) -->
-      <button id="tool-music"
-        class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-gray-600 bg-red-900 pulse-green"
-        onclick="toggleMusic()">
-        <svg id="music-icon" class="w-6 h-6 opacity-40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 18V6l10-2v12" />
-          <circle cx="7" cy="18" r="2" />
-          <circle cx="17" cy="16" r="2" />
-        </svg>
-        <span data-i18n="music" class="text-[9px] font-bold mt-1 uppercase">Music</span>
-      </button>
-      <button id="tool-sfx"
-        class="service-btn bg-gray-700 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-gray-600 bg-red-900 pulse-green"
-        onclick="toggleSfx()">
-        <svg id="sfx-icon" class="w-6 h-6 opacity-40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5 6 9H3v6h3l5 4V5z" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" />
-        </svg>
-        <span data-i18n="sfx" class="text-[9px] font-bold mt-1 uppercase">SFX</span>
-      </button>
-
-      <!-- Tools -->
-      <div class="flex gap-1 pr-4 border-r border-gray-700">
+  <!-- Layout (toolbar categories, 2026-07-24): build tools · service palette ·
+       settings. The palette is a tab strip plus the active category's buttons,
+       both filled by src/ui/toolbar.js — the flat 23-button run that used to
+       live here was ~2000px wide, so half of it hung off-screen, and the bar
+       scrolled on the wrong axis (overflow-y) while overflowing horizontally. -->
+  <div class="absolute bottom-6 left-0 w-full z-10 pointer-events-none flex justify-center px-4">
+    <div class="glass-panel rounded-2xl p-2 pointer-events-auto max-w-full overflow-x-auto overflow-y-hidden flex items-center gap-2 shadow-2xl">
+      <!-- Build tools: modes, not services, so they stay visible in every category -->
+      <div class="flex gap-1 pr-2 border-r border-gray-700">
         <button id="tool-select"
           class="service-btn active bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent"
           onclick="setTool('select')">
@@ -592,301 +568,44 @@
         </button>
       </div>
 
-      <!-- Shop -->
-      <div class="flex gap-2 pl-2">
-        <!-- WAF -->
-        <button id="tool-waf"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('waf')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $40
-          </div>
-          <div class="w-4 h-4 bg-purple-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(168,85,247,0.6)]"></div>
-          <span data-i18n="fw" class="text-[10px] font-bold mt-1">FW</span>
-        </button>
+      <!-- Service palette — category tabs above, the active category's service
+           buttons below. Both are rendered by src/ui/toolbar.js. -->
+      <div class="flex flex-col gap-1 px-1">
+        <div id="service-tabs" class="flex gap-1"></div>
+        <div id="service-palette" class="flex gap-2"></div>
+      </div>
 
-        <!-- API Gateway -->
-        <button id="tool-apigw"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('apigw')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $70
-          </div>
-          <div class="w-4 h-4 bg-fuchsia-400 rounded-sm mb-1 shadow-[0_0_10px_rgba(232,121,249,0.6)]" style="transform: rotate(45deg)"></div>
-          <span data-i18n="apigw_short" class="text-[10px] font-bold mt-1">API GW</span>
-        </button>
-
-        <!-- SQS -->
-        <button id="tool-sqs"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('sqs')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $45
-          </div>
-          <div class="w-5 h-3 bg-orange-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(255,153,0,0.6)]"></div>
-          <span data-i18n="queue" class="text-[10px] font-bold mt-1">Queue</span>
-        </button>
-
-        <button id="tool-alb"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('alb')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $50
-          </div>
-          <div class="w-4 h-4 bg-blue-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
-          <span data-i18n="lb" class="text-[10px] font-bold mt-1">LB</span>
-        </button>
-
-        <button id="tool-lambda"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('lambda')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $60
-          </div>
-          <div class="w-4 h-4 bg-orange-500 rounded-full mb-1 shadow-[0_0_10px_rgba(249,115,22,0.6)]"></div>
-          <span data-i18n="compute_short" class="text-[10px] font-bold mt-1">Compute</span>
-        </button>
-
-        <!-- Serverless Function -->
-        <button id="tool-serverless"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('serverless')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $45
-          </div>
-          <div class="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[14px] border-b-amber-400 mb-1 shadow-[0_0_10px_rgba(251,191,36,0.6)]"></div>
-          <span data-i18n="serverless_short" class="text-[10px] font-bold mt-1">λ Func</span>
-        </button>
-
-        <button id="tool-db"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('db')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $150
-          </div>
-          <div
-            class="w-4 h-4 bg-red-600 rounded-sm mb-1 shadow-[0_0_10px_rgba(220,38,38,0.6)] border-b-2 border-red-800">
-          </div>
-          <span data-i18n="db_short" class="text-[10px] font-bold mt-1">SQL DB</span>
-        </button>
-
-        <!-- NoSQL DB -->
-        <button id="tool-nosql"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('nosql')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $80
-          </div>
-          <div
-            class="w-4 h-4 bg-violet-600 rounded-full mb-1 shadow-[0_0_10px_rgba(124,58,237,0.6)] border-b-2 border-violet-800">
-          </div>
-          <span data-i18n="nosql_short" class="text-[10px] font-bold mt-1">NoSQL</span>
-        </button>
-
-        <!-- Cache -->
-        <button id="tool-cache"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('cache')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $60
-          </div>
-          <div class="w-4 h-4 bg-red-600 rounded mb-1 shadow-[0_0_10px_rgba(220,56,45,0.6)]"></div>
-          <span data-i18n="cache_short" class="text-[10px] font-bold mt-1">Cache</span>
-        </button>
-
-        <!-- CDN -->
-        <button id="tool-cdn"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('cdn')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $60
-          </div>
-          <div
-            class="w-4 h-4 bg-green-400 rounded-full mb-1 shadow-[0_0_10px_rgba(74,222,128,0.6)] border border-white">
-          </div>
-          <span data-i18n="cdn_short" class="text-[10px] font-bold mt-1">CDN</span>
-        </button>
-
-        <!-- S3 -->
-        <button id="tool-s3"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('s3')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $25
-          </div>
-          <div class="w-4 h-4 bg-emerald-500 rounded-full mb-1 shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
-          <span data-i18n="storage_short" class="text-[10px] font-bold mt-1">Storage</span>
-        </button>
-
-        <!-- Search Engine -->
-        <button id="tool-search"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('search')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $120
-          </div>
-          <div
-            class="w-4 h-4 bg-cyan-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(6,182,212,0.6)]" style="transform: rotate(22deg)">
-          </div>
-          <span data-i18n="search_short" class="text-[10px] font-bold mt-1">Search</span>
-        </button>
-
-        <!-- Read Replica -->
-        <button id="tool-replica"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('replica')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $100
-          </div>
-          <div
-            class="w-4 h-4 bg-pink-400 rounded-sm mb-1 shadow-[0_0_10px_rgba(244,114,182,0.6)] border-b-2 border-pink-600">
-          </div>
-          <span data-i18n="replica_short" class="text-[10px] font-bold mt-1">Replica</span>
-        </button>
-
-        <!-- Monitoring (#194) -->
-        <button id="tool-monitor"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('monitor')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $75
-          </div>
-          <div
-            class="w-4 h-4 bg-teal-400 rounded-full mb-1 shadow-[0_0_10px_rgba(20,184,166,0.6)] border-2 border-teal-700">
-          </div>
-          <span data-i18n="monitor_short" class="text-[10px] font-bold mt-1">Monitor</span>
-        </button>
-
-        <!-- Dead-Letter Queue (#197) -->
-        <button id="tool-dlq"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('dlq')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $55
-          </div>
-          <div
-            class="w-4 h-4 bg-stone-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(120,113,108,0.6)] border-b-2 border-stone-700">
-          </div>
-          <span data-i18n="dlq_short" class="text-[10px] font-bold mt-1">DLQ</span>
-        </button>
-
-        <!-- Pub/Sub Topic (#197) -->
-        <button id="tool-pubsub"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('pubsub')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $65
-          </div>
-          <div
-            class="w-4 h-4 bg-indigo-400 mb-1 shadow-[0_0_10px_rgba(129,140,248,0.6)]" style="clip-path: polygon(50% 0, 100% 100%, 0 100%)">
-          </div>
-          <span data-i18n="pubsub_short" class="text-[10px] font-bold mt-1">Pub/Sub</span>
-        </button>
-
-        <!-- Identity Provider (#197) -->
-        <button id="tool-auth"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('auth')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $55
-          </div>
-          <div
-            class="w-3 h-4 bg-yellow-500 rounded-sm mb-1 shadow-[0_0_10px_rgba(234,179,8,0.6)] border border-yellow-700">
-          </div>
-          <span data-i18n="auth_short" class="text-[10px] font-bold mt-1">Auth</span>
-        </button>
-
-        <!-- Scheduler / Cron (#197) -->
-        <button id="tool-scheduler"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('scheduler')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $50
-          </div>
-          <div
-            class="w-4 h-4 bg-sky-400 rounded-full mb-1 shadow-[0_0_10px_rgba(56,189,248,0.6)] border border-sky-700">
-          </div>
-          <span data-i18n="scheduler_short" class="text-[10px] font-bold mt-1">Cron</span>
-        </button>
-
-        <!-- Notification (#197) -->
-        <button id="tool-notify"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('notify')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $40
-          </div>
-          <div
-            class="w-4 h-4 bg-rose-400 mb-1 shadow-[0_0_10px_rgba(251,113,133,0.6)]" style="clip-path: polygon(0 100%, 100% 100%, 50% 0)">
-          </div>
-          <span data-i18n="notify_short" class="text-[10px] font-bold mt-1">Notify</span>
-        </button>
-
-        <!-- Container Cluster (#198) -->
-        <button id="tool-container"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('container')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $120
-          </div>
-          <svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-blue-400" fill="none" stroke="currentColor"
-            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="1.5" y="6" width="5" height="4.5" rx="0.5" />
-            <rect x="9.5" y="6" width="5" height="4.5" rx="0.5" />
-            <rect x="5.5" y="1.5" width="5" height="4.5" rx="0.5" />
+      <!-- Settings: help / music / sfx. Icon-only and out at the edge — they
+           are settings, not gameplay, and used to hold the three leftmost slots. -->
+      <div class="flex gap-1 pl-2 border-l border-gray-700">
+        <button id="tool-help" title="Help" data-i18n-title="help"
+          class="service-btn bg-gray-700 text-gray-200 rounded-lg w-8 h-8 flex items-center justify-center border border-gray-600"
+          onclick="showFAQ()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6" />
+            <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
+            <circle cx="12" cy="12" r="9" />
           </svg>
-          <span data-i18n="container_short" class="text-[10px] font-bold mt-1">Cluster</span>
         </button>
 
-        <!-- Stream (#198) -->
-        <button id="tool-stream"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('stream')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $90
-          </div>
-          <svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-teal-400" fill="none" stroke="currentColor"
-            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M1.5 4h13" />
-            <path d="M1.5 8h13" />
-            <path d="M1.5 12h13" />
-            <circle cx="5" cy="4" r="0.4" fill="currentColor" />
-            <circle cx="10" cy="8" r="0.4" fill="currentColor" />
-            <circle cx="7" cy="12" r="0.4" fill="currentColor" />
+        <!-- Music / SFX toggles (#112) -->
+        <button id="tool-music" title="Music" data-i18n-title="music"
+          class="service-btn bg-gray-700 text-gray-200 rounded-lg w-8 h-8 flex items-center justify-center border border-gray-600 bg-red-900 pulse-green"
+          onclick="toggleMusic()">
+          <svg id="music-icon" class="w-4 h-4 opacity-40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 18V6l10-2v12" />
+            <circle cx="7" cy="18" r="2" />
+            <circle cx="17" cy="16" r="2" />
           </svg>
-          <span data-i18n="stream_short" class="text-[10px] font-bold mt-1">Stream</span>
         </button>
-
-        <!-- GeoDNS (#198) -->
-        <button id="tool-dns"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('dns')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $50
-          </div>
-          <svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-lime-400" fill="none" stroke="currentColor"
-            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="8" cy="8" r="6.2" />
-            <path d="M1.8 8h12.4" />
-            <path d="M8 1.8c2 2 2 10.4 0 12.4-2-2-2-10.4 0-12.4Z" />
+        <button id="tool-sfx" title="SFX" data-i18n-title="sfx"
+          class="service-btn bg-gray-700 text-gray-200 rounded-lg w-8 h-8 flex items-center justify-center border border-gray-600 bg-red-900 pulse-green"
+          onclick="toggleSfx()">
+          <svg id="sfx-icon" class="w-4 h-4 opacity-40" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5 6 9H3v6h3l5 4V5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" />
           </svg>
-          <span data-i18n="dns_short" class="text-[10px] font-bold mt-1">GeoDNS</span>
-        </button>
-
-        <!-- Data Warehouse (#198) -->
-        <button id="tool-warehouse"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent group relative overflow-hidden"
-          onclick="setTool('warehouse')">
-          <div class="absolute top-0 right-0 bg-green-900/80 text-green-400 text-[9px] px-1 rounded-bl font-mono">
-            $90
-          </div>
-          <svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-amber-500" fill="none" stroke="currentColor"
-            stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M1.5 6.5 8 2l6.5 4.5" />
-            <path d="M2.5 6.5v7.5h11V6.5" />
-            <path d="M5 14v-4h6v4" />
-          </svg>
-          <span data-i18n="warehouse_short" class="text-[10px] font-bold mt-1">Warehouse</span>
         </button>
       </div>
     </div>

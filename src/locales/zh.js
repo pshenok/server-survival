@@ -158,6 +158,13 @@ export const ZH_TRANSLATIONS = {
     "link": "连接",
     "demolish": "拆除",
     "unlink": "断开",
+
+    // Service-palette category tabs (toolbar categories, 2026-07-24)
+    "cat_frontdoor": "入口",
+    "cat_compute": "计算",
+    "cat_data": "数据",
+    "cat_async": "异步",
+    "cat_ops": "运维",
     "fw": "防火墙",
     "queue": "队列",
     "lb": "负载均衡",

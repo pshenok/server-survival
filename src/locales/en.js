@@ -158,6 +158,13 @@ export const EN_TRANSLATIONS = {
     "link": "Link",
     "demolish": "Demolish",
     "unlink": "Unlink",
+
+    // Service-palette category tabs (toolbar categories, 2026-07-24)
+    "cat_frontdoor": "Front Door",
+    "cat_compute": "Compute",
+    "cat_data": "Data",
+    "cat_async": "Async",
+    "cat_ops": "Ops",
     "fw": "FW",
     "queue": "Queue",
     "lb": "LB",
