@@ -2,8 +2,9 @@
 // docs/superpowers/specs/2026-05-24-campaign-mode-design.md
 //
 // Level schema:
-//   id                 — 1..14, used for unlock + persistence
-//   chapter            — 1=Basics, 2=Optimization, 3=Defense & Mastery
+//   id                 — 1..N, sequential from 1; used for unlock + persistence
+//   chapter            — 1=Basics, 2=Optimization, 3=Defense & Mastery,
+//                        4=Production Readiness
 //   title, scenario    — UI strings (EN)
 //   learn              — educational text (EN)
 //   icon               — single emoji
@@ -14,6 +15,9 @@
 //                         connection ids: "internet" or numeric index into services[]
 //   trafficDistribution — forced mix (sums to 1.0)
 //   rps                — fixed spawn rate (overrides survival ramp)
+//   burstPattern       — { enabled, intervalSec, burstSize } forced spawn bursts
+//   forceOutageAtSec   — game time at which the first Firewall is knocked offline
+//   enableSurvivalShifts — opt into survival's traffic shifts / random events
 //   allowedServices    — string[]; [] or undefined = all allowed
 //   forbiddenServices  — string[]; overrides allowedServices for explicit blocks
 //   objectives         — { primary: Obj[], bonus: Obj[] }
@@ -525,5 +529,218 @@ export const CAMPAIGN_LEVELS = [
         },
         failConditions: { repBelow: 20, moneyBelow: -500, timeoutSec: 270 },
         debriefTip: "Congratulations, Architect. You've mastered the basics of cloud system design. Now try Survival mode for the real grind.",
+    },
+
+    // ===== Chapter 4: Production Readiness (#217) =====
+    // The Wave 1 mechanics (#193): observability, auto-scaling, resilience,
+    // dead-letter queues and fan-out. Levels 1-14 are deliberately untouched —
+    // wiring a new objective into a released level re-balances it for players
+    // who are mid-progress, so new mechanics get new levels.
+    {
+        id: 15, chapter: 4,
+        title: "Flying Blind",
+        scenario: "The architecture looks finished — Firewall, Load Balancer, Compute, Cache, Database, Storage — and it still buckles. One node in this chain is running far hotter than the rest. Guessing costs money you don't have; measuring costs $75.",
+        learn: "Monitoring never touches traffic. Placing it unlocks the live METRICS dashboard — per-service utilization, queue depth, error rate and latency — plus threshold alerts. The hottest node is almost never the most expensive one, and only the panel tells you which is which. Then upgrade THAT node.",
+        icon: "📈",
+        diagramHighlights: {},
+        budget: 190,
+        durationSec: 85,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -22, z: 0 },
+                { type: "alb", x: -12, z: 0 },
+                { type: "compute", x: -2, z: 0 },
+                { type: "cache", x: 8, z: 7 },
+                { type: "db", x: 18, z: 7 },
+                { type: "s3", x: 8, z: -7 },
+            ],
+            connections: [["internet", 0], [0, 1], [1, 2], [2, 3], [3, 4], [2, 4], [2, 5]],
+        },
+        // Tuned by headless playthrough: the traffic is deliberately heavy
+        // (UPLOAD/SEARCH weights) so the pre-built Tier-1 Compute sits ~10%
+        // over its own throughput. That is enough to bury it inside ~30s —
+        // long enough to read the panel, short enough that guessing loses.
+        // Every other node here is far below its ceiling, which is the point:
+        // the expensive DB is not the bottleneck, the cheap Compute is.
+        trafficDistribution: { STATIC: 0.05, READ: 0.15, WRITE: 0.1, UPLOAD: 0.4, SEARCH: 0.2, MALICIOUS: 0.1 },
+        rps: 4.6,
+        allowedServices: ["monitor"],
+        objectives: {
+            primary: [
+                { id: "deploy_monitoring", label: "Deploy a Monitoring node", check: (s) => CampaignObjectives.hasService(s, "monitor") },
+                { id: "serve_220", label: "Complete 220 requests", check: (s) => CampaignObjectives.totalCompleted(s) >= 220 },
+            ],
+            bonus: [
+                { id: "nothing_hot", label: "No service above 30% load", check: (s) => CampaignObjectives.busiestLoad(s) < 0.3 },
+                { id: "fail_under_10_pct", label: "Failure rate under 10%", check: (s) => CampaignObjectives.failureRate(s) < 0.1 },
+            ],
+        },
+        failConditions: { repBelow: 25, timeoutSec: 210 },
+        debriefTip: "CloudWatch, Azure Monitor, Cloud Monitoring — every provider sells the dashboard separately, and every outage post-mortem starts with 'we had no visibility'. Buy the eyes before you buy the hardware.",
+    },
+
+    {
+        id: 16, chapter: 4,
+        title: "The Traffic Spike",
+        scenario: "Marketing shipped the campaign without telling you, and the queries are expensive ones. Your single Compute node is already behind and there is no budget for a bigger one. Turn on AUTO and let the fleet grow itself.",
+        learn: "An Auto-Scaling Group boots a new instance when utilization stays above target — but a new instance carries NO traffic while it warms up. You pay for it from the moment it boots and get capacity only seconds later. That gap is the cold start: scaling out is a reaction, never a prediction.",
+        icon: "🌊",
+        diagramHighlights: { 2: "critical" },
+        budget: 90,
+        durationSec: 90,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -22, z: 0 },
+                { type: "alb", x: -12, z: 0 },
+                { type: "compute", x: -2, z: 0 },
+                { type: "db", x: 10, z: 0 },
+            ],
+            connections: [["internet", 0], [0, 1], [1, 2], [2, 3]],
+        },
+        // Tuned by headless playthrough. Arrival sits a hair ABOVE one
+        // instance's throughput: the backlog grows slowly enough that the
+        // group scales out before the circuit breaker gives up on the node,
+        // and the fleet then clears the queue. Push the rate higher and the
+        // breaker trips first — which starves the node, cancels the warming
+        // instance and the group can never catch up.
+        trafficDistribution: { STATIC: 0, READ: 0.1, WRITE: 0, UPLOAD: 0, SEARCH: 0.8, MALICIOUS: 0.1 },
+        rps: 3.2,
+        allowedServices: ["monitor"],
+        objectives: {
+            primary: [
+                { id: "fleet_scaled", label: "Let the Compute fleet scale itself out (AUTO)", check: (s) => CampaignObjectives.fleetScaledOut(s, "compute") },
+                { id: "serve_150", label: "Complete 150 requests", check: (s) => CampaignObjectives.totalCompleted(s) >= 150 },
+            ],
+            bonus: [
+                { id: "fail_under_25_pct", label: "Failure rate under 25%", check: (s) => CampaignObjectives.failureRate(s) < 0.25 },
+                { id: "rep_above_40", label: "Reputation above 40%", check: (s) => s.reputation >= 40 },
+            ],
+        },
+        // No survive-N objective: the goal is throughput, so a fixed fleet
+        // fails by never getting there rather than by a stopwatch.
+        failConditions: { repBelow: 15, timeoutSec: 150 },
+        debriefTip: "AWS Auto Scaling Groups, GCP Managed Instance Groups, Azure VM Scale Sets — all of them react to a metric, and all of them boot cold. Pre-warm before a known spike; auto-scaling saves you from the spikes you didn't know about.",
+    },
+
+    {
+        id: 17, chapter: 4,
+        title: "Node Down",
+        scenario: "Ops is running a game day: 30 seconds in, they will pull the plug on your Firewall — the one node every single request enters through. A quarter of your traffic is hostile. Survive the outage without losing the customers.",
+        learn: "Redundancy is not spare capacity, it is a second path. Routing skips a node that is offline or whose circuit breaker has opened, so a second identical entry point absorbs the traffic automatically. One of anything on the request path is a single point of failure.",
+        icon: "🔌",
+        diagramHighlights: { 0: "critical" },
+        // Roomy on purpose: a MALICIOUS leak costs $50, so a player who waits
+        // for the outage before buying the spare Firewall must still be able
+        // to afford it after the first wave of breaches.
+        budget: 200,
+        durationSec: 90,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -22, z: 0 },
+                { type: "alb", x: -12, z: 0 },
+                { type: "compute", x: -2, z: 0 },
+                { type: "cache", x: 8, z: 7 },
+                { type: "db", x: 18, z: 7 },
+            ],
+            connections: [["internet", 0], [0, 1], [1, 2], [2, 3], [3, 4], [2, 4]],
+        },
+        trafficDistribution: { STATIC: 0, READ: 0.5, WRITE: 0.15, UPLOAD: 0, SEARCH: 0.1, MALICIOUS: 0.25 },
+        rps: 4,
+        forceOutageAtSec: 30,
+        allowedServices: ["waf"],
+        objectives: {
+            primary: [
+                { id: "survived_outage", label: "Survive the outage with reputation above 75%", check: (s) => CampaignObjectives.survivedNodeFailure(s, 75) },
+                { id: "survive_70s", label: "Survive 70 seconds", check: (s) => s.elapsedGameTime >= 70 },
+            ],
+            bonus: [
+                { id: "no_leaks", label: "Zero MALICIOUS leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
+                { id: "rep_above_90", label: "Reputation above 90%", check: (s) => s.reputation >= 90 },
+            ],
+        },
+        failConditions: { repBelow: 30, timeoutSec: 270 },
+        debriefTip: "This is why clouds sell Availability Zones: two Firewalls in one rack are one power failure. Spread the redundant copies, and make sure traffic can actually reach the spare — an unwired standby is decoration.",
+    },
+
+    {
+        id: 18, chapter: 4,
+        title: "Nothing Gets Lost",
+        scenario: "Two Compute nodes, both running hot. Some requests are already saved by an automatic retry to the healthy peer — the rest simply vanish, and every vanished request is a customer. Give the losers somewhere to land.",
+        learn: "A Dead-Letter Queue is the only node that HOLDS an already-failed request instead of dropping it. Wire it to the nodes whose final failures you want to catch: a parked request counts as neither success nor failure, and the slow auto-drain recovers it for a small fee. Let it overflow and you are worse off than with no DLQ at all.",
+        icon: "📥",
+        diagramHighlights: { 2: "critical", 3: "critical" },
+        budget: 120,
+        durationSec: 90,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -22, z: 0 },
+                { type: "alb", x: -12, z: 0 },
+                { type: "compute", x: -2, z: 7 },
+                { type: "compute", x: -2, z: -7 },
+                { type: "db", x: 10, z: 0 },
+            ],
+            connections: [["internet", 0], [0, 1], [1, 2], [1, 3], [2, 4], [3, 4]],
+        },
+        // Tuned by headless playthrough: the baseline is comfortable for two
+        // Tier-1 Compute nodes and every burst overruns them. That produces
+        // ~1.5 final failures per second — just inside what one DLQ can drain
+        // (drainIntervalSec 0.6) and just outside what reputation can absorb
+        // without one.
+        trafficDistribution: { STATIC: 0, READ: 0.45, WRITE: 0.35, UPLOAD: 0, SEARCH: 0.1, MALICIOUS: 0.1 },
+        rps: 4,
+        burstPattern: { enabled: true, intervalSec: 8, burstSize: 14 },
+        allowedServices: ["dlq"],
+        objectives: {
+            primary: [
+                { id: "deploy_dlq", label: "Catch failures in a Dead-Letter Queue", check: (s) => CampaignObjectives.hasService(s, "dlq") },
+                { id: "survive_70s", label: "Survive 70 seconds", check: (s) => s.elapsedGameTime >= 70 },
+            ],
+            bonus: [
+                { id: "retries_worked", label: "At least 15 requests saved by a retry", check: (s) => CampaignObjectives.retriedRequests(s) >= 15 },
+                { id: "nothing_lost", label: "Zero requests lost outright", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
+            ],
+        },
+        failConditions: { repBelow: 40, timeoutSec: 270 },
+        debriefTip: "SQS dead-letter queues, Azure Service Bus dead-letter sub-queues, Pub/Sub dead-letter topics — same idea everywhere: retry a couple of times, then park the message for a human. A DLQ nobody drains is just a slower way to lose data.",
+    },
+
+    {
+        id: 19, chapter: 4,
+        title: "Fan Out",
+        scenario: "Product wants a push notification for every order — without slowing the order down by one millisecond. Both consumers are provisioned and neither is plugged into the balancer. Stop chaining services one after another: publish the event once and let every subscriber take its own copy.",
+        learn: "A Pub/Sub Topic is the only node that MULTIPLIES a request: it delivers one copy to every subscriber wired to it, in parallel and independently. The order path and the notification path stop waiting for each other — and a slow subscriber can no longer take the fast one down with it.",
+        icon: "📡",
+        diagramHighlights: { 4: "critical" },
+        budget: 150,
+        durationSec: 60,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -22, z: 0 },
+                { type: "alb", x: -12, z: 0 },
+                { type: "compute", x: 2, z: 7 },
+                { type: "db", x: 14, z: 7 },
+                { type: "notify", x: 2, z: -9 },
+            ],
+            connections: [["internet", 0], [0, 1], [2, 3]],
+        },
+        trafficDistribution: { STATIC: 0, READ: 0.25, WRITE: 0.6, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0.15 },
+        rps: 5,
+        allowedServices: ["pubsub"],
+        objectives: {
+            primary: [
+                { id: "notifications_sent", label: "Deliver 180 events to the Notification service", check: (s) => CampaignObjectives.completedByService(s, "notify") >= 180 },
+                { id: "orders_stored", label: "Store 180 orders in the Database", check: (s) => CampaignObjectives.completedByService(s, "db") >= 180 },
+            ],
+            bonus: [
+                { id: "fail_under_5_pct", label: "Failure rate under 5%", check: (s) => CampaignObjectives.failureRate(s) < 0.05 },
+                { id: "rep_above_90", label: "Reputation above 90%", check: (s) => s.reputation >= 90 },
+            ],
+        },
+        // Deliberately NOT the usual 3x durationSec. The tight deadline is what
+        // rules out the sequential shortcut (wire the balancer to both consumers
+        // and it round-robins, so each gets half the events and neither target
+        // lands in time). Fan-out delivers a copy to BOTH, which is the lesson.
+        failConditions: { repBelow: 40, timeoutSec: 75 },
+        debriefTip: "SNS + SQS, Google Pub/Sub, Azure Event Grid — publish once, subscribe many. The point is not saving a call, it is decoupling: adding an audit-log subscriber tomorrow must not require touching the order path today.",
     },
 ];

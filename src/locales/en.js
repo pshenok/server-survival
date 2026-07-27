@@ -448,6 +448,7 @@ export const EN_TRANSLATIONS = {
     "campaign_chapter_1": "Chapter 1: Basics",
     "campaign_chapter_2": "Chapter 2: Optimization",
     "campaign_chapter_3": "Chapter 3: Defense & Mastery",
+    "campaign_chapter_4": "Chapter 4: Production Readiness",
     "campaign_locked": "Locked",
     "monitor": "Monitoring",
     "monitor_short": "Monitor",

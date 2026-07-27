@@ -3,12 +3,33 @@
 // and traffic types with no reachable destination (#159, #162, #184).
 import { describe, expect, it } from "vitest";
 import { CAMPAIGN_LEVELS } from "../src/campaign/levels.js";
+import { EN_TRANSLATIONS as en } from "../src/locales/en.js";
 
 describe("campaign levels", () => {
-  it("has 14 levels with sequential ids", () => {
+  // Deliberately count-agnostic (#217 added chapter 4): a new level must not
+  // require editing this test, but a gap or a duplicate in the ids silently
+  // breaks unlock progression (highestUnlocked = levelId + 1) and the
+  // debrief's "next level" lookup, so the SEQUENCE is still pinned.
+  it("has N levels with sequential ids from 1", () => {
     expect(CAMPAIGN_LEVELS.map((l) => l.id)).toEqual(
-      Array.from({ length: 14 }, (_, i) => i + 1)
+      CAMPAIGN_LEVELS.map((_, i) => i + 1)
     );
+  });
+
+  it("groups levels into contiguous, non-decreasing chapters", () => {
+    // The level-select renderer emits a heading whenever the chapter changes,
+    // so a level filed out of chapter order would print the same heading twice.
+    const chapters = CAMPAIGN_LEVELS.map((l) => l.chapter);
+    expect(chapters).toEqual([...chapters].sort((a, b) => a - b));
+  });
+
+  it("every chapter in use has a heading string in en", () => {
+    // renderCampaignLevels() looks the heading up as campaign_chapter_<n>;
+    // a missing one renders the raw key at the top of the level list.
+    const missing = [...new Set(CAMPAIGN_LEVELS.map((l) => l.chapter))]
+      .map((n) => `campaign_chapter_${n}`)
+      .filter((k) => !(k in en));
+    expect(missing).toEqual([]);
   });
 
   describe.each(CAMPAIGN_LEVELS)("level $id — $title", (level) => {
