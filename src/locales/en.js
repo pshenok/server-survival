@@ -313,7 +313,7 @@ export const EN_TRANSLATIONS = {
     "tools_controls": "TOOLS & CONTROLS",
     "tool_select_desc": "Inspect services to see load and stats. Click Compute/DB to upgrade.",
     "tool_connect_desc": "Link nodes together. Click <span class=\"text-green-400\">Source</span> then <span class=\"text-blue-400\">Destination</span>.",
-    "tool_delete_desc": "Remove components or links. You get 100% refund for components!",
+    "tool_delete_desc": "Remove components or links. Components refund 50% of their cost.",
     "tool_unlink": "UNLINK",
     "tool_unlink_desc": "Remove connections between services. Click on a link to delete it.",
     "hud": "HUD",

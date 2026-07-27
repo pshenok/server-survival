@@ -313,7 +313,7 @@ export const ZH_TRANSLATIONS = {
     "tools_controls": "工具与控制",
     "tool_select_desc": "检查服务以查看负载和统计信息。点击计算节点/数据库进行升级。",
     "tool_connect_desc": "连接节点。点击 <span class=\"text-green-400\">源</span> 然后点击 <span class=\"text-blue-400\">目的地</span>。",
-    "tool_delete_desc": "移除组件或连接。组件可获得 100% 退款！",
+    "tool_delete_desc": "移除组件或连接。组件可退还 50% 的成本。",
     "tool_unlink": "断开连接",
     "tool_unlink_desc": "移除服务之间的连接。点击连接线即可删除。",
     "hud": "界面显示",
