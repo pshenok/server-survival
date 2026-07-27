@@ -32,6 +32,7 @@ import { recordServiceError } from "../core/metrics.js";
 // established pattern: failRequest is a hoisted function declaration, only
 // dereferenced when a backoff actually expires.
 import { failRequest } from "../core/actions.js";
+import { FAIL_REASONS } from "../core/failure-reasons.js";
 import { isRoutable } from "./circuit-breaker.js";
 
 // A conservative "alternate path exists" test: another routable service of the
@@ -100,7 +101,9 @@ function tickRetry(req, dt) {
     if (peer && STATE.services.includes(peer) && isRoutable(peer)) {
         req.flyTo(peer);
     } else {
-        failRequest(req);
+        // The backoff bought the request a second chance and the peer was gone
+        // when it came due — the retry itself is what failed (#156).
+        failRequest(req, FAIL_REASONS.RETRY_FAILED);
     }
     return true;
 }

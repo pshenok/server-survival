@@ -9,6 +9,7 @@
 // hoisted function declarations, dereferenced long after both evaluate.
 
 import { failOrPark } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 import { chargeServerlessInvocation } from "./serverless.js";
 
 export function process(service, job) {
@@ -20,6 +21,8 @@ export function process(service, job) {
 
   if (destType === "blocked") {
     chargePerRequest();
+    // Destination "blocked" is MALICIOUS traffic: failRequest relabels this
+    // one as the breach it is scored as, so no reason is passed here (#156).
     failOrPark(job.req, service);
     return "next";
   }
@@ -88,7 +91,7 @@ export function process(service, job) {
       if (sqlTarget) { chargePerRequest(); job.req.flyTo(sqlTarget); return "next"; }
     }
     chargePerRequest();
-    failOrPark(job.req, service);
+    failOrPark(job.req, service, FAIL_REASONS.NO_ROUTE);
     return "next";
   }
 
@@ -104,7 +107,7 @@ export function process(service, job) {
     job.req.flyTo(directTarget);
   } else {
     chargePerRequest();
-    failOrPark(job.req, service);
+    failOrPark(job.req, service, FAIL_REASONS.NO_ROUTE);
   }
   return "next";
 }

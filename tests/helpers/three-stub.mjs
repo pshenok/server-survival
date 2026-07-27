@@ -102,13 +102,33 @@ class Material {
     this.color = new Color(typeof params.color === "number" ? params.color : 0);
     if (!("opacity" in params)) this.opacity = 1;
     if (!("transparent" in params)) this.transparent = false;
+    // #156: the failure-badge leak tests assert every texture/material a badge
+    // allocated was actually disposed, so the stub has to remember.
+    this.disposed = false;
   }
-  dispose() {}
+  dispose() {
+    this.disposed = true;
+  }
 }
 export class MeshStandardMaterial extends Material {}
 export class MeshBasicMaterial extends Material {}
 export class MeshLambertMaterial extends Material {}
 export class LineBasicMaterial extends Material {}
+export class SpriteMaterial extends Material {}
+
+// Canvas-backed texture (#156 failure badges). Real THREE uploads the canvas
+// to the GPU on needsUpdate; here it only has to be disposable and countable.
+export class Texture {
+  constructor(image = null) {
+    this.image = image;
+    this.needsUpdate = false;
+    this.disposed = false;
+  }
+  dispose() {
+    this.disposed = true;
+  }
+}
+export class CanvasTexture extends Texture {}
 
 class Geometry {
   dispose() {}
@@ -183,6 +203,15 @@ export class Mesh extends Object3D {
 }
 
 export class Line extends Mesh {}
+
+// A real Sprite carries no geometry of its own (THREE shares one internally),
+// which is exactly why the badge disposal path only touches map + material.
+export class Sprite extends Object3D {
+  constructor(material) {
+    super();
+    this.material = material;
+  }
+}
 
 export class OrthographicCamera extends Object3D {
   constructor(left, right, top, bottom, near, far) {
@@ -294,6 +323,10 @@ export const THREE_STUB = {
   Mesh,
   Line,
   Line3,
+  Sprite,
+  SpriteMaterial,
+  Texture,
+  CanvasTexture,
   OrthographicCamera,
   AmbientLight,
   DirectionalLight,

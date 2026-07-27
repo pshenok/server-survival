@@ -563,4 +563,24 @@ export const NE_TRANSLATIONS = {
     "warehouse_desc_long": "डाटाबेसको उल्टो प्रोफाइल भएको विश्लेषण भण्डार: यो WRITE र UPLOAD ट्राफिक पूरा गर्छ — ठूलो परिमाणमा ढिलो र सस्तो — तर यसमा पुग्ने कुनै पनि वास्तविक-समय READ वा SEARCH असफल पार्छ, किनकि वेयरहाउस OLAP हो, OLTP होइन। तपाईं यसमा लोड गर्नुहुन्छ, यसबाट प्रयोगकर्ता पढाइ सेवा गर्नुहुन्न। यसलाई Pub/Sub फ्यान-आउटको विश्लेषण प्रतिलिपि, Scheduler को अनुसूचित ब्याच लोड, वा Stream ले खुवाउनुहोस्। यो पढाइ अस्वीकार र सस्तो-उच्च क्षमता नै OLTP बनाम OLAP को पाठ हो। वास्तविक समकक्ष: Amazon Redshift · Azure Synapse · Google BigQuery।",
     "warehouse_flow": "प्रवाह: Pub/Sub / Scheduler / Stream → डाटा वेयरहाउस (विश्लेषण टर्मिनल)",
     "warehouse_desc_short": "सस्तो विश्लेषण भण्डार ($90)",
+
+    // Educational failure badges (#156). Short floating labels drawn over the
+    // node that dropped a request — keep them SHORT, they are sprite text.
+    "failure_badges": "असफलताका कारण",
+    "fail_queue_full": "लाम भरियो",
+    "fail_overloaded": "अत्यधिक भार",
+    "fail_retry_failed": "पुनःप्रयास असफल",
+    "fail_no_route": "मार्ग छैन",
+    "fail_no_origin": "मूल स्रोत छैन",
+    "fail_no_subscriber": "सदस्य छैन",
+    "fail_no_master": "मास्टर छैन",
+    "fail_read_only_replica": "पढ्न मात्र मिल्ने प्रतिलिपि",
+    "fail_analytics_store": "विश्लेषण भण्डार, पढाइका लागि होइन",
+    "fail_wrong_store": "गलत भण्डार प्रकार",
+    "fail_not_indexed": "खोज अनुक्रमणिका छैन",
+    "fail_search_only": "खोज अनुक्रमणिका मात्र",
+    "fail_circuit_open": "ब्रेकर खुला",
+    "fail_partition_stalled": "पार्टिसन अवरुद्ध",
+    "fail_breach": "उल्लङ्घन!",
+    "fail_throttled": "सीमित",
 };

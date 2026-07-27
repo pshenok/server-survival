@@ -28,6 +28,7 @@
 
 import { STATE } from "../state.js";
 import { failOrPark } from "../core/actions.js";
+import { FAIL_REASONS } from "../core/failure-reasons.js";
 import { isRoutable } from "./circuit-breaker.js";
 
 // Lazily seed the partition buckets + per-partition timers on first tick.
@@ -88,7 +89,12 @@ export function tickStream(service, dt) {
             // it cannot leak. The tail advances to the next head next frame.
             part.shift();
             service.partitionTimers[p] = 0;
-            failOrPark(head, service);
+            // "Partition stalled" (#156) rather than "no route": what the
+            // player has to learn here is that the whole partition was WAITING
+            // on this one head — everything behind it was blocked by it, and
+            // the neighbouring partitions kept flowing. That is head-of-line
+            // blocking, and it is the reason this node exists.
+            failOrPark(head, service, FAIL_REASONS.PARTITION_STALLED);
             continue;
         }
 

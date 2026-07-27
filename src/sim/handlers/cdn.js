@@ -4,6 +4,7 @@
 
 import { STATE } from "../../state.js";
 import { failRequest, finishRequest } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 import { isRoutable } from "../circuit-breaker.js";
 
 export function process(service, job) {
@@ -31,8 +32,10 @@ export function process(service, job) {
     const target = connectedServices[0];
     job.req.flyTo(target);
   } else {
-    // Configuring Miss but no origin = Fail
-    failRequest(job.req);
+    // Configuring Miss but no origin = Fail. "No origin" rather than the
+    // generic "no route" (#156): an edge cache with nothing behind it is the
+    // specific mistake, and naming it is the lesson.
+    failRequest(job.req, FAIL_REASONS.NO_ORIGIN);
   }
   return "next";
 }

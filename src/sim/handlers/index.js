@@ -34,6 +34,7 @@
 
 import { STATE } from "../../state.js";
 import { failOrPark } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 import { isRoutable } from "../circuit-breaker.js";
 import { process as apigw } from "./apigw.js";
 import { process as cache } from "./cache.js";
@@ -67,7 +68,7 @@ export function genericForward(service, job) {
     service.rrIndex++;
     job.req.flyTo(target);
   } else {
-    failOrPark(job.req, service);
+    failOrPark(job.req, service, FAIL_REASONS.NO_ROUTE);
   }
   return "next";
 }

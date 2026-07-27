@@ -6,6 +6,7 @@
 
 import { STATE } from "../../state.js";
 import { failOrPark, throttleRequest } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 import { isRoutable } from "../circuit-breaker.js";
 
 export function process(service, job) {
@@ -14,7 +15,7 @@ export function process(service, job) {
 
   if (service.rateCounter > rateLimit) {
     // Rate limited - soft fail
-    throttleRequest(job.req);
+    throttleRequest(job.req, FAIL_REASONS.THROTTLED);
     return "next";
   }
 
@@ -30,7 +31,7 @@ export function process(service, job) {
     service.rrIndex++;
     job.req.flyTo(target);
   } else {
-    failOrPark(job.req, service);
+    failOrPark(job.req, service, FAIL_REASONS.NO_ROUTE);
   }
   return "next";
 }

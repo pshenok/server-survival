@@ -4,6 +4,7 @@
 
 import { STATE } from "../../state.js";
 import { failRequest, finishRequest } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 
 export function process(service, job) {
   const hasMaster = service.connections.some(id => {
@@ -11,13 +12,15 @@ export function process(service, job) {
     return s && (s.type === "db" || s.type === "nosql");
   });
   if (!hasMaster) {
-    failRequest(job.req);
+    // A replica replicates FROM somewhere — unwired, it has nothing to serve.
+    failRequest(job.req, FAIL_REASONS.NO_MASTER);
     return "next";
   }
   if (job.req.type === "READ" && job.req.destination === "db") {
     finishRequest(job.req, service.type, service);
   } else {
-    failRequest(job.req);
+    // The read-replica lesson (#156): WRITEs must go to the master.
+    failRequest(job.req, FAIL_REASONS.READ_ONLY_REPLICA);
   }
   return "next";
 }

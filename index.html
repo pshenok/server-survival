@@ -607,6 +607,19 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" />
           </svg>
         </button>
+
+        <!-- Failure-reason badges toggle (#156). Default ON — the labels are
+             the teaching half of every failure — with the preference persisted
+             in localStorage exactly like the sound channels above. -->
+        <button id="tool-badges" title="Failure reasons" data-i18n-title="failure_badges"
+          class="service-btn bg-gray-700 text-gray-200 rounded-lg w-8 h-8 flex items-center justify-center border border-gray-600"
+          onclick="toggleFailureBadges()">
+          <svg id="badges-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v10H9l-4 4V5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5v3" />
+            <circle cx="12" cy="12.8" r="0.7" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>

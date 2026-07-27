@@ -14,7 +14,14 @@ import { Request } from "../entities/Request.js";
 import { recordServiceError, recordServiceSuccess } from "./metrics.js";
 // Resilience (#196): routing skips tripped nodes exactly like disabled ones.
 // The breaker's counters are NOT fed from here — see the note on failRequest.
-import { isRoutable } from "../sim/circuit-breaker.js";
+// hasTrippedDownstream is the fail-fast attribution for the badges (#156).
+import { hasTrippedDownstream, isRoutable } from "../sim/circuit-breaker.js";
+// Educational failure badges (#156). The `reason` argument threaded through
+// failRequest / failOrPark / throttleRequest is pure attribution: it is read
+// only here, only to draw a label, and never influences control flow. See the
+// contract note in core/failure-reasons.js.
+import { FAIL_REASONS } from "./failure-reasons.js";
+import { spawnFailureBadge } from "../ui/failure-badges.js";
 // Dead-Letter Queue (#197): a final failure at a node wired to a DLQ is parked
 // there instead of dropped. Runtime-only cycle (actions.js ⇄ dlq.js) — hoisted
 // declarations, dereferenced long after both modules evaluate.
@@ -108,7 +115,7 @@ function spawnRequest() {
 function routeRequestToEntry(req, type) {
     const conns = STATE.internetNode.connections;
     if (conns.length === 0) {
-        failRequest(req);
+        failRequest(req, FAIL_REASONS.NO_ROUTE);
         return;
     }
     const entryNodes = conns.map((id) =>
@@ -148,7 +155,7 @@ function routeRequestToEntry(req, type) {
     }
 
     if (target) req.flyTo(target);
-    else failRequest(req);
+    else failRequest(req, FAIL_REASONS.NO_ROUTE);
 }
 
 function updateScore(req, outcome) {
@@ -244,7 +251,12 @@ function finishRequest(req, viaServiceType, service) {
     removeRequest(req);
 }
 
-function failRequest(req) {
+// `reason` (optional second param, #156) is a FAIL_REASONS value describing WHY
+// this request died, purely so the badge over the node can teach it. It is
+// read once, at the very end, to spawn a label — it touches no counter, no
+// score and no branch, so passing one can never change which requests fail.
+// Defaults to null (no badge) for callers with nothing to say.
+function failRequest(req, reason = null) {
     // Observability (#194): attribute the failure to the service the request
     // was headed to / sitting on. Entry-routing failures with no target (no
     // Internet connections at all) stay unattributed by design. `failed` marks
@@ -268,7 +280,25 @@ function failRequest(req) {
     updateScore(req, failType);
     STATE.sound.playFail();
     req.mesh.material.color.setHex(CONFIG.colors.requestFail);
+    // A MALICIOUS request that reaches here got through — whatever routing
+    // verdict actually dropped it, the lesson is the breach, which is also
+    // exactly what updateScore just charged the player for.
+    spawnFailureBadge(
+        req,
+        req.type === TRAFFIC_TYPES.MALICIOUS ? FAIL_REASONS.BREACH : reason
+    );
     setTimeout(() => removeRequest(req), 500);
+}
+
+// Fail-fast attribution (#156). A node that found no candidate downstream
+// normally means the player forgot a wire — but if the only downstream is
+// there and merely TRIPPED, the request is being shed by the circuit breaker,
+// which is a completely different lesson. Resolving it here (rather than at
+// every routing site) keeps the handlers' one-liners intact, and it is pure
+// relabelling: NO_ROUTE and CIRCUIT_OPEN both fail the request identically.
+function routingReason(service, reason) {
+    if (reason !== FAIL_REASONS.NO_ROUTE) return reason;
+    return hasTrippedDownstream(service) ? FAIL_REASONS.CIRCUIT_OPEN : reason;
 }
 
 // Dead-Letter Queue interception (#197). The single choke point every "this
@@ -280,9 +310,9 @@ function failRequest(req) {
 // service context (entry routing with no Internet link, queue overflow in
 // Request.update) keep calling failRequest directly: there is no node to hang a
 // DLQ off. MALICIOUS is never parked (see parkInDLQ).
-function failOrPark(req, service) {
+function failOrPark(req, service, reason = null) {
     if (parkInDLQ(req, service)) return;
-    failRequest(req);
+    failRequest(req, routingReason(service, reason));
 }
 
 // Notification silent failure (#197). A Notification node's overload drops are
@@ -301,7 +331,7 @@ function notifySilentFail(req, service) {
     removeRequest(req);
 }
 
-function throttleRequest(req) {
+function throttleRequest(req, reason = null) {
     // Throttling is load shedding working as designed, not a service error:
     // it feeds neither the metrics error rate nor the breaker window. The flag
     // keeps Service.update() from scoring it as a breaker success either.
@@ -309,6 +339,9 @@ function throttleRequest(req) {
     updateScore(req, "THROTTLED");
     STATE.sound.playFail();
     req.mesh.material.color.setHex(CONFIG.colors.apigw); // Pink flash for throttled
+    // Soft fail (#156): the badge paints this one amber, not red — the
+    // gateway did its job, the player just hit the rate limit.
+    spawnFailureBadge(req, reason);
     setTimeout(() => removeRequest(req), 500);
 }
 

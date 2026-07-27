@@ -3,12 +3,14 @@
 // Service.update().
 
 import { failRequest, finishRequest } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 
 export function process(service, job) {
   if (job.req.type === "SEARCH") {
     finishRequest(job.req, service.type, service);
   } else {
-    failRequest(job.req);
+    // A search index serves SEARCH and nothing else (#156).
+    failRequest(job.req, FAIL_REASONS.SEARCH_ONLY);
   }
   return "next";
 }

@@ -4,6 +4,7 @@ import { STATE } from "../state.js";
 // hoisted function declarations / top-level consts, only dereferenced at
 // runtime — long after all modules have finished evaluating.
 import { failRequest } from "../core/actions.js";
+import { FAIL_REASONS } from "../core/failure-reasons.js";
 // Retry backoff (#196) is ticked here, inside the existing flight model, so a
 // pending retry freezes with the game and dies with a reset — see the note in
 // src/sim/retry.js.
@@ -102,7 +103,7 @@ export class Request {
                     // is failing" signals the breaker listens to — the target
                     // is so backed up it cannot even accept the request.
                     recordBreakerFailure(this.target);
-                    failRequest(this);
+                    failRequest(this, FAIL_REASONS.QUEUE_FULL);
                 }
             } else {
                 const dest = this.target.position.clone();

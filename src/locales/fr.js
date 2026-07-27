@@ -563,4 +563,24 @@ export const FR_TRANSLATIONS = {
     "warehouse_desc_long": "Un magasin analytique au profil inverse d'une base de données : il termine le trafic WRITE et UPLOAD — lentement et à bas coût à grand volume — mais fait échouer tout READ ou SEARCH en temps réel qui l'atteint, car un entrepôt est OLAP, pas OLTP. On le charge, on n'y sert pas de lectures utilisateur. Alimentez-le d'une copie analytique depuis un fan-out Pub/Sub, d'un chargement par lots planifié depuis le Scheduler, ou d'un Stream. Ce rejet des lectures plus la capacité élevée et bon marché est la leçon OLTP vs OLAP. Équivalents réels : Amazon Redshift · Azure Synapse · Google BigQuery.",
     "warehouse_flow": "Flux : Pub/Sub / Scheduler / Stream → Entrepôt de données (terminal analytique)",
     "warehouse_desc_short": "Magasin analytique bon marché ($90)",
+
+    // Educational failure badges (#156). Short floating labels drawn over the
+    // node that dropped a request — keep them SHORT, they are sprite text.
+    "failure_badges": "Raisons d'échec",
+    "fail_queue_full": "File pleine",
+    "fail_overloaded": "Surchargé",
+    "fail_retry_failed": "Nouvelle tentative échouée",
+    "fail_no_route": "Aucune route",
+    "fail_no_origin": "Aucune origine",
+    "fail_no_subscriber": "Aucun abonné",
+    "fail_no_master": "Aucun maître",
+    "fail_read_only_replica": "Réplica en lecture seule",
+    "fail_analytics_store": "Entrepôt analytique, pas pour les lectures",
+    "fail_wrong_store": "Mauvais type de stockage",
+    "fail_not_indexed": "Aucun index de recherche",
+    "fail_search_only": "Index de recherche uniquement",
+    "fail_circuit_open": "Disjoncteur ouvert",
+    "fail_partition_stalled": "Partition bloquée",
+    "fail_breach": "Intrusion !",
+    "fail_throttled": "Limité",
 };

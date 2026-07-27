@@ -70,6 +70,22 @@ function isBreakerOpen(service) {
     return service?.breakerState === "open";
 }
 
+// Fail-fast attribution for the failure badges (#156). True when `service` is
+// wired to a downstream that is ONLINE but skipped purely because its breaker
+// is not accepting traffic — i.e. the request in front of us is being shed by
+// the breaker rather than falling off an unwired board. Read-only: it decides
+// nothing, it only lets core/actions.js relabel a NO_ROUTE as "Circuit open".
+function hasTrippedDownstream(service) {
+    if (!service || !service.connections) return false;
+    return STATE.services.some(
+        (s) =>
+            service.connections.includes(s.id) &&
+            !s.isDisabled &&
+            (s.breakerState === "open" ||
+                (s.breakerState === "half-open" && s.breakerProbes <= 0))
+    );
+}
+
 function errorRate(service) {
     const events = service.breakerEvents;
     if (!events || events.length === 0) return 0;
@@ -171,6 +187,7 @@ function resetResilience() {
 
 export {
     errorRate,
+    hasTrippedDownstream,
     initBreaker,
     isBreakerOpen,
     isRoutable,
