@@ -563,4 +563,24 @@ export const ZH_TRANSLATIONS = {
     "warehouse_desc_long": "一种与数据库画像相反的分析存储：它完成 WRITE 和 UPLOAD 流量——在大批量下缓慢而廉价——但会让任何到达它的实时 READ 或 SEARCH 失败，因为数据仓库是 OLAP，而非 OLTP。你向它加载数据，而不从中服务用户读取。用 Pub/Sub 扇出的分析副本、Scheduler 的定时批量加载或 Stream 来喂养它。这种拒绝读取加上廉价高容量，就是 OLTP 与 OLAP 的教训。现实对应：Amazon Redshift · Azure Synapse · Google BigQuery。",
     "warehouse_flow": "流向：Pub/Sub / Scheduler / Stream → 数据仓库（分析终点）",
     "warehouse_desc_short": "廉价分析存储（$90）",
+
+    // Educational failure badges (#156). Short floating labels drawn over the
+    // node that dropped a request — keep them SHORT, they are sprite text.
+    "failure_badges": "失败原因",
+    "fail_queue_full": "队列已满",
+    "fail_overloaded": "过载",
+    "fail_retry_failed": "重试失败",
+    "fail_no_route": "无路由",
+    "fail_no_origin": "无源站",
+    "fail_no_subscriber": "无订阅者",
+    "fail_no_master": "无主库",
+    "fail_read_only_replica": "只读副本",
+    "fail_analytics_store": "分析存储，不供读取",
+    "fail_wrong_store": "存储类型不匹配",
+    "fail_not_indexed": "无搜索索引",
+    "fail_search_only": "仅限搜索索引",
+    "fail_circuit_open": "熔断器断开",
+    "fail_partition_stalled": "分区阻塞",
+    "fail_breach": "被攻破！",
+    "fail_throttled": "被限流",
 };

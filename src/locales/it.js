@@ -563,4 +563,24 @@ export const IT_TRANSLATIONS = {
     "warehouse_desc_long": "Un archivio analitico con il profilo opposto di un database: completa il traffico WRITE e UPLOAD — lentamente e a basso costo su grandi volumi — ma fa fallire qualsiasi READ o SEARCH in tempo reale che lo raggiunge, perché un warehouse è OLAP, non OLTP. Lo carichi, non ci servi letture degli utenti. Alimentalo con una copia analitica da un fan-out Pub/Sub, un carico batch pianificato dallo Scheduler, o uno Stream. Questo rifiuto delle letture più la capacità elevata ed economica è la lezione OLTP vs OLAP. Equivalenti reali: Amazon Redshift · Azure Synapse · Google BigQuery.",
     "warehouse_flow": "Flusso: Pub/Sub / Scheduler / Stream → Data Warehouse (terminale analitico)",
     "warehouse_desc_short": "Archivio analitico economico ($90)",
+
+    // Educational failure badges (#156). Short floating labels drawn over the
+    // node that dropped a request — keep them SHORT, they are sprite text.
+    "failure_badges": "Motivi di errore",
+    "fail_queue_full": "Coda piena",
+    "fail_overloaded": "Sovraccarico",
+    "fail_retry_failed": "Nuovo tentativo fallito",
+    "fail_no_route": "Nessuna rotta",
+    "fail_no_origin": "Nessuna origine",
+    "fail_no_subscriber": "Nessun sottoscrittore",
+    "fail_no_master": "Nessun master",
+    "fail_read_only_replica": "Replica in sola lettura",
+    "fail_analytics_store": "Archivio analitico, non per letture",
+    "fail_wrong_store": "Tipo di archivio errato",
+    "fail_not_indexed": "Nessun indice di ricerca",
+    "fail_search_only": "Solo indice di ricerca",
+    "fail_circuit_open": "Interruttore aperto",
+    "fail_partition_stalled": "Partizione bloccata",
+    "fail_breach": "Violazione!",
+    "fail_throttled": "Limitato",
 };

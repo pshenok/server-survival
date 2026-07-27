@@ -18,6 +18,7 @@
 
 import { STATE } from "../../state.js";
 import { failOrPark } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 import { Request } from "../../entities/Request.js";
 import { isRoutable } from "../circuit-breaker.js";
 
@@ -28,7 +29,7 @@ export function process(service, job) {
 
     if (subs.length === 0) {
         // No subscriber to deliver to — fail the event (a wired DLQ may catch it).
-        failOrPark(job.req, service);
+        failOrPark(job.req, service, FAIL_REASONS.NO_SUBSCRIBER);
         return "next";
     }
 

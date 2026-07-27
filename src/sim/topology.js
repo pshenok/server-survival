@@ -13,6 +13,9 @@ import { Service } from "../entities/Service.js";
 import { flashMoney, removeRequest } from "../core/actions.js";
 import { updateRepairCostTable } from "../core/economy.js";
 import { isRoutable } from "./circuit-breaker.js";
+// Failure badges (#156) are anchored to services; wiping the board must
+// dispose their textures too — see the note in ui/failure-badges.js.
+import { clearFailureBadges } from "../ui/failure-badges.js";
 // Runtime-only cycle (game.js ⇄ topology.js) — established pattern: these
 // are top-level consts in game.js (scene groups + raycasting singletons),
 // only dereferenced at runtime, long after both modules evaluate.
@@ -393,6 +396,7 @@ function clearAllServices() {
     STATE.internetNode.connections = [];
     STATE.requests.forEach((r) => r.destroy());
     STATE.requests = [];
+    clearFailureBadges();
     STATE.money = STATE.sandboxBudget;
 }
 

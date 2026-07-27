@@ -39,6 +39,15 @@ import { upkeepInstanceFactor } from "./src/sim/autoscaling.js";
 import { resetResilience } from "./src/sim/circuit-breaker.js";
 import { metricsTick, resetMetrics } from "./src/core/metrics.js";
 import { renderMetricsPanel } from "./src/ui/metrics-panel.js";
+// Educational failure badges (#156): the floating "why did this fail" labels.
+// game.js owns their scene group (badgeGroup, below), ticks them once per
+// frame next to metricsTick, and clears them on reset.
+import {
+    clearFailureBadges,
+    syncFailureBadgeButton,
+    tickFailureBadges,
+    toggleFailureBadges,
+} from "./src/ui/failure-badges.js";
 import {
     campaignNextLevel,
     campaignRetryLevel,
@@ -243,9 +252,13 @@ scene.add(gridHelper);
 const serviceGroup = new THREE.Group();
 const connectionGroup = new THREE.Group();
 const requestGroup = new THREE.Group();
+// Failure badges (#156) get their own group: a badge must outlive the node
+// that dropped the request, and sprite scale must not inherit a node's.
+const badgeGroup = new THREE.Group();
 scene.add(serviceGroup);
 scene.add(connectionGroup);
 scene.add(requestGroup);
+scene.add(badgeGroup);
 
 const internetGeo = new THREE.BoxGeometry(6, 1, 10);
 const internetMat = new THREE.MeshStandardMaterial({
@@ -352,6 +365,9 @@ function resetGame(mode = "survival") {
     STATE.autoRepairEnabled = false;
     resetMetrics();
     resetResilience();
+    // Dispose the floating failure labels (#156) — a badge anchored to a
+    // node from the previous run is both meaningless and a texture leak.
+    clearFailureBadges();
     STATE.hints = {
       lastHintTime: 0,
       dismissedHints: new Set(),
@@ -790,6 +806,7 @@ window.toggleSfx = () => {
 
 // Reflect persisted prefs on load
 syncSoundButtons();
+syncFailureBadgeButton();
 
 // The wheel-zoom, upgrade-indicator, keyboard-navigation, and mouse
 // drag/pan/connect/place listeners (with their state) moved to
@@ -951,6 +968,10 @@ function animate(time) {
     // it only rebuilds rows on service-set changes and redraws on new samples.
     metricsTick(dt);
     renderMetricsPanel();
+
+    // Failure badges (#156): age and fade the floating labels. Same
+    // game-scaled dt as everything else, so they freeze with the board.
+    tickFailureBadges(dt);
 
     // Live tooltip refresh (#173): while the pointer sits still over a service,
     // replay the last mousemove at ~4 Hz so the tooltip's load/queue/rate stats
@@ -1430,6 +1451,8 @@ window.resumeGame = () => {
 window.restartGame = restartGame;
 window.retryWithSameArchitecture = retryWithSameArchitecture;
 window.toggleAutoRepair = toggleAutoRepair;
+// #156: the failure-badge toggle in the toolbar's settings cluster.
+window.toggleFailureBadges = toggleFailureBadges;
 
 // #155 PR 6: the campaign-UI and save/load handlers now live in
 // src/ui/campaign-ui.js and src/persistence/save-load.js; index.html inline
@@ -1467,6 +1490,7 @@ window.STATE = STATE;
 // declarations / top-level consts only dereferenced after evaluation).
 export {
     animate,
+    badgeGroup,
     camera,
     cameraTarget,
     connectionGroup,

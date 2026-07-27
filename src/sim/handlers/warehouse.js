@@ -16,6 +16,7 @@
 
 import { TRAFFIC_TYPES } from "../../config.js";
 import { failRequest, finishRequest } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 
 export function process(service, job) {
     const t = job.req.type;
@@ -24,7 +25,9 @@ export function process(service, job) {
         finishRequest(job.req, service.type, service);
     } else {
         // READ / SEARCH / STATIC / anything else: a warehouse cannot serve it.
-        failRequest(job.req);
+        // The badge says so in as many words — this is the OLTP-vs-OLAP lesson
+        // and the one failure players most often read as a bug (#156).
+        failRequest(job.req, FAIL_REASONS.ANALYTICS_STORE);
     }
     return "next";
 }

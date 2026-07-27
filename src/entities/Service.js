@@ -14,6 +14,10 @@ import {
   updateScore,
 } from "../core/actions.js";
 import { addInterventionWarning } from "../core/events.js";
+// Failure taxonomy (#156): the load/health roll is the "Overloaded" lesson —
+// unless the request had already burned its retry, which teaches a different
+// one. Attribution only; see the contract in core/failure-reasons.js.
+import { FAIL_REASONS } from "../core/failure-reasons.js";
 // Per-type job processing lives in the handler registry (#155 PR 9):
 // one file per service type + the shared fallback. See the control-flow
 // contract in src/sim/handlers/index.js.
@@ -618,8 +622,16 @@ export class Service {
             notifySilentFail(job.req, this);
           } else if (!retryRequest(job.req, this)) {
             // Final failure: park it in a wired DLQ (#197) if one exists,
-            // otherwise drop it normally.
-            failOrPark(job.req, this);
+            // otherwise drop it normally. A request that already spent a retry
+            // and died anyway is a "Retry failed", not a plain overload —
+            // labelling only, both paths fail it identically (#156).
+            failOrPark(
+              job.req,
+              this,
+              job.req.retries > 0
+                ? FAIL_REASONS.RETRY_FAILED
+                : FAIL_REASONS.OVERLOADED
+            );
           }
           continue;
         }

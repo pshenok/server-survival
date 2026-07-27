@@ -13,6 +13,7 @@
 
 import { STATE } from "../../state.js";
 import { failOrPark } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 import { isRoutable } from "../circuit-breaker.js";
 
 export function process(service, job) {
@@ -21,7 +22,7 @@ export function process(service, job) {
         .filter((s) => s && isRoutable(s));
 
     if (stacks.length === 0) {
-        failOrPark(job.req, service);
+        failOrPark(job.req, service, FAIL_REASONS.NO_ROUTE);
         return "next";
     }
 

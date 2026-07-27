@@ -563,4 +563,24 @@ export const EN_TRANSLATIONS = {
     "warehouse_desc_long": "An analytics store with the inverse profile of a database: it completes WRITE and UPLOAD traffic — slowly and cheaply at high volume — but fails any realtime READ or SEARCH that reaches it, because a warehouse is OLAP, not OLTP. You load it, you do not serve user reads from it. Feed it an analytics copy from a Pub/Sub fan-out, a scheduled batch load from the Scheduler, or a Stream. That read-rejection plus cheap-high-capacity is the OLTP-vs-OLAP lesson. Real-world equivalents: Amazon Redshift · Azure Synapse · Google BigQuery.",
     "warehouse_flow": "Flow: Pub/Sub / Scheduler / Stream → Data Warehouse (analytics terminal)",
     "warehouse_desc_short": "Cheap analytics store ($90)",
+
+    // Educational failure badges (#156). Short floating labels drawn over the
+    // node that dropped a request — keep them SHORT, they are sprite text.
+    "failure_badges": "Failure reasons",
+    "fail_queue_full": "Queue full",
+    "fail_overloaded": "Overloaded",
+    "fail_retry_failed": "Retry failed",
+    "fail_no_route": "No route",
+    "fail_no_origin": "No origin",
+    "fail_no_subscriber": "No subscriber",
+    "fail_no_master": "No master",
+    "fail_read_only_replica": "Read-only replica",
+    "fail_analytics_store": "Analytics store, not for reads",
+    "fail_wrong_store": "Wrong store type",
+    "fail_not_indexed": "No search index",
+    "fail_search_only": "Search index only",
+    "fail_circuit_open": "Circuit open",
+    "fail_partition_stalled": "Partition stalled",
+    "fail_breach": "Breach!",
+    "fail_throttled": "Throttled",
 };

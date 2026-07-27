@@ -5,6 +5,7 @@
 
 import { STATE } from "../../state.js";
 import { failOrPark, finishRequest } from "../../core/actions.js";
+import { FAIL_REASONS } from "../../core/failure-reasons.js";
 
 export function process(service, job) {
   if (job.req.isCacheable) {
@@ -37,7 +38,7 @@ export function process(service, job) {
     }
     const sqlTarget = service.findConnectedService("db");
     if (sqlTarget) { job.req.flyTo(sqlTarget); return "next"; }
-    failOrPark(job.req, service);
+    failOrPark(job.req, service, FAIL_REASONS.NO_ROUTE);
   } else {
     // Storage-family destinations are interchangeable on a miss (#88):
     // STATIC's destination is "cdn" but a Cache wired to S3 should still
@@ -49,7 +50,7 @@ export function process(service, job) {
     if (target) {
       job.req.flyTo(target);
     } else {
-      failOrPark(job.req, service);
+      failOrPark(job.req, service, FAIL_REASONS.NO_ROUTE);
     }
   }
   return "next";

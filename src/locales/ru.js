@@ -563,4 +563,24 @@ export const RU_TRANSLATIONS = {
     "warehouse_desc_long": "Аналитическое хранилище с профилем, обратным базе данных: оно завершает трафик WRITE и UPLOAD — медленно и дёшево на больших объёмах, — но проваливает любой READ или SEARCH в реальном времени, дошедший до него, ведь хранилище — это OLAP, а не OLTP. В него загружают, из него не обслуживают пользовательские чтения. Питайте его аналитической копией из веерной рассылки Pub/Sub, плановой пакетной загрузкой от Scheduler или из Стрима. Этот отказ в чтении плюс дешёвая высокая ёмкость и есть урок OLTP против OLAP. Реальные аналоги: Amazon Redshift · Azure Synapse · Google BigQuery.",
     "warehouse_flow": "Поток: Pub/Sub / Scheduler / Стрим → Хранилище данных (аналитический терминал)",
     "warehouse_desc_short": "Дешёвое аналитическое хранилище ($90)",
+
+    // Educational failure badges (#156). Short floating labels drawn over the
+    // node that dropped a request — keep them SHORT, they are sprite text.
+    "failure_badges": "Причины отказов",
+    "fail_queue_full": "Очередь переполнена",
+    "fail_overloaded": "Перегрузка",
+    "fail_retry_failed": "Повтор не помог",
+    "fail_no_route": "Нет маршрута",
+    "fail_no_origin": "Нет источника",
+    "fail_no_subscriber": "Нет подписчиков",
+    "fail_no_master": "Нет мастера",
+    "fail_read_only_replica": "Реплика только для чтения",
+    "fail_analytics_store": "Аналитика, не для чтений",
+    "fail_wrong_store": "Неподходящее хранилище",
+    "fail_not_indexed": "Нет поискового индекса",
+    "fail_search_only": "Только поиск",
+    "fail_circuit_open": "Предохранитель разомкнут",
+    "fail_partition_stalled": "Партиция застряла",
+    "fail_breach": "Взлом!",
+    "fail_throttled": "Ограничено",
 };

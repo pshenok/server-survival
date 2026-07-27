@@ -563,4 +563,24 @@ export const KO_TRANSLATIONS = {
     "warehouse_desc_long": "데이터베이스와 반대 프로파일의 분석 저장소: WRITE와 UPLOAD 트래픽을 완료하지만 — 대용량에서 느리고 저렴하게 — 도달하는 실시간 READ나 SEARCH는 실패시킵니다. 웨어하우스는 OLTP가 아니라 OLAP이기 때문입니다. 적재하는 곳이지, 사용자 읽기를 서비스하는 곳이 아닙니다. Pub/Sub 팬아웃의 분석 사본, 스케줄러의 예약 배치 적재, 또는 스트림으로 공급하세요. 이 읽기 거부와 저렴한 고용량이 OLTP 대 OLAP 교훈입니다. 실제 대응: Amazon Redshift · Azure Synapse · Google BigQuery.",
     "warehouse_flow": "흐름: Pub/Sub / 스케줄러 / 스트림 → 데이터 웨어하우스(분석 종점)",
     "warehouse_desc_short": "저렴한 분석 저장소 ($90)",
+
+    // Educational failure badges (#156). Short floating labels drawn over the
+    // node that dropped a request — keep them SHORT, they are sprite text.
+    "failure_badges": "실패 원인",
+    "fail_queue_full": "큐 가득 참",
+    "fail_overloaded": "과부하",
+    "fail_retry_failed": "재시도 실패",
+    "fail_no_route": "경로 없음",
+    "fail_no_origin": "오리진 없음",
+    "fail_no_subscriber": "구독자 없음",
+    "fail_no_master": "마스터 없음",
+    "fail_read_only_replica": "읽기 전용 복제본",
+    "fail_analytics_store": "분석 저장소, 읽기 불가",
+    "fail_wrong_store": "저장소 유형 불일치",
+    "fail_not_indexed": "검색 색인 없음",
+    "fail_search_only": "검색 색인 전용",
+    "fail_circuit_open": "차단기 열림",
+    "fail_partition_stalled": "파티션 정체",
+    "fail_breach": "침해!",
+    "fail_throttled": "속도 제한",
 };
