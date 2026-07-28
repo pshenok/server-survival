@@ -584,4 +584,14 @@ export const NE_TRANSLATIONS = {
     "fail_partition_stalled": "पार्टिसन अवरुद्ध",
     "fail_breach": "उल्लङ्घन!",
     "fail_throttled": "सीमित",
+
+    // Share Architecture (#157): the share modal + top-bar button.
+    "share_arch": "आर्किटेक्चर साझा गर्नुहोस्",
+    "share_title": "आर्किटेक्चर साझा गर्नुहोस्",
+    "share_desc": "आफ्नो निर्माणको स्न्यापसट डाउनलोड गर्नुहोस्, वा स्यान्डबक्समा खोल्ने लिङ्क कपी गर्नुहोस्।",
+    "share_png": "PNG डाउनलोड गर्नुहोस्",
+    "share_copy_link": "लिङ्क कपी गर्नुहोस्",
+    "share_link_copied": "लिङ्क क्लिपबोर्डमा कपी भयो!",
+    "share_too_large": "यो निर्माण लिङ्कमा अटाउन धेरै ठूलो छ।",
+    "share_copy_failed": "कपी असफल — ब्राउजरले क्लिपबोर्ड पहुँच रोक्यो।",
 };

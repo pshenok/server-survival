@@ -584,4 +584,14 @@ export const EN_TRANSLATIONS = {
     "fail_partition_stalled": "Partition stalled",
     "fail_breach": "Breach!",
     "fail_throttled": "Throttled",
+
+    // Share Architecture (#157): the share modal + top-bar button.
+    "share_arch": "Share Architecture",
+    "share_title": "Share Architecture",
+    "share_desc": "Download a snapshot of your build, or copy a link that opens it in Sandbox.",
+    "share_png": "Download PNG",
+    "share_copy_link": "Copy Link",
+    "share_link_copied": "Link copied to clipboard!",
+    "share_too_large": "This build is too large to fit in a link.",
+    "share_copy_failed": "Copy failed — your browser blocked clipboard access.",
 };

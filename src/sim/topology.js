@@ -67,24 +67,12 @@ function restoreService(serviceData, pos) {
     STATE.sound.playPlace();
 }
 
-function createConnection(fromId, toId) {
-    if (fromId === toId) return;
-    const getEntity = (id) =>
-        id === "internet"
-            ? STATE.internetNode
-            : STATE.services.find((s) => s.id === id);
-    const from = getEntity(fromId),
-        to = getEntity(toId);
-    if (!from || !to || from.connections.includes(toId)) return;
-    // Reject the reverse edge of an existing link. ALB⇄SQS is the only pair valid
-    // in both directions, and having both at once loops requests forever (SQS
-    // pushes to ALB, ALB's generic forwarding pushes back) — they never reach
-    // finishRequest/failRequest and leak. Either single direction stays legal.
-    if (to.connections && to.connections.includes(fromId)) return;
-
+// The static edge allowlist, factored out of createConnection so the share
+// link decoder (#157) can pre-filter a hostile payload against the SAME table
+// instead of copying it. Pure over the two type strings — the stateful guards
+// (existing edge, reverse edge, entity lookup) stay in createConnection.
+function isValidEdge(t1, t2) {
     let valid = false;
-    const t1 = from.type,
-        t2 = to.type;
 
     if (t1 === "internet" && (t2 === "waf" || t2 === "alb")) valid = true;
     else if (t1 === "waf" && t2 === "alb") valid = true;
@@ -173,7 +161,28 @@ function createConnection(fromId, toId) {
     // scheduled batch load (Scheduler), or a Stream. Pure terminal, no outgoing.
     else if ((t1 === "pubsub" || t1 === "scheduler" || t1 === "stream") && t2 === "warehouse") valid = true;
 
-    if (!valid) {
+    return valid;
+}
+
+function createConnection(fromId, toId) {
+    if (fromId === toId) return;
+    const getEntity = (id) =>
+        id === "internet"
+            ? STATE.internetNode
+            : STATE.services.find((s) => s.id === id);
+    const from = getEntity(fromId),
+        to = getEntity(toId);
+    if (!from || !to || from.connections.includes(toId)) return;
+    // Reject the reverse edge of an existing link. ALB⇄SQS is the only pair valid
+    // in both directions, and having both at once loops requests forever (SQS
+    // pushes to ALB, ALB's generic forwarding pushes back) — they never reach
+    // finishRequest/failRequest and leak. Either single direction stays legal.
+    if (to.connections && to.connections.includes(fromId)) return;
+
+    const t1 = from.type,
+        t2 = to.type;
+
+    if (!isValidEdge(t1, t2)) {
         new Audio("assets/sounds/click-9.mp3").play();
         console.error(i18n.t('invalid_topology_detailed'));
         return;
@@ -408,6 +417,7 @@ export {
     deleteObject,
     findSPOFs,
     getConnectionAtPoint,
+    isValidEdge,
     restoreService,
     snapToGrid,
     updateConnectionsForNode,

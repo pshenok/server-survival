@@ -584,4 +584,14 @@ export const FR_TRANSLATIONS = {
     "fail_partition_stalled": "Partition bloquée",
     "fail_breach": "Intrusion !",
     "fail_throttled": "Limité",
+
+    // Share Architecture (#157): the share modal + top-bar button.
+    "share_arch": "Partager l'architecture",
+    "share_title": "Partager l'architecture",
+    "share_desc": "Téléchargez une image de votre construction ou copiez un lien qui l'ouvre en mode bac à sable.",
+    "share_png": "Télécharger le PNG",
+    "share_copy_link": "Copier le lien",
+    "share_link_copied": "Lien copié dans le presse-papiers !",
+    "share_too_large": "Cette construction est trop grande pour tenir dans un lien.",
+    "share_copy_failed": "Échec de la copie — le navigateur a bloqué l'accès au presse-papiers.",
 };
