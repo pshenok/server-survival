@@ -584,4 +584,14 @@ export const ZH_TRANSLATIONS = {
     "fail_partition_stalled": "分区阻塞",
     "fail_breach": "被攻破！",
     "fail_throttled": "被限流",
+
+    // Share Architecture (#157): the share modal + top-bar button.
+    "share_arch": "分享架构",
+    "share_title": "分享架构",
+    "share_desc": "下载你的架构快照，或复制一个可在沙盒模式中打开它的链接。",
+    "share_png": "下载 PNG",
+    "share_copy_link": "复制链接",
+    "share_link_copied": "链接已复制到剪贴板！",
+    "share_too_large": "该架构太大，无法放入链接。",
+    "share_copy_failed": "复制失败——浏览器阻止了剪贴板访问。",
 };

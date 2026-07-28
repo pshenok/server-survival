@@ -91,6 +91,17 @@ import {
     lastPointerPos,
     resetCamera,
 } from "./src/input/handlers.js";
+// Share Architecture (#157): the share modal, PNG export, and the ?arch=
+// link. consumeSharedArchParam/rebuildSharedArch are called from the boot
+// path below; the modal handlers are re-exposed in the ESM-boundary block.
+import {
+    closeShareModal,
+    consumeSharedArchParam,
+    copyShareLink,
+    downloadArchitecturePNG,
+    rebuildSharedArch,
+    showShareModal,
+} from "./src/ui/share.js";
 // Service palette (toolbar categories, 2026-07-24): index.html ships only the
 // empty shell, so the tab strip and the active category's buttons are drawn
 // from here. The call sits in the body, not in toolbar.js's own evaluation,
@@ -636,9 +647,20 @@ function retryWithSameArchitecture() {
     STATE.sound?.playPlace();
 }
 
-// Initial setup - show menu, don't start game loop yet
+// Initial setup - show menu, don't start game loop yet. Exception (#157): a
+// valid ?arch= share link skips the menu entirely and drops the player into
+// Sandbox with the shared build already placed — that's the whole point of
+// the link. The param is stripped from the URL bar either way, so reloads
+// don't re-trigger and saves don't confuse.
 setTimeout(() => {
-    showMainMenu();
+    const sharedArch = consumeSharedArchParam();
+    if (sharedArch) {
+        document.getElementById("main-menu-modal").classList.add("hidden");
+        resetGame("sandbox");
+        rebuildSharedArch(sharedArch);
+    } else {
+        showMainMenu();
+    }
 }, 100);
 
 // getIntersect (canvas raycast picking) moved to src/input/handlers.js
@@ -1474,6 +1496,12 @@ window.saveGameState = saveGameState;
 window.onSaveGameFileUpload = onSaveGameFileUpload;
 window.onClickContinueGame = onClickContinueGame;
 
+// #157: the share modal's inline handlers in index.html.
+window.showShareModal = showShareModal;
+window.closeShareModal = closeShareModal;
+window.copyShareLink = copyShareLink;
+window.downloadArchitecturePNG = downloadArchitecturePNG;
+
 // #155 PR 7: the build/wire/demolish cluster now lives in src/sim/topology.js;
 // index.html's sandbox "Clear All" button still resolves this on window.
 window.clearAllServices = clearAllServices;
@@ -1503,6 +1531,7 @@ export {
     renderer,
     requestGroup,
     resetGame,
+    scene,
     serviceGroup,
     syncInput,
 };

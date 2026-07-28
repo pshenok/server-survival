@@ -584,4 +584,14 @@ export const DE_TRANSLATIONS = {
     "fail_partition_stalled": "Partition blockiert",
     "fail_breach": "Einbruch!",
     "fail_throttled": "Gedrosselt",
+
+    // Share Architecture (#157): the share modal + top-bar button.
+    "share_arch": "Architektur teilen",
+    "share_title": "Architektur teilen",
+    "share_desc": "Lade einen Schnappschuss deines Aufbaus herunter oder kopiere einen Link, der ihn im Sandbox-Modus öffnet.",
+    "share_png": "PNG herunterladen",
+    "share_copy_link": "Link kopieren",
+    "share_link_copied": "Link in die Zwischenablage kopiert!",
+    "share_too_large": "Dieser Aufbau ist zu groß für einen Link.",
+    "share_copy_failed": "Kopieren fehlgeschlagen — der Browser hat den Zugriff auf die Zwischenablage blockiert.",
 };

@@ -305,6 +305,15 @@
             d="M8 7H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
         </svg>
       </button>
+      <button onclick="showShareModal()" id="btn-share"
+        class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-cyan-500 hover:text-cyan-400 flex items-center justify-center"
+        data-i18n-title="share_arch"
+        title="Share Architecture">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+        </svg>
+      </button>
       <button onclick="restartGame()" id="btn-restart"
         class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-red-500 hover:text-red-400 flex items-center justify-center mr-2"
         data-i18n-title="restart_game"
@@ -797,6 +806,48 @@
         </button>
 
         <button onclick="closeSaveModal()"
+          data-i18n="cancel"
+          class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-8 rounded-lg border border-gray-600 transition hover:text-white font-mono uppercase">
+          Cancel
+        </button>
+      </div>
+
+      <div class="mt-8 text-xs text-gray-500 font-mono"></div>
+    </div>
+  </div>
+
+  <!-- Share Architecture Modal (#157) -->
+  <div id="share-modal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div
+      class="relative bg-gray-900/90 p-12 rounded-2xl border border-cyan-500/30 shadow-2xl max-w-md w-full text-center">
+
+      <h1
+        data-i18n="share_title"
+        class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300 mb-2 tracking-tighter filter drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">
+        Share Architecture
+      </h1>
+
+      <p data-i18n="share_desc" class="text-sm text-gray-400 mb-6">
+        Download a snapshot of your build, or copy a link that opens it in Sandbox.
+      </p>
+
+      <div class="space-y-4">
+
+        <button onclick="downloadArchitecturePNG()" id="btn-share-png"
+          data-i18n="share_png"
+          class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-cyan-400/50">
+          Download PNG
+        </button>
+
+        <button onclick="copyShareLink()" id="btn-share-link"
+          data-i18n="share_copy_link"
+          class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-teal-400/50">
+          Copy Link
+        </button>
+
+        <div id="share-status" class="text-sm font-mono h-5"></div>
+
+        <button onclick="closeShareModal()"
           data-i18n="cancel"
           class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 px-8 rounded-lg border border-gray-600 transition hover:text-white font-mono uppercase">
           Cancel

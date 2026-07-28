@@ -584,4 +584,14 @@ export const KO_TRANSLATIONS = {
     "fail_partition_stalled": "파티션 정체",
     "fail_breach": "침해!",
     "fail_throttled": "속도 제한",
+
+    // Share Architecture (#157): the share modal + top-bar button.
+    "share_arch": "아키텍처 공유",
+    "share_title": "아키텍처 공유",
+    "share_desc": "빌드의 스냅샷을 다운로드하거나, 샌드박스에서 열리는 링크를 복사하세요.",
+    "share_png": "PNG 다운로드",
+    "share_copy_link": "링크 복사",
+    "share_link_copied": "링크가 클립보드에 복사되었습니다!",
+    "share_too_large": "이 빌드는 링크에 담기에는 너무 큽니다.",
+    "share_copy_failed": "복사 실패 — 브라우저가 클립보드 접근을 차단했습니다.",
 };

@@ -584,4 +584,14 @@ export const RU_TRANSLATIONS = {
     "fail_partition_stalled": "Партиция застряла",
     "fail_breach": "Взлом!",
     "fail_throttled": "Ограничено",
+
+    // Share Architecture (#157): the share modal + top-bar button.
+    "share_arch": "Поделиться архитектурой",
+    "share_title": "Поделиться архитектурой",
+    "share_desc": "Скачайте снимок вашей постройки или скопируйте ссылку, открывающую её в песочнице.",
+    "share_png": "Скачать PNG",
+    "share_copy_link": "Скопировать ссылку",
+    "share_link_copied": "Ссылка скопирована в буфер обмена!",
+    "share_too_large": "Постройка слишком большая, чтобы уместиться в ссылке.",
+    "share_copy_failed": "Не удалось скопировать — браузер заблокировал доступ к буферу обмена.",
 };
