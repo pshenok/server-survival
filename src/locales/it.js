@@ -448,6 +448,7 @@ export const IT_TRANSLATIONS = {
     "campaign_chapter_1": "Capitolo 1: Le Basi",
     "campaign_chapter_2": "Capitolo 2: Ottimizzazione",
     "campaign_chapter_3": "Capitolo 3: Difesa e Maestria",
+    "campaign_chapter_4": "Capitolo 4: Pronti per la Produzione",
     "campaign_locked": "Bloccato",
     "monitor": "Monitoring",
     "monitor_short": "Monitor",

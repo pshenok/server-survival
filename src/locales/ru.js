@@ -448,6 +448,7 @@ export const RU_TRANSLATIONS = {
     "campaign_chapter_1": "Глава 1: Основы",
     "campaign_chapter_2": "Глава 2: Оптимизация",
     "campaign_chapter_3": "Глава 3: Защита и мастерство",
+    "campaign_chapter_4": "Глава 4: Готовность к продакшену",
     "campaign_locked": "Заблокировано",
     "monitor": "Monitoring",
     "monitor_short": "Monitor",

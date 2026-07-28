@@ -96,6 +96,55 @@ describe("load checks", () => {
   it("maxLoadOfType is 0 (not -Infinity) when no service of the type exists", () => {
     expect(O.maxLoadOfType({ services: [] }, "compute")).toBe(0);
   });
+
+  it("busiestLoad is the max across every type, not one type", () => {
+    const state = {
+      services: [
+        svc("compute", { totalLoad: 0.2 }),
+        svc("db", { totalLoad: 0.9 }),
+        svc("waf", { totalLoad: 0.1 }),
+      ],
+    };
+    expect(O.busiestLoad(state)).toBeCloseTo(0.9);
+  });
+
+  it("busiestLoad is 0 (not -Infinity) on an empty board", () => {
+    expect(O.busiestLoad({ services: [] })).toBe(0);
+    expect(O.busiestLoad({})).toBe(0);
+  });
+});
+
+describe("auto-scaling objectives", () => {
+  it("fleetScaledOut is false for an ASG that is on but has never scaled", () => {
+    const state = { services: [svc("compute", { asgEnabled: true, instances: 1, lastScaleAt: 0 })] };
+    expect(O.fleetScaledOut(state, "compute")).toBe(false);
+  });
+
+  it("fleetScaledOut is true while the fleet is larger than one", () => {
+    const state = { services: [svc("compute", { asgEnabled: true, instances: 3, lastScaleAt: 0 })] };
+    expect(O.fleetScaledOut(state, "compute")).toBe(true);
+  });
+
+  it("stays true after the fleet scales back in (latched via lastScaleAt)", () => {
+    const state = { services: [svc("compute", { asgEnabled: true, instances: 1, lastScaleAt: 12.5 })] };
+    expect(O.fleetScaledOut(state, "compute")).toBe(true);
+  });
+
+  it("ignores a scaled node of a different type, and a node with ASG off", () => {
+    const state = {
+      services: [
+        svc("container", { asgEnabled: true, instances: 4, lastScaleAt: 8 }),
+        svc("compute", { asgEnabled: false, instances: 3, lastScaleAt: 9 }),
+      ],
+    };
+    expect(O.fleetScaledOut(state, "compute")).toBe(false);
+    expect(O.fleetScaledOut(state, "container")).toBe(true);
+  });
+
+  it("is false with no services at all", () => {
+    expect(O.fleetScaledOut({ services: [] }, "compute")).toBe(false);
+    expect(O.fleetScaledOut({}, "compute")).toBe(false);
+  });
 });
 
 describe("finance", () => {
@@ -123,6 +172,18 @@ describe("finance", () => {
       ],
     };
     expect(O.totalUpkeepPerSec(state)).toBeCloseTo(36 / 60);
+  });
+});
+
+describe("per-service completion counts", () => {
+  it("completedByService reads the per-service counter", () => {
+    const state = { campaign: { completedByService: { notify: 42, db: 7 } } };
+    expect(O.completedByService(state, "notify")).toBe(42);
+  });
+
+  it("completedByService is 0 for a service that finished nothing", () => {
+    expect(O.completedByService({ campaign: { completedByService: {} } }, "notify")).toBe(0);
+    expect(O.completedByService({}, "notify")).toBe(0);
   });
 });
 

@@ -5,6 +5,7 @@
 // ESM-boundary block.
 
 import { STATE } from "../state.js";
+import { i18n } from "../i18n.js";
 import { CAMPAIGN_LEVELS } from "../campaign/levels.js";
 import { renderArchitectureSVG } from "../campaign/diagram.js";
 import { Service } from "../entities/Service.js";
@@ -41,13 +42,15 @@ function renderCampaignLevels() {
     const list = document.getElementById("campaign-levels-list");
     if (!list) return;
     const progress = window.campaign.loadProgress();
-    const chapters = { 1: "Chapter 1: Basics", 2: "Chapter 2: Optimization", 3: "Chapter 3: Defense & Mastery" };
     let html = "";
     let lastChapter = -1;
     for (const lvl of CAMPAIGN_LEVELS) {
         if (lvl.chapter !== lastChapter) {
             if (lastChapter !== -1) html += "</div>";
-            html += `<div class="text-yellow-400 text-sm font-bold uppercase tracking-wider mt-4 mb-2">${chapters[lvl.chapter]}</div>`;
+            // Chapter headings come from the locale rather than a hardcoded
+            // 1-3 table, so a new chapter needs a level and a translation and
+            // nothing else (#217 added chapter 4).
+            html += `<div class="text-yellow-400 text-sm font-bold uppercase tracking-wider mt-4 mb-2">${i18n.t("campaign_chapter_" + lvl.chapter)}</div>`;
             html += `<div class="space-y-2">`;
             lastChapter = lvl.chapter;
         }
