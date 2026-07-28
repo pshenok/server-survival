@@ -17,6 +17,10 @@
 //   rps                — fixed spawn rate (overrides survival ramp)
 //   burstPattern       — { enabled, intervalSec, burstSize } forced spawn bursts
 //   forceOutageAtSec   — game time at which the first Firewall is knocked offline
+//   forceRegionOutageAtSec — game time at which the whole stack behind the DNS's
+//                        first-wired front door goes dark as one region (#221)
+//   regionOutageDurationSec — how long that region stays dark (default 25s);
+//                        it restores so the player sees traffic shift BACK too
 //   enableSurvivalShifts — opt into survival's traffic shifts / random events
 //   allowedServices    — string[]; [] or undefined = all allowed
 //   forbiddenServices  — string[]; overrides allowedServices for explicit blocks
@@ -742,5 +746,57 @@ export const CAMPAIGN_LEVELS = [
         // lands in time). Fan-out delivers a copy to BOTH, which is the lesson.
         failConditions: { repBelow: 40, timeoutSec: 75 },
         debriefTip: "SNS + SQS, Google Pub/Sub, Azure Event Grid — publish once, subscribe many. The point is not saving a call, it is decoupling: adding an audit-log subscriber tomorrow must not require touching the order path today.",
+    },
+
+    // ===== Chapter 4 (cont.): Multi-region failover (#221) =====
+    // The mechanics already existed — GeoDNS round-robins across its routable
+    // front doors (#198) — so this level's job is to make the player USE them:
+    // build the second region before the announced kill, watch traffic shift
+    // away, and watch it shift back when the region returns.
+    {
+        id: 20, chapter: 4,
+        title: "Two Regions",
+        scenario: "Your service went global, and Ops has scheduled the drill to prove it: 35 seconds in, the entire pre-built stack behind your GeoDNS — Firewall, Load Balancer, Compute — goes dark for 25 seconds. One region cannot be trusted with all of your traffic. Build the second one before the lights go out.",
+        learn: "GeoDNS only resolves to front doors that are alive, so a second complete stack wired to it IS your failover: traffic shifts to it the moment region A dies, and spreads back on its own when it returns. That is active-active — both regions serve live traffic and either can carry the whole site. The bill is the catch: two of everything means double upkeep every second, outage or not.",
+        icon: "🌐",
+        diagramHighlights: { 1: "critical" },
+        // Region B costs exactly $150 (WAF 40 + ALB 50 + Compute 60); the rest
+        // is slack for a late reaction, not for a second Compute upgrade —
+        // duplicating the stack, not gold-plating one region, is the lesson.
+        budget: 190,
+        durationSec: 90,
+        preBuilt: {
+            services: [
+                { type: "dns", x: -30, z: 0 },
+                { type: "waf", x: -20, z: 7 },
+                { type: "alb", x: -10, z: 7 },
+                { type: "compute", x: 0, z: 7 },
+                { type: "db", x: 12, z: 0 },
+            ],
+            connections: [["internet", 0], [0, 1], [1, 2], [2, 3], [3, 4]],
+        },
+        // Tuned by headless playthrough: non-MALICIOUS arrival (~4.7 rps) sits
+        // just under ONE Tier-1 Compute's throughput (~5.2 rps for this mix),
+        // so a single region carries the BASELINE cleanly — the level must be
+        // lost to the outage, not to background overload — and the surviving
+        // region alone carries the outage strained but alive. At rps 6 the
+        // lone region started drowning at ~22s, before the announced kill.
+        trafficDistribution: { STATIC: 0, READ: 0.55, WRITE: 0.2, UPLOAD: 0, SEARCH: 0.1, MALICIOUS: 0.15 },
+        rps: 5.5,
+        forceRegionOutageAtSec: 35,
+        regionOutageDurationSec: 25,
+        allowedServices: ["waf", "alb", "compute"],
+        objectives: {
+            primary: [
+                { id: "survived_region", label: "Survive the region outage with reputation above 70%", check: (s) => CampaignObjectives.survivedNodeFailure(s, 70) },
+                { id: "serve_300", label: "Complete 300 requests", check: (s) => CampaignObjectives.totalCompleted(s) >= 300 },
+            ],
+            bonus: [
+                { id: "outage_throughput", label: "Complete 60 requests while region A is dark", check: (s) => CampaignObjectives.completedDuringRegionOutage(s) >= 60 },
+                { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
+            ],
+        },
+        failConditions: { repBelow: 30, timeoutSec: 270 },
+        debriefTip: "Active-active means either region can lose the other — you just proved it in both directions, and paid double upkeep the whole time; that idle-looking second region IS the product. Active-passive halves the bill with a cold standby and pays in failover time and an untested region. Route 53 health checks · Azure Traffic Manager · Cloud DNS — same choice, same double bill.",
     },
 ];

@@ -496,6 +496,12 @@ export const ZH_TRANSLATIONS = {
     "redundancy_full": "冗余（N+1）",
     "redundancy_desc_long": "游戏中所有分发流量的节点——互联网入口、负载均衡器、API 网关、计算节点——只会在仍可路由的相连节点中选择，跳过离线的和已熔断的。因此，接在同一上游的第二个同类型节点就是你的故障转移：第一个节点一挂，它立刻接管流量。在流量路径上只有一个实例的类型就是单点故障，游戏会向你发出提示。现实对应：跨可用区实例组 · N+1 容量规划 · 基于健康检查的故障转移。",
     "redundancy_flow": "流程：上游 → 该类型的任意健康节点；失效节点直接跳过",
+    // Multi-region failover (#221)
+    "multiregion_full": "多区域（双活）",
+    "multiregion_desc_long": "GeoDNS 位于两套完整的区域栈之前，两边同时承接实时流量。当整个区域熄灭时——这正是可用区存在的意义——路由只是不再解析到它的前门：每个新请求都落到幸存区域，而当故障区域恢复后，流量会自行重新铺开。两个方向都是自动的；账单不是。所有东西都要两份，意味着无论有没有故障，每一秒都在付双倍维护费——而这笔常态开销恰恰就是你买到的东西：丢掉一个区域仍然在线的权利。主备（active-passive）用冷备把账单砍半——代价是切换时间和一个从没人验证过的区域。现实对应：Route 53 健康检查 · Azure Traffic Manager · Google Cloud DNS。",
+    "multiregion_flow": "流向：互联网 → GeoDNS → A / B 区域前门 → 共享后端；熄灭的区域会被直接跳过，双向自动",
+    "region_outage_warning": "🌍 区域故障！{type} 栈已熄灭——{count} 个服务离线",
+    "region_outage_restored": "区域已恢复——流量重新铺开到两个区域",
     // Sandbox archetypes, batch 1 (#197)
     "dlq": "死信队列",
     "dlq_short": "DLQ",
@@ -584,6 +590,7 @@ export const ZH_TRANSLATIONS = {
     "fail_partition_stalled": "分区阻塞",
     "fail_breach": "被攻破！",
     "fail_throttled": "被限流",
+    "fail_region_down": "区域离线",
 
     // Share Architecture (#157): the share modal + top-bar button.
     "share_arch": "分享架构",

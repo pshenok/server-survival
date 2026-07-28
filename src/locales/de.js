@@ -496,6 +496,12 @@ export const DE_TRANSLATIONS = {
     "redundancy_full": "Redundanz (N+1)",
     "redundancy_desc_long": "Jeder Verteiler im Spiel — der Interneteingang, Load Balancer, API Gateways, Compute — wählt nur unter den erreichbaren verbundenen Knoten und überspringt offline oder ausgelöste. Ein zweiter Knoten desselben Typs am selben Upstream IST damit Ihr Failover: Er übernimmt den Verkehr in dem Moment, in dem der erste ausfällt. Ein Typ, der auf dem Verkehrspfad nur einmal vorhanden ist, ist ein Single Point of Failure — das Spiel warnt Sie davor. Reale Entsprechungen: Instanzgruppen über mehrere AZs · N+1-Kapazitätsplanung · Failover per Health Check.",
     "redundancy_flow": "Ablauf: Upstream → beliebiger gesunder Knoten des Typs; tote werden einfach übersprungen",
+    // Multi-region failover (#221)
+    "multiregion_full": "Multi-Region (Aktiv-Aktiv)",
+    "multiregion_desc_long": "GeoDNS vor zwei kompletten regionalen Stacks, die beide gleichzeitig Live-Traffic bedienen. Fällt eine ganze Region aus — das Szenario, für das es Availability Zones gibt —, löst das Routing ihre Front-Tür schlicht nicht mehr auf: jede neue Anfrage landet in der überlebenden Region, und kehrt die tote zurück, verteilt sich der Traffic von selbst wieder. Beide Richtungen sind automatisch; die Rechnung nicht. Alles doppelt heißt doppelter Unterhalt in jeder Sekunde, auch ganz ohne Ausfall — und genau diese laufenden Kosten kauft man: das Recht, eine Region zu verlieren und online zu bleiben. Aktiv-Passiv halbiert die Rechnung mit einem kalten Standby — und zahlt mit Failover-Zeit und einer Region, die nie jemand getestet hat. Reale Entsprechungen: Route 53 Health Checks · Azure Traffic Manager · Google Cloud DNS.",
+    "multiregion_flow": "Ablauf: Internet → GeoDNS → Front-Türen von Region A / Region B → gemeinsames Backend; eine dunkle Region wird einfach übersprungen, in beide Richtungen",
+    "region_outage_warning": "🌍 REGIONSAUSFALL! Der {type}-Stack ist dunkel — {count} Dienste offline",
+    "region_outage_restored": "Region wiederhergestellt — der Traffic verteilt sich wieder auf beide Regionen",
     // Sandbox archetypes, batch 1 (#197)
     "dlq": "Warteschlange für Unzustellbare",
     "dlq_short": "DLQ",
@@ -584,6 +590,7 @@ export const DE_TRANSLATIONS = {
     "fail_partition_stalled": "Partition blockiert",
     "fail_breach": "Einbruch!",
     "fail_throttled": "Gedrosselt",
+    "fail_region_down": "Region offline",
 
     // Share Architecture (#157): the share modal + top-bar button.
     "share_arch": "Architektur teilen",

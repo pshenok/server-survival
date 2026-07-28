@@ -496,6 +496,12 @@ export const FR_TRANSLATIONS = {
     "redundancy_full": "Redondance (N+1)",
     "redundancy_desc_long": "Tout ce qui répartit le trafic dans le jeu — l'entrée Internet, les load balancers, les API Gateways, les Compute — ne choisit que parmi les nœuds connectés encore joignables, en ignorant ceux qui sont hors ligne ou dont le disjoncteur est ouvert. Un second nœud du même type branché sur le même amont EST donc votre bascule : il absorbe le trafic à l'instant où le premier meurt. Un type présent en un seul exemplaire sur le chemin du trafic est un point de défaillance unique, et le jeu vous en avertit. Équivalents réels : groupes d'instances multi-AZ · dimensionnement N+1 · bascule sur health check.",
     "redundancy_flow": "Flux : amont → n'importe quel nœud sain du type ; un nœud mort est simplement ignoré",
+    // Multi-region failover (#221)
+    "multiregion_full": "Multi-région (actif-actif)",
+    "multiregion_desc_long": "Un GeoDNS devant deux piles régionales complètes, qui servent toutes deux du trafic en direct. Quand une région entière s'éteint — le scénario pour lequel les zones de disponibilité existent —, le routage cesse simplement de résoudre sa porte d'entrée : chaque nouvelle requête atterrit dans la région survivante, et quand la région morte revient, le trafic se répartit à nouveau de lui-même. Les deux sens sont automatiques ; la facture, non. Tout en double signifie un entretien doublé à chaque seconde, panne ou pas — et ce coût permanent est exactement ce que vous achetez : le droit de perdre une région en restant en ligne. L'actif-passif divise la facture par deux avec un standby froid — et paie en temps de bascule et en une région que personne n'a testée. Équivalents réels : Route 53 health checks · Azure Traffic Manager · Google Cloud DNS.",
+    "multiregion_flow": "Flux : Internet → GeoDNS → portes d'entrée des régions A / B → backend partagé ; une région éteinte est simplement ignorée, dans les deux sens",
+    "region_outage_warning": "🌍 PANNE DE RÉGION ! La pile {type} s'est éteinte — {count} services hors ligne",
+    "region_outage_restored": "Région rétablie — le trafic se répartit à nouveau sur les deux régions",
     // Sandbox archetypes, batch 1 (#197)
     "dlq": "File de lettres mortes",
     "dlq_short": "DLQ",
@@ -584,6 +590,7 @@ export const FR_TRANSLATIONS = {
     "fail_partition_stalled": "Partition bloquée",
     "fail_breach": "Intrusion !",
     "fail_throttled": "Limité",
+    "fail_region_down": "Région hors ligne",
 
     // Share Architecture (#157): the share modal + top-bar button.
     "share_arch": "Partager l'architecture",

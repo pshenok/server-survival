@@ -15,7 +15,11 @@ import { CAMPAIGN_LEVELS } from "./levels.js";
 // `typeof x === "function"` guards below tolerated load-order gaps; as imports
 // the names are always bound, so the guards simply always pass now.
 import { spawnRequest } from "../core/actions.js";
-import { addInterventionWarning } from "../core/events.js";
+import {
+    addInterventionWarning,
+    triggerRegionOutage,
+    updateRegionOutage,
+} from "../core/events.js";
 import {
     renderCampaignObjectives,
     showCampaignDebrief,
@@ -101,6 +105,8 @@ export class CampaignController {
         STATE.campaign.completedByService = {};
         STATE.campaign.burstTimer = 0;
         STATE.campaign.outageFired = false;
+        STATE.campaign.regionOutageFired = false;
+        STATE.campaign.regionOutage = null;
         this._tickCounter = 0;
         return true;
     }
@@ -145,6 +151,20 @@ export class CampaignController {
                 }
             }
         }
+
+        // 2b) Forced region outage (level config: forceRegionOutageAtSec, #221).
+        // The whole stack behind the DNS's first-wired front door goes dark at
+        // T and comes back regionOutageDurationSec later, so the player sees
+        // GeoDNS shift traffic away AND back — active-active in both
+        // directions. updateRegionOutage re-asserts the disable every frame
+        // (a paused random outage's cleanup re-enables everything) and runs
+        // the game-time restore clock, so pause freezes the whole event.
+        const regionAt = STATE.campaign.level?.forceRegionOutageAtSec;
+        if (regionAt && !STATE.campaign.regionOutageFired && STATE.elapsedGameTime >= regionAt) {
+            STATE.campaign.regionOutageFired = true;
+            triggerRegionOutage(STATE.campaign.level.regionOutageDurationSec ?? 25);
+        }
+        if (STATE.campaign.regionOutage?.active) updateRegionOutage();
 
         // 3) Re-evaluate objectives at 2 Hz
         this._tickCounter += dt;

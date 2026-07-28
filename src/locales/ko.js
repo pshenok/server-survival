@@ -496,6 +496,12 @@ export const KO_TRANSLATIONS = {
     "redundancy_full": "이중화(N+1)",
     "redundancy_desc_long": "게임에서 트래픽을 나누는 모든 지점 — 인터넷 진입점, 로드 밸런서, API 게이트웨이, 컴퓨트 — 은 아직 라우팅 가능한 연결 노드 중에서만 대상을 고르고, 오프라인이거나 차단기가 열린 노드는 건너뜁니다. 따라서 같은 상위 노드에 연결된 같은 유형의 두 번째 노드가 곧 장애 조치입니다. 첫 번째가 죽는 순간 트래픽을 그대로 받아냅니다. 트래픽 경로에 인스턴스가 하나뿐인 유형은 단일 장애점이며, 게임이 이를 알려 줍니다. 실제 사례: 다중 AZ 인스턴스 그룹 · N+1 용량 계획 · 헬스 체크 기반 장애 조치.",
     "redundancy_flow": "흐름: 상위 노드 → 해당 유형의 건강한 노드; 죽은 노드는 그냥 건너뜀",
+    // Multi-region failover (#221)
+    "multiregion_full": "멀티 리전 (액티브-액티브)",
+    "multiregion_desc_long": "완전한 리전 스택 두 개 앞에 GeoDNS를 두고, 양쪽이 동시에 실시간 트래픽을 처리합니다. 리전 하나가 통째로 꺼지면 — 가용 영역이 존재하는 이유인 바로 그 시나리오 — 라우팅은 그 리전의 정문을 더 이상 해석하지 않을 뿐입니다: 모든 새 요청은 살아남은 리전에 떨어지고, 죽었던 리전이 돌아오면 트래픽은 스스로 다시 퍼집니다. 양방향 모두 자동이지만, 청구서는 아닙니다. 모든 것이 두 벌이라는 것은 장애가 있든 없든 매초 두 배의 유지비를 낸다는 뜻이고, 그 상시 비용이 바로 당신이 사는 것입니다: 리전 하나를 잃고도 살아남을 권리. 액티브-패시브는 콜드 스탠바이로 청구서를 반으로 줄이는 대신, 페일오버 시간과 아무도 검증한 적 없는 리전으로 값을 치릅니다. 실제 대응: Route 53 상태 확인 · Azure Traffic Manager · Google Cloud DNS.",
+    "multiregion_flow": "흐름: 인터넷 → GeoDNS → 리전 A / B 정문 → 공유 백엔드; 꺼진 리전은 양방향 모두 자동으로 건너뜁니다",
+    "region_outage_warning": "🌍 리전 장애! {type} 스택이 꺼졌습니다 — 서비스 {count}개 오프라인",
+    "region_outage_restored": "리전 복구 — 트래픽이 다시 두 리전으로 퍼집니다",
     // Sandbox archetypes, batch 1 (#197)
     "dlq": "데드레터 큐",
     "dlq_short": "DLQ",
@@ -584,6 +590,7 @@ export const KO_TRANSLATIONS = {
     "fail_partition_stalled": "파티션 정체",
     "fail_breach": "침해!",
     "fail_throttled": "속도 제한",
+    "fail_region_down": "리전 오프라인",
 
     // Share Architecture (#157): the share modal + top-bar button.
     "share_arch": "아키텍처 공유",

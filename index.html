@@ -1423,6 +1423,26 @@
               Flow: upstream → any healthy node of that type; a dead node is simply skipped
             </p>
           </div>
+          <!-- Multi-region failover (#221): a concept card like its three
+               siblings — the mechanic is GeoDNS + isRoutable, always on. -->
+          <div class="bg-gray-800/30 p-3 rounded border border-cyan-900/50">
+            <div class="flex items-center gap-2 mb-1">
+              <svg class="w-4 h-4 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="5" r="2.5" />
+                <rect x="2" y="14" width="8" height="6" rx="1" />
+                <rect x="14" y="14" width="8" height="6" rx="1" />
+                <path d="M10.5 7l-3.5 7M13.5 7l3.5 7" />
+              </svg>
+              <strong data-i18n="multiregion_full" class="text-cyan-400">Multi-Region (Active-Active)</strong>
+            </div>
+            <p data-i18n="multiregion_desc_long" class="text-gray-400 text-xs">
+              GeoDNS in front of two complete regional stacks, both serving live traffic at once. When a whole region goes dark — the scenario Availability Zones exist for — routing simply stops resolving to its front door: every new request lands on the surviving region, and when the dead one returns, traffic spreads back on its own. Both directions are automatic; the bill is not. Two of everything means double upkeep every second the sky is blue, and that standing cost is exactly what you are buying: the right to lose a region and stay up. Active-passive halves the bill with a cold standby — and pays in failover time and a region nobody has tested. Real-world equivalents: Route 53 health checks · Azure Traffic Manager · Google Cloud DNS.
+            </p>
+            <p data-i18n="multiregion_flow" class="text-gray-500 text-xs mt-1">
+              Flow: Internet → GeoDNS → region A / region B front doors → shared backend; a dark region is simply skipped, in both directions
+            </p>
+          </div>
         </div>
       </div>
 

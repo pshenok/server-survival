@@ -2,12 +2,18 @@
 // shifts, random economy/capacity/outage events, and their warning +
 // event-bar UI. Code moved verbatim from game.js.
 
-import { CONFIG } from "../config.js";
+import { CONFIG, TRAFFIC_TYPES } from "../config.js";
 import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
 // Cyclic import (events.js <-> game.js) is safe: formatTime is a hoisted
 // function declaration in game.js, only called at runtime.
 import { formatTime } from "../../game.js";
+// Region outage (#221) terminates the requests caught inside the dying
+// region. Runtime-only cycle (actions.js -> metrics.js -> events.js ->
+// actions.js) — established pattern: hoisted function declarations, only
+// dereferenced when an outage actually fires.
+import { failRequest, removeRequest } from "./actions.js";
+import { FAIL_REASONS } from "./failure-reasons.js";
 
 function updateMaliciousSpike(dt) {
     if (STATE.gameMode === "campaign") {
@@ -482,12 +488,214 @@ function updateActiveEventTimer() {
     }
 }
 
+// ==================== REGION OUTAGE (#221) ====================
+//
+// The whole-region failure the multi-region lesson needs: where
+// SERVICE_OUTAGE above kills one node, this kills one ENTIRE regional stack
+// behind a GeoDNS front door — the "an Availability Zone went dark" scenario
+// that active-active exists for. Campaign-only, driven by the level config
+// (forceRegionOutageAtSec / regionOutageDurationSec) from CampaignController
+// .tick(), so every timer here is game time: pause freezes the outage, and a
+// retry/reset rebuilds the state through loadLevel (the #183 timer class).
+//
+// The outage RESTORES after regionOutageDurationSec on purpose (rather than
+// staying dark for the level): failover is only half of active-active, and
+// the restore is what lets the player watch traffic spread BACK across both
+// regions — the direction no single-node outage ever shows.
+
+// Same visual contract as SERVICE_OUTAGE: isDisabled + ghosted mesh.
+function setServiceDisabled(service, disabled) {
+    service.isDisabled = disabled;
+    service.mesh.material.opacity = disabled ? 0.3 : 1.0;
+    service.mesh.material.transparent = disabled;
+}
+
+function totalCampaignCompleted() {
+    return Object.values(STATE.campaign?.completedByType || {}).reduce(
+        (a, b) => a + b,
+        0
+    );
+}
+
+// The set of service ids that die with the region behind `frontDoorId` (one
+// direct downstream of a DNS node): everything reachable from that front door
+// that is NOT reachable from any other way into the graph. A shared backend
+// wired from both regions stays up — which is itself accurate: a database
+// both regions talk to is not sitting in the dead AZ.
+function computeRegionSubtree(frontDoorId) {
+    const byId = new Map(STATE.services.map((s) => [s.id, s]));
+
+    // Defensive BFS: the services graph has no downward cycles today
+    // (topology guards them), but a visited set costs nothing and keeps this
+    // terminating if one ever appears.
+    const reachableFrom = (startIds, blockedId) => {
+        const seen = new Set();
+        const stack = [...startIds];
+        while (stack.length > 0) {
+            const id = stack.pop();
+            if (id === blockedId || seen.has(id) || !byId.has(id)) continue;
+            seen.add(id);
+            for (const next of byId.get(id).connections) stack.push(next);
+        }
+        return seen;
+    };
+
+    const behindFrontDoor = reachableFrom([frontDoorId], null);
+    // Every OTHER way in: the Internet's remaining direct entries — the
+    // GeoDNS itself among them, and walking it reaches the surviving regions'
+    // stacks. Traversal is blocked at the dying front door, so "reachable"
+    // here means reachable WITHOUT the dead region.
+    const otherEntries = (STATE.internetNode?.connections || []).filter(
+        (id) => id !== frontDoorId
+    );
+    const reachableElsewhere = reachableFrom(otherEntries, frontDoorId);
+
+    return [...behindFrontDoor].filter((id) => !reachableElsewhere.has(id));
+}
+
+// THE CARDINAL INVARIANT: a request caught inside the dying region must
+// terminate now, not sit in a dead queue. Non-MALICIOUS requests fail with
+// the REGION_DOWN badge; a MALICIOUS one is removed silently — the attack
+// died with the region, so it neither breached (failRequest would score it
+// as one) nor earned the WAF a block.
+function terminateInDeadRegion(req) {
+    // Mid-air arrivals hold an incomingCount slot on their target; give it
+    // back before freezing the flight, exactly like Request.destroy() would.
+    if (req.isMoving && req.target && typeof req.target.incomingCount === "number") {
+        req.target.incomingCount = Math.max(0, req.target.incomingCount - 1);
+    }
+    req.isMoving = false;
+    if (req.type === TRAFFIC_TYPES.MALICIOUS) {
+        removeRequest(req);
+    } else {
+        failRequest(req, FAIL_REASONS.REGION_DOWN);
+    }
+}
+
+// Fires the region outage. Deterministic target: the FIRST front door the
+// internet-wired DNS was connected to — i.e. the level's pre-built region,
+// which the briefing announces, so the player always knows which side dies.
+// Returns false (and stays inert) when there is no DNS front door to kill.
+function triggerRegionOutage(durationSec) {
+    const dns = STATE.services.find(
+        (s) => s.type === "dns" && STATE.internetNode.connections.includes(s.id)
+    );
+    const frontDoor = dns
+        ? dns.connections
+            .map((id) => STATE.services.find((s) => s.id === id))
+            .find(Boolean)
+        : null;
+    if (!frontDoor) return false;
+
+    const serviceIds = computeRegionSubtree(frontDoor.id);
+    STATE.campaign.regionOutage = {
+        serviceIds,
+        endAtSec: STATE.elapsedGameTime + durationSec,
+        active: true,
+        // Completed-request watermarks for the "kept serving through the
+        // outage" objective — see CampaignObjectives.completedDuringRegionOutage.
+        startedCompleted: totalCampaignCompleted(),
+        endedCompleted: null,
+    };
+
+    // Resilience (#196): one region outage is one node-failure event on the
+    // session counter behind survivedNodeFailure — same as SERVICE_OUTAGE.
+    if (STATE.resilience) STATE.resilience.outages++;
+
+    const dead = new Set(serviceIds);
+    for (const id of serviceIds) {
+        const s = STATE.services.find((x) => x.id === id);
+        if (s) setServiceDisabled(s, true);
+    }
+
+    // Terminate everything already inside the region: queued, processing and
+    // mid-air arrivals. New traffic never enters — every routing site funnels
+    // through isRoutable(), which skips disabled nodes — and a retry backoff
+    // aimed here re-validates its peer on expiry (tickRetry) and fails on its
+    // own, so after this sweep nothing can hang in the dark.
+    for (const id of serviceIds) {
+        const s = STATE.services.find((x) => x.id === id);
+        if (!s) continue;
+        const caught = [
+            ...s.queue.splice(0),
+            ...s.processing.splice(0).map((job) => job.req),
+        ];
+        for (const req of caught) terminateInDeadRegion(req);
+    }
+    for (const req of STATE.requests.slice()) {
+        if (req.isMoving && req.target && dead.has(req.target.id)) {
+            terminateInDeadRegion(req);
+        }
+    }
+
+    addInterventionWarning(
+        i18n.t("region_outage_warning", {
+            type: i18n.t(frontDoor.type),
+            count: serviceIds.length,
+        }),
+        "danger",
+        8000
+    );
+    STATE.sound?.playTone(200, "sawtooth", 0.5);
+    STATE.sound?.playTone(150, "sawtooth", 0.5, 0.15);
+    return true;
+}
+
+// Ticked from CampaignController.tick() every frame while the outage is
+// active (so it freezes with the game — tick receives the game-scaled dt and
+// elapsedGameTime stops at timeScale 0).
+function updateRegionOutage() {
+    const outage = STATE.campaign?.regionOutage;
+    if (!outage?.active) return;
+
+    // Re-assert every frame. Pausing the game ends any concurrent random
+    // SERVICE_OUTAGE, and that cleanup re-enables EVERY disabled service
+    // (see endRandomEvent) — this region's included. An idempotent re-disable
+    // keeps the region dark whatever fires around it, and it is what makes
+    // pause → resume re-darken the SAME region, the way outageServiceId does
+    // for a single service.
+    for (const id of outage.serviceIds) {
+        const s = STATE.services.find((x) => x.id === id);
+        if (s && !s.isDisabled) setServiceDisabled(s, true);
+    }
+
+    if (STATE.elapsedGameTime >= outage.endAtSec) endRegionOutage();
+}
+
+function endRegionOutage() {
+    const outage = STATE.campaign?.regionOutage;
+    if (!outage?.active) return;
+
+    for (const id of outage.serviceIds) {
+        const s = STATE.services.find((x) => x.id === id);
+        if (!s) continue; // demolished mid-outage
+        // A random SERVICE_OUTAGE may have independently picked this node;
+        // its own end event owns that restore.
+        if (
+            STATE.intervention?.activeEvent === "SERVICE_OUTAGE" &&
+            STATE.intervention.outageServiceId === id
+        ) {
+            continue;
+        }
+        setServiceDisabled(s, false);
+    }
+
+    outage.active = false;
+    outage.endedCompleted = totalCampaignCompleted();
+    addInterventionWarning(i18n.t("region_outage_restored"), "info", 5000);
+    STATE.sound?.playSuccess();
+}
+
 export {
     addInterventionWarning,
+    computeRegionSubtree,
     endRandomEvent,
+    endRegionOutage,
     triggerRandomEvent,
+    triggerRegionOutage,
     updateActiveEventTimer,
     updateMaliciousSpike,
     updateRandomEvents,
+    updateRegionOutage,
     updateTrafficShift,
 };
