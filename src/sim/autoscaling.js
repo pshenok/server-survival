@@ -2,12 +2,26 @@
 // mechanic. A Compute node with ASG enabled grows a fleet of instances under
 // sustained load and shrinks it when the load passes:
 //
-//   util > targetUtil   held for sustainSec, cooldown elapsed -> boot ONE
-//                       instance. It warms for warmupSec and carries NO
-//                       traffic until then (the cold-start lesson: you pay
-//                       for it from boot, you get capacity only later).
-//   util < scaleInUtil  held for sustainSec, cooldown elapsed -> retire one
-//                       instance immediately (newest first).
+//   util > targetUtil          held for sustainSec, cooldown elapsed -> boot
+//     OR queue pressure high    ONE instance. It warms for warmupSec and
+//                              carries NO traffic until then (the cold-start
+//                              lesson: you pay for it from boot, you get
+//                              capacity only later).
+//   util < scaleInUtil         held for sustainSec, cooldown elapsed ->
+//     AND queue pressure low    retire one instance immediately (newest
+//                              first).
+//
+// Queue pressure (#220) is the second scaling signal: a fleet that PULLS from
+// an upstream Queue caps its own intake at current capacity, so a saturated
+// consumer reads comfortable utilization forever while the queue behind it
+// grows without bound. The engine therefore also watches the fill ratio of
+// every connected upstream SQS (max across queues) and scales out when it
+// stays past cfg.queuePressureThreshold — the sim's version of SQS
+// ApproximateNumberOfMessages target tracking. Both signals feed the SAME
+// asgAbove accumulator, sustain window and cooldown; scale-in additionally
+// requires the pressure to have dropped below HALF the threshold, otherwise
+// the fleet would flap (drain a little, util still 0, retire the instance it
+// just booted).
 //
 // The gap between the two thresholds is the hysteresis that stops a fleet
 // from flapping; cooldownSec caps how fast the fleet can change at all.
@@ -51,6 +65,34 @@ function warmupFor(service) {
     return service.type === "container"
         ? (cfg.containerWarmupSec ?? cfg.warmupSec)
         : cfg.warmupSec;
+}
+
+// Queue-depth signal (#220). Fill ratio of the fullest upstream SQS this
+// fleet pulls from — discovery mirrors the compute pull loop in
+// Service.update() (type + connection into this node), so the fleet scales
+// on precisely the queues it is wired to drain. A queue's backlog lives in
+// BOTH arrays: `processing` holds the jobs parked by the "requeue-next"
+// wait-for-pull outcome, `queue` the overflow behind them.
+//
+// Deliberately NOT the pull loop's full isRoutable() gate: a drowning SQS
+// trips its own breaker (its parked jobs re-roll load failures and a
+// pull-drained queue never records a success), so requiring routability
+// would blind the signal in exactly the backlog it exists to detect. Real
+// queue metrics work the same way — ApproximateNumberOfMessages reports the
+// backlog no matter how sick the consumers are. Only a disabled queue
+// (outage event) is skipped: its backlog is frozen and no fleet size can
+// drain it. Returns 0 when the node has no upstream SQS — i.e. for every
+// ALB-push fleet, which keeps this signal a strict no-op for them.
+function upstreamQueuePressure(service) {
+    let pressure = 0;
+    for (const s of STATE.services) {
+        if (s.type !== "sqs" || s.isDisabled) continue;
+        if (!s.connections.includes(service.id)) continue;
+        const fill =
+            (s.queue.length + s.processing.length) / (s.config.maxQueueSize || 20);
+        if (fill > pressure) pressure = fill;
+    }
+    return pressure;
 }
 
 // Seeded from the Service constructor for EVERY type. Non-compute services
@@ -123,10 +165,19 @@ function updateAutoscaling(service, dt) {
     // the instance count, so a fleet at half load reads 0.5 no matter how
     // wide it is. That is what makes scale-in possible at all.
     const util = service.totalLoad;
-    if (util > cfg.targetUtil) {
+    // Second signal (#220): a pull-based fleet never looks busy however deep
+    // the upstream queue gets, so queue pressure feeds the SAME accumulator
+    // as utilization — one state machine, two reasons to grow.
+    const pressureThreshold = cfg.queuePressureThreshold ?? 0.5;
+    const queuePressure = upstreamQueuePressure(service);
+    if (util > cfg.targetUtil || queuePressure > pressureThreshold) {
         service.asgAbove += dt;
         service.asgBelow = 0;
-    } else if (util < cfg.scaleInUtil) {
+    } else if (util < cfg.scaleInUtil && queuePressure < pressureThreshold / 2) {
+        // Scale-in demands BOTH quiet: half the threshold is the queue-side
+        // hysteresis gap — without it the fleet scales out on pressure,
+        // drains a little, still reads util 0 and immediately retires the
+        // instance it just booted.
         service.asgBelow += dt;
         service.asgAbove = 0;
     } else {
@@ -242,5 +293,6 @@ export {
     toggleAutoscaling,
     updateAutoscaling,
     upkeepInstanceFactor,
+    upstreamQueuePressure,
     warmingCount,
 };

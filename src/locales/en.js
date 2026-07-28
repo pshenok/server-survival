@@ -471,7 +471,7 @@ export const EN_TRANSLATIONS = {
     "alert_error_rate": "Error rate critical: {type}",
     // Auto-Scaling Group (#195)
     "compute_full": "Compute Node",
-    "compute_desc_long": "Processes every request type and routes it onward. Upgrade tiers scale it UP (capacity 4/10/18). Toggle AUTO to scale it OUT instead: an Auto-Scaling Group boots an instance whenever utilization stays above 70% and retires one below 30%, between 1 and 5 instances. A new instance needs 3s to warm up and carries no traffic until it does — that cold start is why you pre-scale ahead of a known peak — and every instance is billed from the moment it boots. Real-world equivalents: AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.",
+    "compute_desc_long": "Processes every request type and routes it onward. Upgrade tiers scale it UP (capacity 4/10/18). Toggle AUTO to scale it OUT instead: an Auto-Scaling Group boots an instance whenever utilization stays above 70% and retires one below 30%, between 1 and 5 instances. A new instance needs 3s to warm up and carries no traffic until it does — that cold start is why you pre-scale ahead of a known peak — and every instance is billed from the moment it boots. Fed from a Queue, the fleet also scales on queue depth: pull-based workers cap their own intake and never look busy, so when a connected Queue stays filled past 20% the group scales out anyway — the sim's version of target tracking on SQS ApproximateNumberOfMessages. Real-world equivalents: AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.",
     "compute_flow": "Flow: LB / Queue → Compute → Cache / DB / NoSQL / Storage",
     "asg_label": "AUTO",
     "asg_off": "OFF",

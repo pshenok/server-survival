@@ -471,7 +471,7 @@ export const ZH_TRANSLATIONS = {
     "alert_error_rate": "错误率危急：{type}",
     // Auto-Scaling Group (#195)
     "compute_full": "计算节点",
-    "compute_desc_long": "处理所有类型的请求并转发。升级层级是纵向扩容（容量 4/10/18）。开启 AUTO 则改为横向扩容：当利用率持续高于 70% 时，自动伸缩组会新增一个实例；低于 30% 时移除一个，实例数保持在 1 到 5 之间。新实例需要 3 秒预热，在此之前不承担任何流量——这就是冷启动，也是要在已知高峰前提前扩容的原因——而且实例从启动那一刻起就开始计费。现实对应：AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group。",
+    "compute_desc_long": "处理所有类型的请求并转发。升级层级是纵向扩容（容量 4/10/18）。开启 AUTO 则改为横向扩容：当利用率持续高于 70% 时，自动伸缩组会新增一个实例；低于 30% 时移除一个，实例数保持在 1 到 5 之间。新实例需要 3 秒预热，在此之前不承担任何流量——这就是冷启动，也是要在已知高峰前提前扩容的原因——而且实例从启动那一刻起就开始计费。由队列供给的机群还会按队列深度扩容：拉取式 worker 只按自身容量取活，永远显得不忙，所以当相连的队列持续超过 20% 满时，伸缩组照样扩容——对应现实中基于 SQS ApproximateNumberOfMessages 的目标跟踪。现实对应：AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group。",
     "compute_flow": "流程：负载均衡 / 队列 → 计算 → 缓存 / 数据库 / NoSQL / 存储",
     "asg_label": "AUTO",
     "asg_off": "关闭",

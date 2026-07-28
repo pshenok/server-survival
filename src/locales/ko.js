@@ -471,7 +471,7 @@ export const KO_TRANSLATIONS = {
     "alert_error_rate": "오류율 위험: {type}",
     // Auto-Scaling Group (#195)
     "compute_full": "컴퓨트 노드",
-    "compute_desc_long": "모든 요청 유형을 처리하고 다음 서비스로 전달합니다. 업그레이드 티어는 수직 확장입니다(용량 4/10/18). AUTO를 켜면 수평 확장으로 바뀝니다. 오토스케일링 그룹은 사용률이 70%를 계속 넘으면 인스턴스를 추가하고 30% 아래로 내려가면 하나를 줄이며, 1~5대 사이를 유지합니다. 새 인스턴스는 준비까지 3초가 걸리고 그동안에는 트래픽을 처리하지 않습니다. 이 콜드 스타트 때문에 예정된 피크 전에 미리 확장해야 하며, 모든 인스턴스는 부팅 순간부터 요금이 발생합니다. 실제 서비스: AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.",
+    "compute_desc_long": "모든 요청 유형을 처리하고 다음 서비스로 전달합니다. 업그레이드 티어는 수직 확장입니다(용량 4/10/18). AUTO를 켜면 수평 확장으로 바뀝니다. 오토스케일링 그룹은 사용률이 70%를 계속 넘으면 인스턴스를 추가하고 30% 아래로 내려가면 하나를 줄이며, 1~5대 사이를 유지합니다. 새 인스턴스는 준비까지 3초가 걸리고 그동안에는 트래픽을 처리하지 않습니다. 이 콜드 스타트 때문에 예정된 피크 전에 미리 확장해야 하며, 모든 인스턴스는 부팅 순간부터 요금이 발생합니다. 큐에서 작업을 가져오는 플릿은 큐 깊이로도 확장됩니다. 풀 방식 워커는 처리 가능한 만큼만 가져와 결코 바빠 보이지 않으므로, 연결된 큐가 20% 이상 차 있으면 그룹은 그래도 확장합니다 — SQS ApproximateNumberOfMessages 기반 target tracking에 해당합니다. 실제 서비스: AWS Auto Scaling Group · Azure VM Scale Set · GCP Managed Instance Group.",
     "compute_flow": "흐름: LB / 큐 → 컴퓨트 → 캐시 / DB / NoSQL / 스토리지",
     "asg_label": "AUTO",
     "asg_off": "꺼짐",
