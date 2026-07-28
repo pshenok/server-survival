@@ -313,7 +313,7 @@ export const PT_BR_TRANSLATIONS = {
     "tools_controls": "Ferramentas e Controles",
     "tool_select_desc": "Selecione para ver carga e estatísticas de serviços. Clique em nós de computação/banco de dados para atualizar.",
     "tool_connect_desc": "Conecte nós. Clique em <span class=\"text-green-400\">origem</span> primeiro, depois em <span class=\"text-blue-400\">destino</span>.",
-    "tool_delete_desc": "Remova componentes ou conexões. Receba 100% de reembolso nos componentes!",
+    "tool_delete_desc": "Remova componentes ou conexões. Componentes reembolsam 50% do custo.",
     "tool_unlink": "Desconectar",
     "tool_unlink_desc": "Remova conexões entre serviços. Clique na linha de conexão para deletar.",
     "hud": "Interface",

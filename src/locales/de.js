@@ -313,7 +313,7 @@ export const DE_TRANSLATIONS = {
     "tools_controls": "WERKZEUGE & STEUERUNG",
     "tool_select_desc": "Inspiziere Dienste für Last und Statistiken. Klicke Compute/DB zum Upgraden.",
     "tool_connect_desc": "Verbinde Knoten. Klicke <span class=\"text-green-400\">Quelle</span> dann <span class=\"text-blue-400\">Ziel</span>.",
-    "tool_delete_desc": "Entferne Komponenten oder Verbindungen. Du erhältst 100% Erstattung für Komponenten!",
+    "tool_delete_desc": "Entferne Komponenten oder Verbindungen. Komponenten erstatten 50% der Kosten.",
     "tool_unlink": "TRENNEN",
     "tool_unlink_desc": "Entferne Verbindungen zwischen Diensten. Klicke auf eine Verbindung, um sie zu löschen.",
     "hud": "HUD",

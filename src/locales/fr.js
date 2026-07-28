@@ -313,7 +313,7 @@ export const FR_TRANSLATIONS = {
     "tools_controls": "OUTILS & CONTRÔLES",
     "tool_select_desc": "Inspectez les services pour voir la charge et les statistiques. Cliquez sur Calcul/DB pour améliorer.",
     "tool_connect_desc": "Liez les nœuds ensemble. Cliquez sur <span class=\"text-green-400\">Source</span> puis <span class=\"text-blue-400\">Destination</span>.",
-    "tool_delete_desc": "Supprimez les composants ou les liens. Vous obtenez 100% de remboursement pour les composants !",
+    "tool_delete_desc": "Supprimez les composants ou les liens. Les composants remboursent 50% de leur coût.",
     "tool_unlink": "DÉLIER",
     "tool_unlink_desc": "Supprimez les connexions entre les services. Cliquez sur un lien pour le supprimer.",
     "hud": "HUD",
