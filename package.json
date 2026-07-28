@@ -1,6 +1,6 @@
 {
   "name": "server-survival",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "private": true,
   "description": "Dev tooling for Server Survival. The game itself has NO build step — it is served raw from this repo by GitHub Pages. Everything here is optional and for contributors only (lint, tests, CI).",
   "scripts": {
