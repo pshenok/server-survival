@@ -28,6 +28,7 @@
 
 import { CONFIG } from "../config.js";
 import { STATE } from "../state.js";
+import { isRoutable } from "./circuit-breaker.js";
 
 // Satellite ring geometry (visual only).
 const SAT_RADIUS = 3.4;
@@ -51,6 +52,38 @@ function warmupFor(service) {
     return service.type === "container"
         ? (cfg.containerWarmupSec ?? cfg.warmupSec)
         : cfg.warmupSec;
+}
+
+// Effective load for autoscaling decisions. When a Compute/Container node has
+// an upstream SQS queue, the fleet should scale out based on queue depth in
+// addition to CPU utilization — a backed-up queue means work is piling up even
+// if the current instances are idle (e.g. because they're waiting on a slow
+// downstream). Without this, an SQS-fed compute fleet never scales.
+function effectiveLoad(service) {
+    const util = service.totalLoad;
+    if (!canAutoscale(service)) return util;
+
+    // Find upstream SQS services that feed into this compute node.
+    const upstreamSQS = STATE.services.filter(
+        (s) =>
+            s.type === "sqs" &&
+            s.connections &&
+            s.connections.includes(service.id) &&
+            isRoutable(s)
+    );
+    if (upstreamSQS.length === 0) return util;
+
+    // Take the deepest queue fill ratio among all upstream SQS queues.
+    const maxFill = Math.max(
+        ...upstreamSQS.map((sqs) => {
+            const maxQ = sqs.config.maxQueueSize || 200;
+            return sqs.queue ? sqs.queue.length / maxQ : 0;
+        })
+    );
+
+    // Effective load is the higher of CPU utilization and queue depth.
+    // A queue at 90% fill triggers the same scale-out as 90% CPU.
+    return Math.max(util, maxFill);
 }
 
 // Seeded from the Service constructor for EVERY type. Non-compute services
@@ -122,7 +155,9 @@ function updateAutoscaling(service, dt) {
     // Utilization of the CURRENT ready fleet — totalLoad already divides by
     // the instance count, so a fleet at half load reads 0.5 no matter how
     // wide it is. That is what makes scale-in possible at all.
-    const util = service.totalLoad;
+    // When an upstream SQS queue is backing up, effectiveLoad incorporates
+    // queue depth so the fleet scales out pre-emptively.
+    const util = effectiveLoad(service);
     if (util > cfg.targetUtil) {
         service.asgAbove += dt;
         service.asgBelow = 0;
@@ -236,6 +271,7 @@ function disposeSatellites(service) {
 export {
     canAutoscale,
     disposeSatellites,
+    effectiveLoad,
     initAutoscaling,
     instanceCount,
     refreshSatellites,
