@@ -496,6 +496,12 @@ export const PT_BR_TRANSLATIONS = {
     "redundancy_full": "Redundância (N+1)",
     "redundancy_desc_long": "Tudo que distribui tráfego no jogo — a entrada da Internet, Load Balancers, API Gateways, Compute — escolhe apenas entre os nós conectados que ainda estão roteáveis, pulando os desligados ou com o disjuntor aberto. Por isso um segundo nó do mesmo tipo ligado ao mesmo upstream É o seu failover: ele absorve o tráfego no instante em que o primeiro morre. Um tipo com um único nó no caminho do tráfego é um ponto único de falha, e o jogo avisa você. Equivalentes no mundo real: grupos de instâncias multi-AZ · planejamento de capacidade N+1 · failover por health check.",
     "redundancy_flow": "Fluxo: upstream → qualquer nó saudável do tipo; o nó morto é simplesmente ignorado",
+    // Multi-region failover (#221)
+    "multiregion_full": "Multirregião (ativo-ativo)",
+    "multiregion_desc_long": "Um GeoDNS na frente de duas pilhas regionais completas, ambas servindo tráfego ao vivo ao mesmo tempo. Quando uma região inteira apaga — o cenário para o qual as Zonas de Disponibilidade existem —, o roteamento simplesmente para de resolver a porta de entrada dela: cada nova requisição cai na região sobrevivente, e quando a região morta volta, o tráfego se redistribui sozinho. Os dois sentidos são automáticos; a conta, não. Tudo em dobro significa upkeep dobrado a cada segundo, com ou sem falha — e esse custo permanente é exatamente o que você está comprando: o direito de perder uma região e continuar no ar. O ativo-passivo corta a conta pela metade com um standby frio — e paga em tempo de failover e numa região que ninguém testou. Equivalentes reais: Route 53 health checks · Azure Traffic Manager · Google Cloud DNS.",
+    "multiregion_flow": "Fluxo: Internet → GeoDNS → portas de entrada das regiões A / B → backend compartilhado; uma região apagada é simplesmente ignorada, nos dois sentidos",
+    "region_outage_warning": "🌍 QUEDA DE REGIÃO! A pilha {type} apagou — {count} serviços offline",
+    "region_outage_restored": "Região restaurada — o tráfego volta a se espalhar pelas duas regiões",
     // Sandbox archetypes, batch 1 (#197)
     "dlq": "Fila de mensagens mortas",
     "dlq_short": "DLQ",
@@ -584,6 +590,7 @@ export const PT_BR_TRANSLATIONS = {
     "fail_partition_stalled": "Partição travada",
     "fail_breach": "Invasão!",
     "fail_throttled": "Limitado",
+    "fail_region_down": "Região offline",
 
     // Share Architecture (#157): the share modal + top-bar button.
     "share_arch": "Compartilhar arquitetura",

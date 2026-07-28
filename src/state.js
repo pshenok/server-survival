@@ -118,5 +118,11 @@ export const STATE = {
         ended: false,
         outcome: null,          // "win" | "lose" | null
         failureReason: null,
+        // Region outage (#221). regionOutage is the live event record
+        // ({ serviceIds, endAtSec, active, startedCompleted, endedCompleted })
+        // written by triggerRegionOutage; the fired flag makes the campaign
+        // trigger one-shot per level session. Both reset in loadLevel.
+        regionOutageFired: false,
+        regionOutage: null,
     }
 };

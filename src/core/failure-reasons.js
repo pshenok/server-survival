@@ -47,6 +47,10 @@ export const FAIL_REASONS = {
     // Wave 1 mechanics
     CIRCUIT_OPEN: "fail_circuit_open",
     PARTITION_STALLED: "fail_partition_stalled",
+    // Multi-region (#221): a request that was already inside a regional stack
+    // when the whole region went dark. Attribution only, like every reason
+    // here — the region event fails those requests identically either way.
+    REGION_DOWN: "fail_region_down",
 
     // Security / load shedding
     BREACH: "fail_breach",

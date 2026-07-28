@@ -121,6 +121,22 @@ export const CampaignObjectives = {
         return failures > 0 && (state.reputation || 0) >= minReputation;
     },
 
+    /**
+     * Requests completed while the forced region outage (#221) was dark.
+     * Watermark arithmetic over the campaign completion counters: the trigger
+     * stamps the count at lights-out, the restore stamps it at lights-on, and
+     * while the outage is live the delta grows with every completion — so the
+     * objective can tick DURING the outage, which is exactly when the player
+     * is watching the surviving region carry the load.
+     */
+    completedDuringRegionOutage(state) {
+        const outage = state.campaign?.regionOutage;
+        if (!outage) return 0;
+        const now = CampaignObjectives.totalCompleted(state);
+        const end = outage.active ? now : (outage.endedCompleted ?? now);
+        return Math.max(0, end - (outage.startedCompleted || 0));
+    },
+
     /** Circuit breakers that opened this session. */
     breakerTrips(state) {
         return state.resilience?.trips || 0;

@@ -496,6 +496,12 @@ export const EN_TRANSLATIONS = {
     "redundancy_full": "Redundancy (N+1)",
     "redundancy_desc_long": "Everything that spreads traffic in this game — the Internet entry point, Load Balancers, API Gateways, Compute — only picks among connected nodes that are still routable, skipping the ones that are offline or tripped. So a second node of the same type wired to the same upstream IS your failover: it absorbs the traffic the moment the first one dies. A type with only one instance on the traffic path is a single point of failure, and the game will warn you about it. Real-world equivalents: multi-AZ instance groups · N+1 capacity planning · health-check failover.",
     "redundancy_flow": "Flow: upstream → any healthy node of that type; a dead node is simply skipped",
+    // Multi-region failover (#221)
+    "multiregion_full": "Multi-Region (Active-Active)",
+    "multiregion_desc_long": "GeoDNS in front of two complete regional stacks, both serving live traffic at once. When a whole region goes dark — the scenario Availability Zones exist for — routing simply stops resolving to its front door: every new request lands on the surviving region, and when the dead one returns, traffic spreads back on its own. Both directions are automatic; the bill is not. Two of everything means double upkeep every second the sky is blue, and that standing cost is exactly what you are buying: the right to lose a region and stay up. Active-passive halves the bill with a cold standby — and pays in failover time and a region nobody has tested. Real-world equivalents: Route 53 health checks · Azure Traffic Manager · Google Cloud DNS.",
+    "multiregion_flow": "Flow: Internet → GeoDNS → region A / region B front doors → shared backend; a dark region is simply skipped, in both directions",
+    "region_outage_warning": "🌍 REGION OUTAGE! The {type} stack went dark — {count} services offline",
+    "region_outage_restored": "Region restored — traffic is spreading back across both regions",
     // Sandbox archetypes, batch 1 (#197)
     "dlq": "Dead-Letter Queue",
     "dlq_short": "DLQ",
@@ -584,6 +590,7 @@ export const EN_TRANSLATIONS = {
     "fail_partition_stalled": "Partition stalled",
     "fail_breach": "Breach!",
     "fail_throttled": "Throttled",
+    "fail_region_down": "Region offline",
 
     // Share Architecture (#157): the share modal + top-bar button.
     "share_arch": "Share Architecture",
