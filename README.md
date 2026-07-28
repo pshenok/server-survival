@@ -8,6 +8,24 @@ Learn cloud by playing:
 
 [![PLAY NOW](https://img.shields.io/badge/PLAY_NOW-Server_Survival-2ea44f?style=for-the-badge)](https://pshenok.github.io/server-survival/)
 
+## Game Modes
+
+- **Survival** — the core experience: survive as long as possible against escalating traffic, DDoS spikes, random events, and service degradation.
+- **Campaign** — 20 hand-crafted levels across 4 chapters (Basics → Optimization → Defense & Mastery → Production Readiness). Each level teaches one architecture concept with pre-built diagrams, objectives, and a debrief.
+- **Sandbox** — a free-play lab: any budget, any traffic mix, no game over. Experiment with all 23 services.
+
+## What It Teaches
+
+Every mechanic is a real cloud concept in miniature:
+
+- **Observability** — place a Monitoring node to unlock a live metrics dashboard (RPS, error rate, latency sparklines) and alerts. Level 15 makes you fly blind without it first.
+- **Auto-scaling & cold start** — Compute fleets scale out at 70% utilization and back in at 30%, but new instances need warmup time (Containers even more so).
+- **Queue-depth scaling** — a queue-fed fleet scales on queue pressure, not just CPU, so backlogs trigger scale-out.
+- **Circuit breaking & retries** — overloaded downstreams trip a breaker (50% error rate over a rolling window), traffic is retried with backoff, and SPOFs get flagged.
+- **Multi-region failover** — GeoDNS splits traffic across regional stacks; region-outage events show why one region is never enough.
+- **OLTP vs OLAP** — the Data Warehouse takes analytics writes cheaply but refuses realtime reads; the Relational DB does the opposite trade.
+- **Failure-reason badges** — every dropped request pops a badge on the node that dropped it, saying *why* (no route, capacity, read-only replica, search-only index...).
+
 ## How to Play
 
 ### Objective
@@ -21,34 +39,44 @@ Survive as long as possible! Manage your **Budget ($)**, **Reputation (%)**, and
 
 ### Traffic Types
 
-| Traffic       | Color  | Destination        | Reward | Description                            |
-| :------------ | :----- | :----------------- | :----- | :------------------------------------- |
-| **STATIC**    | Green  | CDN / Storage      | $0.50  | Static file requests (images, CSS, JS) |
-| **READ**      | Blue   | Replica / NoSQL / SQL DB | $0.80  | Database read operations               |
-| **WRITE**     | Orange | NoSQL / SQL DB     | $1.20  | Database write operations              |
-| **UPLOAD**    | Yellow | Storage            | $1.50  | File uploads                           |
-| **SEARCH**    | Cyan   | Search Engine / SQL DB | $1.20  | Search queries (Search Engine preferred, SQL DB fallback) |
-| **MALICIOUS** | Red    | Blocked by Firewall| $0     | DDoS attacks — block with Firewall!    |
+| Traffic       | Color  | Destination                       | Reward | Description                            |
+| :------------ | :----- | :-------------------------------- | :----- | :------------------------------------- |
+| **STATIC**    | Green  | CDN / Storage                     | $0.50  | Static file requests (images, CSS, JS) |
+| **READ**      | Blue   | Replica / NoSQL / SQL DB          | $0.80  | Database read operations               |
+| **WRITE**     | Orange | NoSQL / SQL DB / Warehouse        | $1.20  | Database write operations              |
+| **UPLOAD**    | Yellow | Storage / Warehouse               | $1.50  | File uploads                           |
+| **SEARCH**    | Cyan   | Search Engine / SQL DB            | $1.20  | Search queries (Search Engine preferred, SQL DB fallback) |
+| **MALICIOUS** | Red    | Blocked by Firewall / Identity Provider | $0 | DDoS attacks — block them or bleed reputation! |
 
 ### Infrastructure & Services
 
-Build your architecture using the toolbar. Each service has a cost, capacity, and upkeep:
+Build your architecture using the toolbar. All 23 services are organized into five category tabs — the same taxonomy as the table below. Each service has a cost, capacity, and per-minute upkeep:
 
-| Service          | Cost | Capacity  | Upkeep    | Function                                                              |
-| :--------------- | :--- | :-------- | :-------- | :-------------------------------------------------------------------- |
-| **Firewall**     | $40  | 30        | Low       | **Security.** First line of defense. Blocks malicious traffic.        |
-| **API Gateway**  | $70  | 40        | Medium    | **Rate Limiting.** Throttles excess traffic (soft-fail). **Upgradeable T1→T3.** |
-| **Queue**        | $45  | Queue:200 | Low       | **Buffer.** Buffers requests during spikes. Prevents drops.           |
-| **Load Balancer**| $50  | 20        | Medium    | **Distribution.** Distributes traffic to multiple instances.          |
-| **Compute**      | $60  | 4         | High      | **Processing.** Processes requests. **Upgradeable T1→T3.**            |
-| **Serverless Function** | $45 | 30 (auto) | Very Low + $0.03/req | **Pay-per-use Compute.** Auto-scales with traffic. Low upkeep, but charges $0.03 per request. Cheap when idle, expensive at high RPS. |
-| **CDN**          | $60  | 50        | Low       | **Delivery.** Caches STATIC content at edge (95% hit rate).           |
-| **SQL DB**       | $150 | 8         | Very High | **Database.** Handles READ/WRITE/SEARCH. **Upgradeable T1→T3.**      |
-| **NoSQL DB**     | $80  | 15        | High      | **Fast Database.** Handles READ/WRITE only (no SEARCH). **Upgradeable T1→T3.** |
-| **Cache**        | $60  | 30        | Medium    | **Caching.** Caches responses to reduce DB load. **Upgradeable T1→T3.** |
-| **Search Engine**| $120 | 12        | High      | **Search.** Specialized for SEARCH queries. 3x faster than SQL DB. **Upgradeable T1→T3.** |
-| **Read Replica** | $100 | 12        | Medium    | **Read Offload.** Offloads READ from master DB. Requires DB connection. **Upgradeable T1→T3.** |
-| **Storage**      | $25  | 25        | Low       | **File System.** Destination for STATIC/UPLOAD traffic.               |
+| Category   | Service                 | Cost | Capacity        | Upkeep              | Role                                                                 |
+| :--------- | :---------------------- | :--- | :-------------- | :------------------ | :------------------------------------------------------------------- |
+| Front door | **GeoDNS**              | $50  | 60              | $4/min              | Front door for the whole site: splits traffic across independent regional stacks. |
+| Front door | **CDN**                 | $60  | 50              | $5/min              | Caches STATIC content at the edge (95% hit rate).                     |
+| Front door | **Firewall**            | $40  | 30              | $4/min              | The first line of defense. Blocks malicious traffic.                  |
+| Front door | **Identity Provider**   | $55  | 20              | $6/min              | Adds latency but catches session-based attacks a WAF misses.          |
+| Front door | **API Gateway**         | $70  | 60              | $8/min              | Rate limits traffic. Throttled requests lose less reputation than failures. **Upgradeable T1–T3.** |
+| Front door | **Load Balancer**       | $50  | 20              | $6/min              | Distributes traffic to multiple Compute instances.                    |
+| Compute    | **Compute**             | $60  | 4               | $12/min             | Processes requests. Auto-scales into a fleet (with cold start). **Upgradeable T1–T3.** |
+| Compute    | **Serverless Function** | $45  | 30              | $2/min + $0.03/req  | Auto-scales with traffic. Very low upkeep but pays per completed request — cheap when idle, expensive at high RPS. |
+| Compute    | **Container Cluster**   | $120 | 12              | $16/min             | Dense fixed capacity at a flat fee. Slow node-pool warmup on scale-out. |
+| Data       | **Relational DB**       | $150 | 8               | $24/min             | Destination for READ/WRITE/SEARCH traffic. **Upgradeable T1–T3.**     |
+| Data       | **NoSQL DB**            | $80  | 15              | $14/min             | Fast for READ/WRITE, but cannot handle SEARCH queries. **Upgradeable T1–T3.** |
+| Data       | **Memory Cache**        | $60  | 30              | $8/min              | Caches responses to reduce DB load. **Upgradeable T1–T3.**            |
+| Data       | **File Storage**        | $25  | 25              | $5/min              | Destination for STATIC/UPLOAD traffic.                                |
+| Data       | **Search Engine**       | $120 | 12              | $16/min             | Specialized for SEARCH queries. 3× faster than SQL DB. **Upgradeable T1–T3.** |
+| Data       | **Read Replica**        | $100 | 12              | $12/min             | Offloads READ traffic from the master DB. Requires connection to a DB. **Upgradeable T1–T3.** |
+| Data       | **Data Warehouse**      | $90  | 40              | $8/min              | Stores analytics WRITEs cheaply and slowly. Cannot serve realtime READ. |
+| Async      | **Message Queue**       | $45  | 50 (queue 200)  | $3/min              | Buffers requests during spikes. Prevents drops.                       |
+| Async      | **Pub/Sub Topic**       | $65  | 30              | $6/min              | Fan-out: one event becomes one delivery per subscriber.               |
+| Async      | **Stream**              | $90  | 40 (queue 200)  | $10/min             | High throughput, strictly ordered per partition. A stalled partition backs up its tail. |
+| Async      | **Dead-Letter Queue**   | $55  | 25              | $4/min              | Parks requests that finally failed, draining them back for a cost.    |
+| Async      | **Scheduler**           | $50  | 1               | $5/min              | Injects its own scheduled batch-job bursts on a timer.                |
+| Async      | **Notification**        | $40  | 20              | $4/min              | Terminal "send": success earns reputation, failures are silent.       |
+| Ops        | **Monitoring**          | $75  | 1               | $8/min              | Unlocks the live metrics dashboard and alerts.                        |
 
 ### Scoring & Economy
 
@@ -59,10 +87,11 @@ Build your architecture using the toolbar. Each service has a cost, capacity, an
 | DB Write       | +$1.20 | +8    | +0.1       |
 | File Upload    | +$1.50 | +10   | +0.1       |
 | Search Query   | +$1.20 | +5    | +0.1       |
-| Attack Blocked | +$0.50 | +10   | -          |
+| Cache Hit      | +20% reward | - | -         |
+| Attack Blocked | -$1 (mitigation) | +10 | -    |
 | Request Failed | -      | -half | -1         |
 | Req. Throttled | -      | -     | -0.2       |
-| Attack Leaked  | -      | -     | -5         |
+| Attack Leaked  | -$50 (breach) | - | -5        |
 
 ### Upkeep & Cost Scaling
 
@@ -71,30 +100,29 @@ Build your architecture using the toolbar. Each service has a cost, capacity, an
 - **Repair Costs:** 15% of service cost to manually repair
 - **Auto-Repair:** +10% upkeep overhead when enabled
 
-### Game Modes
-
-#### Survival Mode
+### Survival Mode
 
 The core experience - survive as long as possible against escalating traffic with constant intervention required:
 
-**Dynamic Challenges:**
-
 - **RPS Acceleration** - Traffic multiplies at time milestones (×1.3 at 1min → ×4.0 at 10min)
-- **Random Events** - Cost spikes, capacity drops, traffic bursts every 15-45 seconds
+- **Random Events** - Cost spikes, capacity drops, traffic bursts, service outages every 15-45 seconds
 - **Traffic Shifts** - Traffic patterns change every 40 seconds
 - **DDoS Spikes** - 50% malicious traffic waves every 45 seconds
 - **Service Degradation** - Services lose health under load, require repairs
+- **Health bars, event indicator, finances panel, auto-repair toggle, game-over analysis**
 
-**New UI Features:**
+### Campaign Mode
 
-- **Health bars on all services**
-- **Active event indicator bar at top**
-- **Detailed finances panel (income/expenses breakdown)**
-- **Service health panel with repair costs**
-- **Auto-repair toggle**
-- **Game over analysis with tips**
+20 levels across 4 chapters, each one a scenario built around a single lesson:
 
-#### Sandbox Mode
+1. **Basics** (levels 1-3) — your first server, storage, and edge caching with a CDN.
+2. **Optimization** (levels 4-10) — caching, queues, read scaling, search, NoSQL, rate limiting, serverless vs compute.
+3. **Defense & Mastery** (levels 11-14) — defense in depth, high availability, cost crunches, and Black Friday.
+4. **Production Readiness** (levels 15-20) — observability, auto-scaling, node failures, dead-letter queues, fan-out, and two-region failover.
+
+Levels come with pre-built starting architectures, primary and bonus objectives, speedrun stars, and a debrief tip. Later chapters throw forced outages — including a whole region going dark — at your build.
+
+### Sandbox Mode
 
 A fully customizable testing environment for experimenting with any architecture:
 
@@ -109,31 +137,12 @@ A fully customizable testing environment for experimenting with any architecture
 
 **No game over in Sandbox** - experiment freely!
 
-### Recent Features (v2.3)
+### Share Your Architecture
 
-- **Serverless Function** - Pay-per-use compute variant ($45 to place, $2/min upkeep, $0.03 per completed request). Auto-scales to capacity 30 with a 900ms cold-start processing time. Same routing topology as Compute (ALB/Queue/API Gateway upstream; Cache/DB/NoSQL/S3/Search/Replica downstream).
-- **Cost-aware Smart Hint** - Warns when a Serverless node's per-request cost is adding up at high RPS, nudging players toward a Compute node for sustained throughput.
+Built something you're proud of? The share panel exports your architecture two ways:
 
-### Recent Features (v2.2)
-
-- **Search Engine** - Specialized SEARCH handler, 3x faster than SQL DB (100ms vs 300ms). Upgradeable (Tiers 1-3: 12/25/40 capacity)
-- **Read Replica** - Offloads READ traffic from master DB. Requires connection to SQL DB or NoSQL. Upgradeable (Tiers 1-3)
-- **Smart Hints** - Contextual suggestions when your architecture is suboptimal (e.g. "DB overloaded with SEARCH — add a Search Engine!")
-- **Economy Rebalance** - Starting budget $500, SEARCH reward increased to $1.20
-- **New Traffic Shifts** - "Read Heavy" (45% READ) and "Full-Text Flood" (55% SEARCH) patterns
-
-### Previous Features (v2.1)
-
-- **API Gateway** - Rate limits traffic with soft-fail throttling (-0.2 rep instead of -1.0). Upgradeable (Tiers 1-3: 20/40/80 RPS)
-- **NoSQL Database** - Fast alternative to SQL for READ/WRITE traffic (150ms vs 300ms). Cannot handle SEARCH. Upgradeable (Tiers 1-3)
-- **Constant Intervention Mechanics** - Game requires active management throughout
-- **Service Health System** - Visual health bars, manual/auto repair options
-- **RPS Milestones** - Traffic surge warnings with multiplier display
-- **Active Event Bar** - Shows current random event with countdown timer
-- **Detailed Finances** - Income by request type, expenses by service with counts
-- **Game Over Analysis** - Failure reason, description, and contextual tips
-- **Retry Same Setup** - Restart with same architecture after game over
-- **Interactive Tutorial** - Guided walkthrough for new players
+- **PNG export** — a clean image of your diagram to post anywhere.
+- **Shareable URL** — your whole build encoded in a `?arch=` link; anyone who opens it gets your architecture loaded and ready to run.
 
 ### Controls
 
@@ -145,39 +154,52 @@ A fully customizable testing environment for experimenting with any architecture
 - **Camera Reset:** Press `R` to reset the camera position.
 - **Birds-Eye View:** Press `T` to switch between isometric and top-down view.
 - **Hide HUD:** Press `H` to toggle UI panels.
+- **Category Tabs:** The toolbar groups services into five tabs — Front Door, Compute, Data, Async, Ops. Keys `1-5` switch between them.
 - **Connect Tool:** Click two nodes to create a connection (flow direction matters!).
-  - _Valid Flows:_ Internet -> (Firewall/CDN/API Gateway) -> Load Balancer -> Queue -> Compute -> Cache -> (Search Engine/Read Replica/SQL DB/NoSQL DB/Storage)
+  - _Valid Flows:_ Internet -> (GeoDNS/Firewall/CDN/API Gateway) -> Load Balancer -> Queue -> Compute -> Cache -> (Search Engine/Read Replica/SQL DB/NoSQL DB/Storage)
 - **Delete Tool:** Remove services to recover 50% of the cost.
 - **Time Controls:** Pause, Play (1x), and Fast Forward (3x).
 
 ## Strategy Tips
 
-1.  **Block Attacks First:** Always place a Firewall immediately connected to the Internet. Malicious leaks destroy reputation fast (-5 per leak).
+1.  **Block Attacks First:** Always place a Firewall immediately connected to the Internet. Malicious leaks destroy reputation fast (-5 per leak) and cost $50 per breach.
 2.  **Use CDN for Static Content:** Connect Internet -> CDN -> Storage. The CDN handles 95% of static traffic cheaply!
 3.  **Watch Service Health:** Damaged services have reduced capacity. Click to repair or enable Auto-Repair.
 4.  **Scale for Traffic Surges:** RPS multiplies at milestones - prepare before ×2.0 at 3 minutes!
 5.  **Balance Income vs Upkeep:** Start lean, scale as income grows. Over-provisioning leads to bankruptcy.
 6.  **Use Cache Wisely:** Reduces database load significantly for READ requests.
-7.  **Buffer with Queue:** Queue helps survive traffic burst events without dropping requests.
+7.  **Buffer with Queue:** Queue helps survive traffic burst events without dropping requests — and a queue-fed Compute fleet auto-scales on queue depth.
 8.  **React to Events:** Watch the event bar - cost spikes mean hold off on purchases, traffic bursts mean ensure capacity.
 9.  **API Gateway for Graceful Degradation:** Throttled requests only lose -0.2 reputation (vs -1.0 for failures). Great for surviving traffic spikes!
-10. **Split DB Traffic with NoSQL:** Route READ/WRITE to NoSQL (faster, cheaper) and keep SQL DB for SEARCH queries only.
+10. **Split DB Traffic with NoSQL:** Route READ/WRITE to NoSQL (faster, cheaper) and keep the Relational DB for SEARCH queries only.
 11. **Search Engine for SEARCH Storms:** SEARCH is the heaviest traffic type (2.5x weight). A dedicated Search Engine processes it 3x faster than SQL DB.
 12. **Read Replica for READ offloading:** Under "API Heavy" or "Read Heavy" shifts, a Read Replica prevents your main DB from drowning in READ requests.
 13. **Serverless Function = pay-per-use:** Great for spiky traffic, but monitor finances — per-request cost ($0.03) adds up fast at high RPS.
+14. **Place Monitoring early:** The metrics dashboard shows error rates and latency before the failure badges start raining.
+15. **Read the failure badges:** Every dropped request tells you why it died — the badge is the lesson.
 
 ## Tech Stack
 
-- **Core:** Vanilla JavaScript (ES6+)
+- **Core:** Vanilla JavaScript (native ES modules — an explicit module graph under `src/`, no bundler)
 - **Rendering:** [Three.js](https://threejs.org/) for 3D visualization.
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/) for the glassmorphism UI.
-- **Build:** No build step required! Just standard HTML/CSS/JS.
+- **Build:** No build step required! The game is served raw from this repo by GitHub Pages.
 
 ## Getting Started
 
 1.  Clone the repository.
 2.  Open `index.html` in your modern web browser.
 3.  Start building your cloud empire!
+
+## For Contributors
+
+There is still **zero build step** — the dev tooling is optional and for contributors only:
+
+- `npm install` once, then `npm run check` runs ESLint + the full Vitest suite (593 tests).
+- CI runs the same check on every PR.
+- The code is native ESM: `game.js` plus focused modules under `src/` (`sim/`, `core/`, `ui/`, `campaign/`, `persistence/`, `input/`).
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow.
 
 ## Community
 
