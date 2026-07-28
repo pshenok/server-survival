@@ -545,6 +545,26 @@ export const CONFIG = {
     minInstances: 1,
     maxInstances: 5,
     sustainSec: 2, // util must hold past the threshold this long
+    // Queue-depth scaling (#220), the SECOND scale-out signal. Utilization is
+    // the CPU-style signal and it is blind for a pull-based fleet: the SQS
+    // pull loop caps intake at current capacity, so a drowning consumer reads
+    // comfortable util forever while the queue grows without bound. So the
+    // engine also watches the fill ratio of every upstream SQS the fleet
+    // pulls from — (queue + parked jobs) / maxQueueSize, max across queues —
+    // and scales out when it holds above this fraction, through the same
+    // sustain/cooldown machinery. Scale-in requires the pressure to have
+    // dropped below HALF this value (queue-side hysteresis, mirrors the
+    // targetUtil/scaleInUtil gap). Real-world mapping: ASG target tracking on
+    // SQS ApproximateNumberOfMessages — scale workers on backlog depth, not
+    // on their CPU, because busy-enough workers never look busy.
+    // Calibrated 0.2 by headless repro of #220 (20 rps into waf→sqs→
+    // compute(AUTO)→db): a saturated SQS equilibrates at ~0.25 fill, not
+    // 1.0 — its processing pool caps at `capacity` (50) parked jobs, which is
+    // 0.25 of maxQueueSize (200), and past load 0.5 the load-failure roll
+    // sheds the rest — so any threshold above 0.25 can never fire. 0.2 sits
+    // just under that ceiling while staying far above the transient ripple a
+    // healthy, actively-drained queue shows.
+    queuePressureThreshold: 0.2,
     // Per-instance upkeep premium: instance #1 costs the base upkeep, every
     // further instance costs base * instanceUpkeepFactor. Left at 1.0 (plain
     // per-instance billing) — the #195 sweep showed this knob cannot flip any

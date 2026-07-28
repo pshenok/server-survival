@@ -14,6 +14,7 @@ import {
   toggleAutoscaling,
   updateAutoscaling,
   upkeepInstanceFactor,
+  upstreamQueuePressure,
   warmingCount,
 } from "../../src/sim/autoscaling.js";
 import { deleteObject } from "../../src/sim/topology.js";
@@ -447,6 +448,254 @@ describe("persistence", () => {
     });
 
     expect(STATE.services[0].instances).toBe(ASG.maxInstances);
+  });
+});
+
+// Queue-depth scaling (#220): the second scale-out signal. An SQS-fed fleet
+// PULLS, capping its own intake at capacity, so its utilization never crosses
+// targetUtil however deep the backlog gets — the engine must scale on the
+// upstream queue's fill ratio instead.
+describe("queue-depth scaling (#220)", () => {
+  const THRESHOLD = CONFIG.autoscaling.queuePressureThreshold;
+
+  // A compute fed by an SQS. Depth is pinned by stuffing the REAL arrays the
+  // signal reads (same trick as the totalLoad test above) — updateAutoscaling
+  // alone never drains them, so the fill stays put.
+  function sqsFed() {
+    const sqs = place("sqs");
+    const c = asg();
+    connect(sqs, c);
+    return { sqs, c };
+  }
+
+  function fillTo(sqs, fraction) {
+    const max = sqs.config.maxQueueSize || 20;
+    sqs.queue = new Array(Math.round(max * fraction)).fill(null);
+    sqs.processing = [];
+  }
+
+  describe("discovery", () => {
+    it("reads 0 for an ALB-push fleet (no upstream SQS)", () => {
+      const alb = place("alb");
+      const c = asg();
+      connect(alb, c);
+      expect(upstreamQueuePressure(c)).toBe(0);
+    });
+
+    it("is the fill ratio over queue + parked jobs", () => {
+      const { sqs, c } = sqsFed();
+      const max = sqs.config.maxQueueSize || 20;
+      sqs.queue = new Array(30).fill(null);
+      sqs.processing = new Array(50).fill(null); // "requeue-next" parked jobs
+      expect(upstreamQueuePressure(c)).toBeCloseTo(80 / max, 10);
+    });
+
+    it("takes the MAX across several upstream queues", () => {
+      const { sqs, c } = sqsFed();
+      const sqs2 = place("sqs");
+      connect(sqs2, c);
+      fillTo(sqs, 0.1);
+      fillTo(sqs2, 0.6);
+      expect(upstreamQueuePressure(c)).toBeCloseTo(0.6, 10);
+    });
+
+    it("ignores an SQS that is not connected to this fleet", () => {
+      const c = asg();
+      const other = place("compute");
+      const sqs = place("sqs");
+      connect(sqs, other); // wired to a DIFFERENT compute
+      fillTo(sqs, 1);
+      expect(upstreamQueuePressure(c)).toBe(0);
+    });
+
+    it("ignores a disabled SQS — a frozen backlog no fleet can drain", () => {
+      const { sqs, c } = sqsFed();
+      fillTo(sqs, 1);
+      sqs.isDisabled = true;
+      expect(upstreamQueuePressure(c)).toBe(0);
+    });
+
+    it("still sees a queue whose breaker is open (the #220 repro state)", () => {
+      // A saturated SQS trips its own breaker; the backlog is real anyway.
+      const { sqs, c } = sqsFed();
+      fillTo(sqs, 0.5);
+      sqs.breakerState = "open";
+      expect(upstreamQueuePressure(c)).toBeCloseTo(0.5, 10);
+    });
+  });
+
+  describe("scale-out on pressure", () => {
+    it("boots an instance while util reads 0", () => {
+      const { sqs, c } = sqsFed();
+      setUtil(c, 0);
+      fillTo(sqs, THRESHOLD + 0.1);
+      tick(c, ASG.sustainSec + 0.2);
+      expect(warmingCount(c)).toBe(1);
+    });
+
+    it("does not fire at exactly the threshold (strict >)", () => {
+      const { sqs, c } = sqsFed();
+      setUtil(c, 0);
+      fillTo(sqs, THRESHOLD);
+      tick(c, 30);
+      expect(instanceCount(c)).toBe(1);
+    });
+
+    it("respects the sustain window like the util signal", () => {
+      const { sqs, c } = sqsFed();
+      setUtil(c, 0);
+      fillTo(sqs, THRESHOLD + 0.1);
+      tick(c, ASG.sustainSec - 0.5);
+      expect(instanceCount(c)).toBe(1);
+      tick(c, 0.7);
+      expect(instanceCount(c)).toBe(2);
+    });
+
+    it("feeds the SAME accumulator as utilization — the streaks add up", () => {
+      const { sqs, c } = sqsFed();
+      setUtil(c, ASG.targetUtil + 0.2); // hot CPU for half the window...
+      tick(c, ASG.sustainSec - 0.5);
+      expect(instanceCount(c)).toBe(1);
+      setUtil(c, 0); // ...then idle CPU but a deep queue for the rest
+      fillTo(sqs, THRESHOLD + 0.1);
+      tick(c, 0.7);
+      expect(instanceCount(c)).toBe(2);
+    });
+
+    it("goes through the same cooldown gate", () => {
+      const { sqs, c } = sqsFed();
+      setUtil(c, 0);
+      fillTo(sqs, THRESHOLD + 0.1);
+      tick(c, ASG.sustainSec + 0.2);
+      expect(instanceCount(c)).toBe(2);
+      tick(c, ASG.sustainSec + 0.2); // inside the cooldown — no third box
+      expect(instanceCount(c)).toBe(2);
+      tick(c, ASG.cooldownSec);
+      expect(instanceCount(c)).toBe(3);
+    });
+
+    it("freezes on pause exactly like the util signal", () => {
+      const { sqs, c } = sqsFed();
+      setUtil(c, 0);
+      fillTo(sqs, 1);
+      STATE.timeScale = 0;
+      tick(c, 60);
+      expect(instanceCount(c)).toBe(1);
+      expect(c.asgAbove).toBe(0);
+    });
+  });
+
+  describe("scale-in guard (no flapping)", () => {
+    it("holds the fleet while pressure sits between half-threshold and threshold", () => {
+      // The flap this prevents: scale out on pressure, drain a little, util
+      // still reads 0 — without the guard the fleet would retire the very
+      // instance it just booted.
+      const { sqs, c } = sqsFed();
+      c.instances = 3;
+      setUtil(c, 0);
+      fillTo(sqs, (THRESHOLD + THRESHOLD / 2) / 2);
+      tick(c, 60);
+      expect(c.instances).toBe(3);
+    });
+
+    it("does not scale in at exactly half the threshold (strict <)", () => {
+      const { sqs, c } = sqsFed();
+      c.instances = 3;
+      setUtil(c, 0);
+      fillTo(sqs, THRESHOLD / 2);
+      tick(c, 30);
+      expect(c.instances).toBe(3);
+    });
+
+    it("scales in once the queue drains below half the threshold", () => {
+      const { sqs, c } = sqsFed();
+      c.instances = 3;
+      setUtil(c, 0);
+      fillTo(sqs, THRESHOLD / 2 - 0.02);
+      tick(c, ASG.sustainSec + 0.2);
+      expect(c.instances).toBe(2);
+    });
+
+    it("changes nothing for an ALB-push fleet: pressure 0 never blocks scale-in", () => {
+      const alb = place("alb");
+      const c = asg();
+      connect(alb, c);
+      c.instances = 3;
+      setUtil(c, ASG.scaleInUtil - 0.1);
+      tick(c, ASG.sustainSec + 0.2);
+      expect(c.instances).toBe(2);
+    });
+  });
+
+  describe("the #220 repro, end to end", () => {
+    // waf -> sqs -> compute(AUTO) -> db, arrivals far past one instance's
+    // throughput. Spawns requests at `rps` through the real entry router.
+    function repro() {
+      const waf = place("waf");
+      const sqs = place("sqs");
+      const c = asg();
+      const db = place("db");
+      connect("internet", waf);
+      connect(waf, sqs);
+      connect(sqs, c);
+      connect(c, db);
+      return { sqs, c };
+    }
+
+    function drive(seconds, rps, dt = 1 / 60) {
+      let acc = 0;
+      for (let t = 0; t < seconds; t += dt) {
+        acc += rps * dt;
+        while (acc >= 1) {
+          acc -= 1;
+          const req = new Request("READ");
+          STATE.requests.push(req);
+          routeRequestToEntry(req, "READ");
+        }
+        STATE.services.forEach((s) => s.update(dt));
+        STATE.requests.slice().forEach((r) => r.update(dt));
+      }
+    }
+
+    it("without the queue signal the fleet is stuck at 1 (the filed bug)", () => {
+      const saved = CONFIG.autoscaling.queuePressureThreshold;
+      CONFIG.autoscaling.queuePressureThreshold = 999; // signal off
+      try {
+        const { c } = repro();
+        drive(30, 20);
+        expect(instanceCount(c)).toBe(1);
+      } finally {
+        CONFIG.autoscaling.queuePressureThreshold = saved;
+      }
+    });
+
+    it("scales out under queue pressure while util never sustains past target", () => {
+      const { sqs, c } = repro();
+      let sustainedHotUtil = 0;
+      let hotStreak = 0;
+      let peak = 1;
+      const dt = 1 / 60;
+      for (let t = 0; t < 30; t += 1) {
+        drive(1, 20, dt);
+        peak = Math.max(peak, instanceCount(c));
+        // Track whether the OLD signal alone could ever have fired.
+        hotStreak = c.totalLoad > ASG.targetUtil ? hotStreak + 1 : 0;
+        sustainedHotUtil = Math.max(sustainedHotUtil, hotStreak);
+      }
+      expect(peak).toBeGreaterThan(1); // the fleet grew...
+      expect(instanceCount(c)).toBeGreaterThan(1);
+      expect(upstreamQueuePressure(c)).toBeGreaterThan(0); // ...on a real backlog
+      expect(sqs.queue.length + sqs.processing.length).toBeGreaterThan(0);
+    });
+
+    it("drains the queue and returns to 1 instance after the traffic stops", () => {
+      const { sqs, c } = repro();
+      drive(30, 20);
+      expect(instanceCount(c)).toBeGreaterThan(1);
+      drive(60, 0); // silence: backlog drains, fleet retires
+      expect(sqs.queue.length + sqs.processing.length).toBe(0);
+      expect(instanceCount(c)).toBe(1);
+    });
   });
 });
 
