@@ -40,7 +40,7 @@ const SERVICE_CATEGORIES = [
     {
         id: "compute",
         labelKey: "cat_compute",
-        types: ["compute", "serverless", "container"],
+        types: ["compute", "serverless", "container", "gpu", "infgw"],
     },
     {
         id: "data",
@@ -55,7 +55,7 @@ const SERVICE_CATEGORIES = [
     {
         id: "ops",
         labelKey: "cat_ops",
-        types: ["monitor"],
+        types: ["monitor", "power"],
     },
 ];
 
@@ -184,6 +184,22 @@ const SERVICE_BUTTONS = {
         key: "warehouse_short",
         text: "Warehouse",
         icon: `<svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-amber-500" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 6.5 8 2l6.5 4.5" /><path d="M2.5 6.5v7.5h11V6.5" /><path d="M5 14v-4h6v4" /></svg>`,
+    },
+    // ===== The AI Wave (#87) =====
+    gpu: {
+        key: "gpu_short",
+        text: "GPU",
+        icon: `<svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-fuchsia-400" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="12" height="8" rx="1" /><rect x="5" y="6.5" width="3" height="3" /><path d="M10 6.5v3M12 6.5v3" /><path d="M4 12v2M7 12v2M10 12v2" /></svg>`,
+    },
+    infgw: {
+        key: "infgw_short",
+        text: "Inf GW",
+        icon: `<svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-fuchsia-600" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2.5h12L9.5 8v5.5l-3 -1.5V8Z" /><path d="M9.5 10.5h4.5" /><circle cx="14" cy="10.5" r="0.4" fill="currentColor" /></svg>`,
+    },
+    power: {
+        key: "power_short",
+        text: "Substation",
+        icon: `<svg viewBox="0 0 16 16" class="w-4 h-4 mb-1 text-yellow-400" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 1.5 3.5 9h3L7 14.5 12.5 7h-3Z" /></svg>`,
     },
 };
 

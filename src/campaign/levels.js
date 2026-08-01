@@ -799,4 +799,300 @@ export const CAMPAIGN_LEVELS = [
         failConditions: { repBelow: 30, timeoutSec: 270 },
         debriefTip: "Active-active means either region can lose the other — you just proved it in both directions, and paid double upkeep the whole time; that idle-looking second region IS the product. Active-passive halves the bill with a cold standby and pays in failover time and an untested region. Route 53 health checks · Azure Traffic Manager · Cloud DNS — same choice, same double bill.",
     },
+
+    // ===== Chapter 5: The AI Wave (#87) =====
+    // GPU inference serving — the batch engine, model cold starts, quality
+    // tiers, the SLO deadline queue and the power wall. Levels 1-20 are
+    // deliberately untouched (the same rule every chapter has shipped under):
+    // new mechanics get new levels. Spec:
+    // docs/superpowers/specs/2026-07-30-ai-wave-design.md §5.
+    {
+        id: 21, chapter: 5,
+        title: "Hello, GPU",
+        scenario: "Product shipped an AI feature and 60% of your traffic is now inference. GPUs are the only nodes that serve it — and marketing just announced a launch-day surge, arriving in waves from second 45. Get a model serving, and get the bigger one loaded BEFORE the wave hits.",
+        learn: "A GPU Cluster serves INFERENCE only, and it cold-starts: the model loads for 12-30s before the node takes any traffic. Tiers are model size — bigger batches AND better answers (10% → 4% → 1% bad-answer risk) — but every upgrade RELOADS the model, and a reloading GPU serves nothing. Upgrade in a lull; upgrading during a surge is a self-inflicted outage.",
+        icon: "🤖",
+        diagramHighlights: { 2: "critical" },
+        // Tuned by headless playthrough (5 consecutive runs, all three
+        // directions). The arithmetic the knobs encode: INFERENCE arrives at
+        // 3.0 × 0.6 = 1.8/s and every unserved one is −1 rep, so a model
+        // (re)load is a rep hole — 12s tier-1 cold start ≈ −21, 20s tier-2
+        // reload ≈ −34. The winning play buys the GPU AND upgrades it before
+        // pressing Play: the upgrade re-triggers the load, so the two holes
+        // collapse into ONE 20s reload (trough 63-74, recovery ≈ +0.25/s,
+        // rep 75-90 at the win, t≈60-71). Upgrading at the 45s surge instead
+        // pays BOTH holes plus the burst's losses — measured rep 46-65 at
+        // the 90s timeout, the win objectives still unmet. Budget 560 = GPU
+        // 300 + tier-2 200 + enough slack that the mid-surge upgrade still
+        // fires after 45s of upkeep (a silently unaffordable upgrade would
+        // turn the ignore-run into an accidental tier-1 win). Two prebuilt
+        // Computes because the burst funnels through them into the GPU: one
+        // Tier-1 Compute made the shared chokepoint, not the GPU, the
+        // dominant loss in EVERY run. Staying on tier 1 survives the primaries
+        // (rep 81-96) — the 10% bad-answer rate is what the bonus star
+        // punishes (tier-1 accrues ~8 by the win, tier-2 0-6, threshold 6;
+        // note the quality tax itself never LOWERS rep — −0.5 against +0.1
+        // per success only halves recovery, see QUALITY_RISK_REPUTATION).
+        budget: 560,
+        durationSec: 90,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -20, z: 0 },
+                { type: "alb", x: -10, z: 0 },
+                { type: "compute", x: 0, z: 6 },
+                { type: "compute", x: 0, z: -6 },
+                { type: "db", x: 10, z: 0 },
+            ],
+            connections: [["internet", 0], [0, 1], [1, 2], [1, 3], [2, 4], [3, 4]],
+        },
+        trafficDistribution: { STATIC: 0, READ: 0.25, WRITE: 0.1, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0.05, INFERENCE: 0.6 },
+        rps: 3.0,
+        burstPattern: { enabled: true, intervalSec: 45, burstSize: 14 },
+        allowedServices: ["gpu"],
+        objectives: {
+            primary: [
+                { id: "serve_80_inference", label: "Serve 80 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 80 },
+                { id: "rep_above_65", label: "Reputation above 65%", check: (s) => s.reputation >= 65 },
+            ],
+            bonus: [
+                { id: "few_bad_answers", label: "Fewer than 6 bad answers", check: (s) => CampaignObjectives.totalBadAnswers(s) < 6 },
+                { id: "rep_above_80", label: "Reputation above 80%", check: (s) => s.reputation >= 80 },
+            ],
+        },
+        failConditions: { repBelow: 30, timeoutSec: 90 },
+        debriefTip: "Model loads are why inference fleets pre-warm: AWS P5 / Inferentia, Azure ND, GCP A3 / TPU — every provider bills the GPU from boot, but your users only see it after the weights are in memory. Ship the bigger model BEFORE the launch, never during it.",
+    },
+
+    {
+        id: 22, chapter: 5,
+        title: "Batch or Bleed",
+        scenario: "Inference is 70% of traffic and finance wants the AI feature to stop bleeding. The board has budget for a second GPU — everyone is asking for it. Look at the batch fill before you spend: a GPU earns only when its batches run full.",
+        learn: "A GPU amortizes a fixed per-batch cost across the requests in the batch, so profit is all utilization: one near-full GPU prints money where two half-fed ones bleed twice the upkeep for the same revenue. The Inference Gateway dispatches to the LEAST-loaded GPU — adding a second one halves the fill of both. Right-size the fleet to the demand.",
+        icon: "📦",
+        diagramHighlights: { 1: "critical" },
+        // Tuned by headless playthrough. INFERENCE arrives at 3.5 × 0.7 =
+        // 2.45/s against a tier-1 GPU's saturated ceiling of ~2.98/s — ONE
+        // GPU runs ~82% full (above the ~50% break-even fill), TWO behind the
+        // gateway's least-loaded dispatch run ~41% each (below it). The whole
+        // stack bleeds ~$0.48/s either way (upkeep + DDoS mitigation exceed
+        // this reward mix), so the profit objective is a floor, level-10
+        // style: one GPU + gateway = $370 of purchases lands at netProfit
+        // −$399..−429 when serve-120 completes (t≈55-60) — inside −$500 —
+        // while the $670 two-GPU build runs out the 150s timeout at
+        // −$900..−916: ~$400 past the floor, and latched, because purchases
+        // never refund into netProfit (demolishing the extra GPU pays back
+        // money, not P&L). The substation is PREBUILT so the second-GPU trap is
+        // actually placeable — the power gate would otherwise refuse it and
+        // defuse the lesson (and level 24 owns the watts).
+        budget: 750,
+        durationSec: 100,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -20, z: 0 },
+                { type: "alb", x: -10, z: 0 },
+                { type: "compute", x: 0, z: 0 },
+                { type: "db", x: 10, z: 0 },
+                { type: "power", x: -10, z: -10 },
+            ],
+            connections: [["internet", 0], [0, 1], [1, 2], [2, 3]],
+        },
+        trafficDistribution: { STATIC: 0, READ: 0.15, WRITE: 0.05, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0.1, INFERENCE: 0.7 },
+        rps: 3.5,
+        allowedServices: ["gpu", "infgw"],
+        objectives: {
+            primary: [
+                { id: "serve_120_inference", label: "Serve 120 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 120 },
+                { id: "profit_floor", label: "Net profit ≥ -$500", check: (s) => CampaignObjectives.netProfit(s) >= -500 },
+            ],
+            bonus: [
+                { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
+                { id: "few_bad_answers", label: "Fewer than 20 bad answers", check: (s) => CampaignObjectives.totalBadAnswers(s) < 20 },
+            ],
+        },
+        failConditions: { repBelow: 40, timeoutSec: 150 },
+        debriefTip: "Batch fill IS the inference business model: vLLM's continuous batching, Triton's dynamic batcher, Bedrock's provisioned throughput — all of them exist to keep expensive accelerators full. An idle GPU costs exactly as much as a busy one.",
+    },
+
+    {
+        id: 23, chapter: 5,
+        title: "The Deadline",
+        scenario: "Users abandon an AI answer that takes longer than a few seconds — a late response is a dead response. Your Inference Gateway enforces that as a hard 6-second SLO, and demand is bursty and already past what one GPU can serve. Expiries are climbing.",
+        learn: "The Inference Gateway holds a backlog with DEADLINE honesty: an entry older than 6s is expired as an SLO breach, never served stale. A queue only buys the time it promised — when demand outruns the fleet, the fix is capacity, not a deeper buffer. And don't delete the gateway: without its backlog, burst overflow dies at the GPU's tiny intake instead.",
+        icon: "⏱️",
+        diagramHighlights: { 4: "critical", 5: "critical" },
+        // Tuned by headless playthrough. Demand: 3.0 base + 15-per-6s bursts
+        // ≈ 5.5 rps, 80% INFERENCE ≈ 4.4/s — permanently ABOVE one tier-1
+        // GPU's ~2.98/s ceiling and comfortably under two (~5.95/s), so the
+        // fix is a second GPU (budget 400 = 300 + slack; the prebuilt
+        // substation raises the cap to 14 kW, exactly two — the power lesson
+        // is deliberately defused here). INFERENCE bypasses the compute tier
+        // (alb → infgw prebuilt), so the bursts land on the deadline queue,
+        // which is the point. Do nothing and the ~1.4/s deficit dies at the
+        // deadline queue: the gateway's warmup grace covers the 12s cold
+        // start, then expiries plus held-20 overflow drops drain rep through
+        // the 30% floor at t≈45-81, 19-32 already on the expiry counter and
+        // climbing ~1/s toward the 30-expiry primary at the loss. Delete
+        // the gateway and direct-wire instead, and the same deficit dies as
+        // NO_ROUTE/QUEUE_FULL at the GPU's 8-slot intake with ZERO expiries
+        // — which is exactly what the failure-rate leg is for: measured
+        // 0.85-0.88 against the 0.12 ceiling, dead in ~22s. The winning
+        // fleet rides the grace through the cold start with ZERO expiries
+        // (both models load together, then the fleet drains the backlog),
+        // wins at t≈67-70 — the 20-expiry bonus star included.
+        budget: 400,
+        durationSec: 100,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -22, z: 0 },
+                { type: "alb", x: -12, z: 0 },
+                { type: "compute", x: -2, z: 8 },
+                { type: "db", x: 10, z: 8 },
+                { type: "infgw", x: -2, z: -6 },
+                { type: "gpu", x: 10, z: -6 },
+                { type: "power", x: -22, z: -10 },
+            ],
+            connections: [["internet", 0], [0, 1], [1, 2], [2, 3], [1, 4], [4, 5]],
+        },
+        trafficDistribution: { STATIC: 0, READ: 0.12, WRITE: 0.03, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0.05, INFERENCE: 0.8 },
+        rps: 3.0,
+        burstPattern: { enabled: true, intervalSec: 6, burstSize: 15 },
+        allowedServices: ["gpu"],
+        objectives: {
+            primary: [
+                { id: "serve_250_inference", label: "Serve 250 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 250 },
+                { id: "fail_under_12_pct", label: "Failure rate under 12%", check: (s) => CampaignObjectives.failureRate(s) < 0.12 },
+                { id: "few_expiries", label: "Fewer than 30 expired requests", check: (s) => CampaignObjectives.expiredRequests(s) < 30 },
+            ],
+            bonus: [
+                { id: "rep_above_75", label: "Reputation above 75%", check: (s) => s.reputation >= 75 },
+                { id: "expiries_under_20", label: "Fewer than 20 expired requests", check: (s) => CampaignObjectives.expiredRequests(s) < 20 },
+            ],
+        },
+        failConditions: { repBelow: 30, timeoutSec: 240 },
+        debriefTip: "Every serious inference router ships a deadline: vLLM's scheduler, Triton's queue policy with max_queue_delay, Bedrock's SLA-backed throughput. Serving a stale generation wastes the GPU twice — once computing it, once apologizing for it.",
+    },
+
+    {
+        id: 24, chapter: 5,
+        title: "The Power Wall",
+        scenario: "The AI feature went viral and inference demand is far past what any single GPU can serve — and still past two. Money is NOT the problem this quarter — the datacenter feed is: the base grid carries 8 kW and every GPU draws 6. Nobody sells you watts on the toolbar until you build them.",
+        learn: "GPU capacity is bought in watts before it is bought in dollars: the grid caps how many GPUs can physically run, and a Substation (+6 kW) is how the cap moves. Three GPUs draw 18 kW — base 8 plus TWO substations. Plan the power BEFORE the fleet: the placement gate is merciless and the demand does not wait.",
+        icon: "🔋",
+        diagramHighlights: { 1: "critical" },
+        // Tuned by headless playthrough (8 runs per direction). INFERENCE
+        // arrives at 8.5 × 0.85 ≈ 7.2/s — nearly double a maxed tier-3
+        // single GPU (~3.8/s) and, crucially, DECISIVELY above two tier-1s
+        // (~5.95/s): the ~1.26/s deficit bleeds −1 rep each, more than the
+        // +0.60/s the served traffic earns back, so the one-substation
+        // two-GPU cheese provably loses (0/16, rep through the 25% floor at
+        // t≈33-71 — chapter5.test pins the inequality). Three tier-1 GPUs
+        // (~8.9/s ceiling, ~81% fill each — above break-even) need 18 kW:
+        // base 8 + TWO substations, the marginal-watts decision the whole
+        // level exists for. Budget 1400 = 2×150 + 3×300 + 70 gateway + $130
+        // slack — money is deliberately NOT the constraint. The gateway's
+        // warmup grace holds the 12s cold-start flood expiry-free (measured
+        // 0; the overflow past its held-20 dies as QUEUE_FULL): rep bottoms
+        // 38-51 and recovers to the 55% objective, serve-300 lands t≈54-58
+        // at rep 57-72 (16/16 wins). Without a substation the grid caps the
+        // fleet at ONE GPU (6 of 8 kW): a ~4.2/s deficit bleeds −1 rep each
+        // through the 25% floor in ~18-20s. The 240s timeout is sized for a
+        // player who detours through tier-3 first (a 30s reload per
+        // experiment, spec §5).
+        budget: 1400,
+        durationSec: 100,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -20, z: 0 },
+                { type: "alb", x: -10, z: 0 },
+                { type: "compute", x: 0, z: 8 },
+                { type: "db", x: 10, z: 8 },
+            ],
+            connections: [["internet", 0], [0, 1], [1, 2], [2, 3]],
+        },
+        trafficDistribution: { STATIC: 0, READ: 0.1, WRITE: 0, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0.05, INFERENCE: 0.85 },
+        rps: 8.5,
+        allowedServices: ["gpu", "power", "infgw"],
+        objectives: {
+            primary: [
+                { id: "serve_300_inference", label: "Serve 300 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 300 },
+                { id: "rep_above_55", label: "Reputation above 55%", check: (s) => s.reputation >= 55 },
+            ],
+            bonus: [
+                { id: "rep_above_65", label: "Reputation above 65%", check: (s) => s.reputation >= 65 },
+                { id: "three_gpus", label: "Run 3 GPUs at once", check: (s) => CampaignObjectives.countServices(s, "gpu") >= 3 },
+            ],
+        },
+        failConditions: { repBelow: 25, timeoutSec: 240 },
+        debriefTip: "Power is the real frontier of the AI buildout: GPU orders wait on substations, not on chips. AWS, Azure and Google all site new AI regions by the megawatt — your cluster's ceiling was set by an electrical engineer years before you clicked deploy.",
+    },
+
+    {
+        id: 25, chapter: 5,
+        title: "The AI Wave",
+        scenario: "Your classic stack is battle-tested — redundant, serverless, boring. Now the AI wave arrives for real: 12% of all traffic is inference on a normal day, hype waves double it without warning, and the board wants the AI feature IN THE BLACK. Add the serving layer and make it pay.",
+        learn: "The capstone: everything Chapter 5 taught, priced honestly, on top of everything the earlier chapters built. GPUs only earn when their batches run full, models reload when you upgrade them, quality is a tier you pay for — and the classic stack still has to absorb DDoS waves and traffic shifts while inference finds its margin.",
+        icon: "🧠",
+        diagramHighlights: { 3: "critical", 4: "critical" },
+        // Tuned by headless playthrough. The classic stack is PREBUILT and
+        // serverless on purpose: netProfit counts purchases, and under
+        // survival-shift economics (a DDoS spike every 45s halves income and
+        // quintuples mitigation for 12s) the whole board only nets
+        // ~+$1.5-2/s — a greenfield build could never buy itself back inside
+        // the timeout, and a Compute tier dies outright to the ×3
+        // traffic-burst event (30 rps vs ~66/s of serverless headroom).
+        // Everything is doubled (ALBs, DBs, storage) because the random
+        // SERVICE_OUTAGE event disables one node for 30s — routing fails
+        // over to the wired twin instead of bleeding −1/s. The player's job
+        // is the AI layer: GPU ($300) + the tier-2 upgrade ($200) in a LULL
+        // — deferring the reload past a live hype wave is the difference
+        // between 12/12 wins (t≈158-280, netProfit 0..+748 at the win) and
+        // an upgrade-into-the-wave rep collapse; the harness scripts exactly
+        // that patience. The serve-150 leg is what makes the no-GPU run
+        // provably lose: the classic traffic shifts carry no INFERENCE
+        // share, so the 12% base bleed pauses during every shift and rep
+        // stabilizes in the 80s-90s — rep alone cannot condemn the run
+        // inside the 450s timeout, zero INFERENCE served can (measured 8/8
+        // timeouts, serve leg unmet, rep 88-97). Bonus: tier-2's 4% risk
+        // accrues 4-9 bad answers by the win against 20; tier-1's 10%
+        // crosses ~28.
+        budget: 900,
+        durationSec: 300,
+        preBuilt: {
+            services: [
+                { type: "waf", x: -26, z: 0 },
+                { type: "alb", x: -18, z: 6 },
+                { type: "alb", x: -18, z: -6 },
+                { type: "serverless", x: -8, z: 6 },
+                { type: "serverless", x: -8, z: -6 },
+                { type: "db", x: 4, z: 10 },
+                { type: "db", x: 12, z: 10 },
+                { type: "s3", x: 4, z: -10 },
+                { type: "s3", x: 12, z: -10 },
+            ],
+            connections: [
+                ["internet", 0], [0, 1], [0, 2],
+                [1, 3], [1, 4], [2, 3], [2, 4],
+                [3, 5], [4, 5], [3, 6], [4, 6],
+                [3, 7], [4, 7], [3, 8], [4, 8],
+            ],
+        },
+        trafficDistribution: { STATIC: 0.2, READ: 0.24, WRITE: 0.14, UPLOAD: 0.06, SEARCH: 0.14, MALICIOUS: 0.1, INFERENCE: 0.12 },
+        rps: 10,
+        enableSurvivalShifts: true,
+        allowedServices: [],
+        objectives: {
+            primary: [
+                { id: "survive_120s", label: "Survive 120 seconds", check: (s) => s.elapsedGameTime >= 120 },
+                { id: "serve_150_inference", label: "Serve 150 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 150 },
+                { id: "rep_above_55", label: "Reputation above 55%", check: (s) => s.reputation >= 55 },
+                { id: "net_profit", label: "Net profit ≥ 0", check: (s) => CampaignObjectives.netProfit(s) >= 0 },
+            ],
+            bonus: [
+                { id: "few_bad_answers", label: "Fewer than 20 bad answers", check: (s) => CampaignObjectives.totalBadAnswers(s) < 20 },
+                { id: "rep_above_75", label: "Reputation above 75%", check: (s) => s.reputation >= 75 },
+            ],
+        },
+        failConditions: { repBelow: 20, moneyBelow: -500, timeoutSec: 450 },
+        debriefTip: "You just ran the 2020s cloud in miniature: classic serving pays the bills, inference is the growth curve, and the margin lives in batch fill. Congratulations, Architect — now go check what your real cloud bill says about GPU utilization.",
+    },
 ];

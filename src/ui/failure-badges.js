@@ -132,23 +132,10 @@ function disposeBadge(badge) {
 
 // ------------------------------------------------------------------- public
 
-// Called from core/actions.js on every failed / throttled request. `reason` is
-// a FAIL_REASONS value (null from a caller that has nothing to teach, e.g. a
-// test double), in which case nothing is drawn. Positions on the service the
-// request was headed to, falling back to the request marker itself for the
-// entry-routing failures that never reached a node.
-function spawnFailureBadge(req, reason) {
-    if (!enabled || !reason) return null;
-
-    const service =
-        req && req.target && req.target.id && req.target.id !== "internet"
-            ? req.target
-            : null;
-    const pos = service?.position || req?.mesh?.position || STATE.internetNode.position;
-    if (!pos) return null;
-
-    const key = (service?.id || "internet") + "|" + reason;
-
+// Shared spawn core: aggregate-or-create one badge for (key, reason) at pos.
+// Both public spawns funnel through here so the aggregation, the cap
+// eviction and the THREE disposal discipline exist exactly once.
+function spawnBadgeAt(key, pos, reason) {
     // Aggregate: the same node failing the same way keeps ONE badge that
     // counts up and lives longer, instead of stacking unreadable duplicates.
     const existing = badges.get(key);
@@ -190,6 +177,36 @@ function spawnFailureBadge(req, reason) {
     badges.set(key, badge);
     paint(badge);
     return badge;
+}
+
+// Called from core/actions.js on every failed / throttled request. `reason` is
+// a FAIL_REASONS value (null from a caller that has nothing to teach, e.g. a
+// test double), in which case nothing is drawn. Positions on the service the
+// request was headed to, falling back to the request marker itself for the
+// entry-routing failures that never reached a node.
+function spawnFailureBadge(req, reason) {
+    if (!enabled || !reason) return null;
+
+    const service =
+        req && req.target && req.target.id && req.target.id !== "internet"
+            ? req.target
+            : null;
+    const pos = service?.position || req?.mesh?.position || STATE.internetNode.position;
+    if (!pos) return null;
+
+    return spawnBadgeAt((service?.id || "internet") + "|" + reason, pos, reason);
+}
+
+// Success-side badge (#87, The AI Wave): a soft label anchored to a SERVICE
+// rather than to a dying request — the GPU's amber "Bad answer" is spawned
+// from tickGpu's completion loop, where the request just FINISHED and paid.
+// This is deliberately a separate spawn path, never routed through
+// failRequest, so a completion-side event stays visible without bending the
+// #156 rule that reasons ride only the fail path. `reason` is a SOFT_BADGES
+// value (or any i18n key in SOFT_REASONS for amber paint).
+function spawnServiceBadge(service, reason) {
+    if (!enabled || !reason || !service?.position) return null;
+    return spawnBadgeAt(service.id + "|" + reason, service.position, reason);
 }
 
 // One per animate() frame, with the same game-scaled dt as metrics and the
@@ -261,6 +278,7 @@ export {
     getFailureBadges,
     setFailureBadgesEnabled,
     spawnFailureBadge,
+    spawnServiceBadge,
     syncFailureBadgeButton,
     tickFailureBadges,
     toggleFailureBadges,

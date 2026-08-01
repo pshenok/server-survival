@@ -11,8 +11,19 @@ import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
 import { Service } from "../entities/Service.js";
 import { flashMoney, removeRequest } from "../core/actions.js";
+// Power-gate refusals (#87) surface as intervention warnings. Runtime-only
+// cycle (topology.js -> events.js -> game.js -> topology.js) — established
+// pattern: hoisted function declarations, dereferenced only at runtime.
+import { addInterventionWarning } from "../core/events.js";
 import { updateRepairCostTable } from "../core/economy.js";
 import { isRoutable } from "./circuit-breaker.js";
+// The power grid (#87): STATE.power is re-derived after every placement and
+// demolition, and the two gates below consult it — see src/sim/power.js.
+import {
+    hasPowerHeadroom,
+    recomputePower,
+    substationRemovalStrandsGpus,
+} from "./power.js";
 // Failure badges (#156) are anchored to services; wiping the board must
 // dispose their textures too — see the note in ui/failure-badges.js.
 import { clearFailureBadges } from "../ui/failure-badges.js";
@@ -37,6 +48,13 @@ function snapToGrid(vec) {
 }
 
 function createService(type, pos) {
+    // Power placement gate (#87): a GPU cannot go on the grid past the cap —
+    // boundary INCLUSIVE, so a draw landing exactly on the cap is legal (see
+    // src/sim/power.js). Checked before any money moves.
+    if (type === "gpu" && !hasPowerHeadroom()) {
+        addInterventionWarning(i18n.t("power_gate_blocked"), "danger", 3000);
+        return;
+    }
     if (STATE.money < CONFIG.services[type].cost) {
         flashMoney();
         return;
@@ -52,6 +70,7 @@ function createService(type, pos) {
             (STATE.finances.expenses.countByService[type] || 0) + 1;
     }
     STATE.services.push(new Service(type, pos));
+    recomputePower();
     STATE.sound.playPlace();
     updateRepairCostTable();
 
@@ -160,6 +179,21 @@ function isValidEdge(t1, t2) {
     // Data Warehouse — analytics sink: fed by a fan-out copy (Pub/Sub), a
     // scheduled batch load (Scheduler), or a Stream. Pure terminal, no outgoing.
     else if ((t1 === "pubsub" || t1 === "scheduler" || t1 === "stream") && t2 === "warehouse") valid = true;
+    // ===== The AI Wave (#87) =====
+    // Reverse-edge guard (#192) covers 2-cycles; longer loops are ruled out
+    // because every edge here forwards strictly "downward": the Inference
+    // Gateway only forwards to GPUs, and a GPU is a pure terminal sink (no
+    // outgoing edges). The Substation ("power") has NO rows at all — it is
+    // unwireable like Monitoring, which also keeps it out of any region
+    // subtree during a region outage.
+    //
+    // Inference Gateway — fed by the front tier and the compute tier, owns
+    // the deadline queue, forwards only to GPUs.
+    else if ((t1 === "alb" || t1 === "apigw" || t1 === "compute" || t1 === "serverless" || t1 === "container") && t2 === "infgw") valid = true;
+    else if (t1 === "infgw" && t2 === "gpu") valid = true;
+    // GPU Cluster — also reachable directly from the compute tier (the
+    // "direct-wired GPU" the gateway's concept card argues against).
+    else if ((t1 === "compute" || t1 === "serverless" || t1 === "container") && t2 === "gpu") valid = true;
 
     return valid;
 }
@@ -286,6 +320,15 @@ function deleteObject(id) {
     const svc = STATE.services.find((s) => s.id === id);
     if (!svc) return;
 
+    // Power deletion gate (#87, anti-cheese): refuse to remove a Substation
+    // whose loss would leave the powered GPUs past the reduced cap —
+    // otherwise buy-place-refund runs an 18 kW fleet on an 8 kW grid forever.
+    // GPU deletion stays free: shedding load is always legal.
+    if (svc.type === "power" && substationRemovalStrandsGpus()) {
+        addInterventionWarning(i18n.t("power_delete_blocked"), "danger", 3000);
+        return;
+    }
+
     STATE.services.forEach(
         (s) => (s.connections = s.connections.filter((c) => c !== id))
     );
@@ -315,12 +358,18 @@ function deleteObject(id) {
         // Stream (#198) holds records in its partitions, not queue/processing —
         // re-home them too or deleting a stream node would strand them.
         ...(svc.partitions ? svc.partitions.flat() : []),
+        // The AI Wave (#87): a GPU's live batch and an Inference Gateway's
+        // deadline entries are the same kind of off-pipeline backlog — a
+        // mid-batch demolish must terminate every member.
+        ...(svc.batch || []),
+        ...(svc.pending ? svc.pending.map((entry) => entry.req) : []),
         ...STATE.requests.filter((r) => r.target === svc),
     ]);
     orphaned.forEach((r) => removeRequest(r));
 
     svc.destroy();
     STATE.services = STATE.services.filter((s) => s.id !== id);
+    recomputePower();
     STATE.money += Math.floor(svc.config.cost / 2);
     STATE.sound.playDelete();
     updateRepairCostTable();
@@ -396,6 +445,7 @@ function findSPOFs(state = STATE) {
 function clearAllServices() {
     STATE.services.forEach((s) => s.destroy());
     STATE.services = [];
+    recomputePower();
     STATE.connections.forEach((c) => {
         connectionGroup.remove(c.mesh);
         c.mesh.geometry.dispose();

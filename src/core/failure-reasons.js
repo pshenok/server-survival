@@ -52,11 +52,31 @@ export const FAIL_REASONS = {
     // here — the region event fails those requests identically either way.
     REGION_DOWN: "fail_region_down",
 
+    // The AI Wave (#87)
+    // SLO_TIMEOUT — an Inference Gateway entry outlived its deadline; the
+    //               answer is worthless now even though the GPUs may be fine.
+    // GPU_ONLY    — non-INFERENCE traffic reached a GPU or Inference Gateway;
+    //               a MALICIOUS one is relabelled to BREACH by failRequest as
+    //               usual (the attack got through, consistent with #156).
+    SLO_TIMEOUT: "fail_slo_timeout",
+    GPU_ONLY: "fail_gpu_only",
+
     // Security / load shedding
     BREACH: "fail_breach",
     THROTTLED: "fail_throttled",
 };
 
+// Success-side soft badges (#87). NOT failure reasons: these ride the same
+// badge renderer but are spawned via spawnServiceBadge() on a COMPLETION-side
+// event — a GPU bad answer still finishes and pays, it just costs a little
+// reputation — so they never touch failRequest and the #156 inertness
+// contract stays intact. Kept in this file so the amber set below can name
+// them without a new import cycle.
+export const SOFT_BADGES = {
+    BAD_ANSWER: "soft_bad_answer",
+};
+
 // Reasons the badge paints amber instead of red: the request was shed on
-// purpose (rate limiting working as designed), not dropped by a broken board.
-export const SOFT_REASONS = new Set([FAIL_REASONS.THROTTLED]);
+// purpose (rate limiting working as designed) or completed with a quality
+// blemish (#87) — not dropped by a broken board.
+export const SOFT_REASONS = new Set([FAIL_REASONS.THROTTLED, SOFT_BADGES.BAD_ANSWER]);

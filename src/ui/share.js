@@ -50,15 +50,30 @@ const round2 = (n) => Math.round(n * 100) / 100;
 
 // The wire format, flat for compactness (50 services must fit in ~2KB):
 //   v — format version, b — sandbox budget,
-//   t — service types in placement order,
+//   t — service types, POWER-FIRST (see below), otherwise placement order,
 //   p — positions as [x0, z0, x1, z1, ...] (y is always 0 on the grid),
 //   c — service→service edges as flat index pairs [from0, to0, from1, ...],
 //   i — internet→service edges as indices into t.
+//
+// POWER-FIRST (#87): the rebuild places services in payload order through
+// createService, whose GPU placement gate needs the substations' capacity
+// already on the board — so substations sort to the front, and EVERY index in
+// c and i is remapped through the permutation (positions p reordered in
+// lockstep). Array.prototype.sort is stable, but the idx tiebreak keeps the
+// non-power relative order explicit rather than implied.
 function encodeArch() {
-    const indexById = new Map(STATE.services.map((s, idx) => [s.id, idx]));
-    const t = STATE.services.map((s) => s.type);
+    const ordered = STATE.services
+        .map((s, idx) => ({ s, idx }))
+        .sort(
+            (a, b) =>
+                (a.s.type === "power" ? 0 : 1) - (b.s.type === "power" ? 0 : 1) ||
+                a.idx - b.idx
+        )
+        .map((e) => e.s);
+    const indexById = new Map(ordered.map((s, idx) => [s.id, idx]));
+    const t = ordered.map((s) => s.type);
     const p = [];
-    for (const s of STATE.services) {
+    for (const s of ordered) {
         p.push(round2(s.position.x), round2(s.position.z));
     }
     const c = [];

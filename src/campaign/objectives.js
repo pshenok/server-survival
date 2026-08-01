@@ -142,9 +142,35 @@ export const CampaignObjectives = {
         return state.resilience?.trips || 0;
     },
 
+    // ---- The AI Wave (#87) ----
+
+    /**
+     * INFERENCE requests that outlived an Inference Gateway's deadline this
+     * session. Reads STATE.inference.expired — the resilience-counter
+     * precedent — because the per-reason failure counters are off the table:
+     * a #156 reason is attribution only, and an objective hanging off one
+     * would make it load-bearing.
+     */
+    expiredRequests(state) {
+        return state.inference?.expired || 0;
+    },
+
     /** Requests that were retried via a healthy peer this session. */
     retriedRequests(state) {
         return state.resilience?.retries || 0;
+    },
+
+    /**
+     * GPU bad answers across the whole fleet this session. A bad answer is a
+     * SUCCESS-side event (#87): the request completed and paid, then the
+     * quality roll dinged reputation — so it lives on the service
+     * (service.badAnswers, bumped in tickGpu), never in the failure counters,
+     * and an objective about model quality has to sum it from the fleet.
+     */
+    totalBadAnswers(state) {
+        return (state.services || [])
+            .filter((s) => s.type === "gpu")
+            .reduce((sum, s) => sum + (s.badAnswers || 0), 0);
     },
 
     // ---- request-type counters (need campaign.tick() to bump these — see Task 5) ----

@@ -55,6 +55,11 @@ import { tickScheduler } from "../sim/scheduler.js";
 // the DLQ drain and Scheduler source, it is ticked directly from update()
 // rather than run through the job-dispatch registry.
 import { tickStream } from "../sim/stream.js";
+// The AI Wave (#87): the GPU batch engine and the Inference Gateway's
+// deadline queue — two more tick-nodes on the stream/dlq/scheduler pattern,
+// ticked from update() and skipped by processQueue().
+import { initGpu, startModelLoad, tickGpu } from "../sim/gpu.js";
+import { initInfgw, tickInfgw } from "../sim/infgw.js";
 import { serviceGroup } from "../../game.js";
 
 export class Service {
@@ -246,6 +251,31 @@ export class Service {
           roughness: 0.4,
         });
         break;
+      // ===== The AI Wave (#87) — distinct shapes =====
+      case "gpu":
+        // Fuchsia server rack, tall and dense — the batch engine.
+        geo = new THREE.BoxGeometry(2.2, 3.2, 2.2);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.gpu,
+          ...materialProps,
+        });
+        break;
+      case "infgw":
+        // Deep-fuchsia six-sided funnel — the dispatcher in front of the racks.
+        geo = new THREE.ConeGeometry(1.3, 2.2, 6);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.infgw,
+          ...materialProps,
+        });
+        break;
+      case "power":
+        // Yellow tapering pylon — the substation feeding the racks.
+        geo = new THREE.CylinderGeometry(0.5, 1.6, 2.8, 4);
+        mat = new THREE.MeshStandardMaterial({
+          color: CONFIG.colors.power,
+          roughness: 0.5,
+        });
+        break;
     }
 
     this.mesh = new THREE.Mesh(geo, mat);
@@ -273,6 +303,9 @@ export class Service {
     else if (type === "stream") this.mesh.position.y += 0.35;
     else if (type === "dns") this.mesh.position.y += 1.5;
     else if (type === "warehouse") this.mesh.position.y += 0.75;
+    else if (type === "gpu") this.mesh.position.y += 1.6;
+    else if (type === "infgw") this.mesh.position.y += 1.1;
+    else if (type === "power") this.mesh.position.y += 1.4;
     else this.mesh.position.y += 1;
 
     this.mesh.castShadow = true;
@@ -304,6 +337,11 @@ export class Service {
     // is invisible, and it keeps isRoutable() free of null checks.
     initBreaker(this);
 
+    // The AI Wave (#87): the GPU's batch/model state (a fresh GPU cold-starts
+    // its model load right here) and the gateway's deadline array.
+    if (type === "gpu") initGpu(this);
+    else if (type === "infgw") initInfgw(this);
+
     // Service health for degradation mechanic
     this.health = 100;
     this.originalColor = mat.color.getHex();
@@ -329,7 +367,7 @@ export class Service {
   }
 
   upgrade() {
-    if (!["compute", "db", "cache", "apigw", "nosql", "search", "replica"].includes(this.type)) return;
+    if (!["compute", "db", "cache", "apigw", "nosql", "search", "replica", "gpu"].includes(this.type)) return;
     const tiers = CONFIG.services[this.type].tiers;
     if (this.tier >= tiers.length) return;
 
@@ -359,6 +397,21 @@ export class Service {
       this.config = { ...this.config, rateLimit: nextTier.rateLimit };
     }
 
+    // GPU tiers are MODEL SIZE (#87): bigger batches, lower bad-answer risk,
+    // a longer model load — and the upgrade RE-TRIGGERS that load, so an
+    // upgrade mid-surge is a self-inflicted outage. The bounded intake
+    // follows the batch size.
+    if (this.type === "gpu") {
+      this.config = {
+        ...this.config,
+        batchSize: nextTier.batchSize,
+        qualityRisk: nextTier.qualityRisk,
+        loadTimeSec: nextTier.loadTimeSec,
+        maxQueueSize: nextTier.batchSize,
+      };
+      startModelLoad(this);
+    }
+
     STATE.sound.playPlace();
 
     // Visuals
@@ -381,6 +434,9 @@ export class Service {
     } else if (this.type === "replica") {
       ringSize = 1.8;
       ringColor = 0xf472b6;
+    } else if (this.type === "gpu") {
+      ringSize = 1.6;
+      ringColor = 0xd946ef;
     } else {
       ringSize = 1.3;
       ringColor = 0xffff00;
@@ -402,6 +458,11 @@ export class Service {
     // pipeline — otherwise records would be pulled out of order into
     // this.processing behind the partition model's back.
     if (this.type === "stream") return;
+    // GPU / Inference Gateway (#87) are tick-nodes the same way: tickGpu
+    // batches straight out of this.queue and tickInfgw owns its deadline
+    // array — feeding this.processing would run their requests through the
+    // per-job pipeline behind the batch/deadline model's back.
+    if (this.type === "gpu" || this.type === "infgw") return;
 
     const effectiveCapacity = this.getEffectiveCapacity();
     while (
@@ -512,6 +573,10 @@ export class Service {
     // its partitions and forwards heads itself, entirely outside the
     // processQueue/processing pipeline (which processQueue skips for a stream).
     else if (this.type === "stream") tickStream(this, dt);
+    // The AI Wave (#87): the GPU batch engine and the gateway's
+    // sweep-then-dispatch deadline queue — same tick-node treatment.
+    else if (this.type === "gpu") tickGpu(this, dt);
+    else if (this.type === "infgw") tickInfgw(this, dt);
 
     if (STATE.upkeepEnabled) {
       const multiplier =
@@ -730,12 +795,16 @@ export class Service {
     //
     // Stream (#198) keeps its backlog in partitions, not in processing/queue,
     // so fold the partition depth in — otherwise a badly backed-up stream would
-    // read as idle and never degrade / colour its load ring.
+    // read as idle and never degrade / colour its load ring. The GPU's batch
+    // and the Inference Gateway's deadline array (#87) are the same kind of
+    // off-pipeline backlog and get the same treatment.
     const partitionDepth = this.partitions
       ? this.partitions.reduce((n, p) => n + p.length, 0)
       : 0;
+    const batchDepth = this.batch ? this.batch.length : 0;
+    const pendingDepth = this.pending ? this.pending.length : 0;
     return (
-      (this.processing.length + this.queue.length + partitionDepth) /
+      (this.processing.length + this.queue.length + partitionDepth + batchDepth + pendingDepth) /
       (this.config.capacity * (this.instances || 1) * 2)
     );
   }
@@ -963,6 +1032,19 @@ export class Service {
               rateLimit: tierData.rateLimit,
             };
           }
+          // GPU (#87): tier fields ride along, and the restored model
+          // RE-loads at the restored tier's duration — a load is a cold boot,
+          // same stance the ASG takes on warming instances above.
+          if (serviceData.type === "gpu" && tierData.batchSize) {
+            service.config = {
+              ...service.config,
+              batchSize: tierData.batchSize,
+              qualityRisk: tierData.qualityRisk,
+              loadTimeSec: tierData.loadTimeSec,
+              maxQueueSize: tierData.batchSize,
+            };
+            startModelLoad(service);
+          }
         }
 
         for (let t = 2; t <= service.tier; t++) {
@@ -985,6 +1067,9 @@ export class Service {
           } else if (service.type === "replica") {
             ringSize = 1.8;
             ringColor = 0xf472b6;
+          } else if (service.type === "gpu") {
+            ringSize = 1.6;
+            ringColor = 0xd946ef;
           } else {
             ringSize = 1.3;
             ringColor = 0xffff00;

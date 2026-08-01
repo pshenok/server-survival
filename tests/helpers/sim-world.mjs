@@ -6,6 +6,7 @@ import { STATE } from "../../src/state.js";
 import { CONFIG } from "../../src/config.js";
 import { createConnection, createService } from "../../src/sim/topology.js";
 import { resetResilience } from "../../src/sim/circuit-breaker.js";
+import { recomputePower } from "../../src/sim/power.js";
 
 export { STATE, CONFIG };
 
@@ -29,7 +30,9 @@ export function resetWorld({ money = 100000, gameMode = "sandbox" } = {}) {
   STATE.reputation = 100;
   STATE.requestsProcessed = 0;
   STATE.score = { total: 0, storage: 0, database: 0, maliciousBlocked: 0 };
-  STATE.failures = { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0 };
+  STATE.failures = { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0, INFERENCE: 0 };
+  STATE.inference = { expired: 0 }; // AI Wave session counter (#87)
+  recomputePower(); // services just emptied — the grid derivation must follow
 
   STATE.gameMode = gameMode; // "sandbox" => no health degradation in update()
   STATE.upkeepEnabled = false;
@@ -66,13 +69,13 @@ export function resetWorld({ money = 100000, gameMode = "sandbox" } = {}) {
         waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0,
         search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0,
         monitor: 0, dlq: 0, pubsub: 0, auth: 0, scheduler: 0, notify: 0,
-        container: 0, stream: 0, dns: 0, warehouse: 0,
+        container: 0, stream: 0, dns: 0, warehouse: 0, gpu: 0, infgw: 0, power: 0,
       },
       countByService: {
         waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0,
         search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0,
         monitor: 0, dlq: 0, pubsub: 0, auth: 0, scheduler: 0, notify: 0,
-        container: 0, stream: 0, dns: 0, warehouse: 0,
+        container: 0, stream: 0, dns: 0, warehouse: 0, gpu: 0, infgw: 0, power: 0,
       },
     },
   };

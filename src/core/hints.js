@@ -85,6 +85,16 @@ function checkSmartHints() {
   } else if (!hasWaf && (STATE.failures.MALICIOUS || 0) > 5 &&
       !STATE.hints.dismissedHints.has("waf")) {
     hint = { key: "hint_no_waf", id: "waf" };
+  } else if (
+    // AI Wave (#87): the staged 3% INFERENCE bleed (see updateInferenceStaging)
+    // exists to arm exactly this hint — a whole traffic class is failing and
+    // only one node type can serve it.
+    !STATE.services.some(s => s.type === "gpu") &&
+    (STATE.trafficDistribution.INFERENCE || 0) > 0 &&
+    (STATE.failures.INFERENCE || 0) > 3 &&
+    !STATE.hints.dismissedHints.has("gpu")
+  ) {
+    hint = { key: "hint_gpu_inference", id: "gpu" };
   } else if (!hasCache && STATE.trafficDistribution.READ + STATE.trafficDistribution.STATIC + STATE.trafficDistribution.SEARCH > 0.5 &&
       !STATE.hints.dismissedHints.has("cache")) {
     hint = { key: "hint_no_cache", id: "cache" };

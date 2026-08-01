@@ -23,6 +23,7 @@ import {
     endRandomEvent,
     triggerRandomEvent,
     updateActiveEventTimer,
+    updateInferenceStaging,
     updateMaliciousSpike,
     updateRandomEvents,
     updateTrafficShift,
@@ -37,6 +38,7 @@ import {
 import { checkSmartHints } from "./src/core/hints.js";
 import { upkeepInstanceFactor } from "./src/sim/autoscaling.js";
 import { resetResilience } from "./src/sim/circuit-breaker.js";
+import { recomputePower } from "./src/sim/power.js";
 import { metricsTick, resetMetrics } from "./src/core/metrics.js";
 import { renderMetricsPanel } from "./src/ui/metrics-panel.js";
 // Educational failure badges (#156): the floating "why did this fail" labels.
@@ -321,7 +323,7 @@ function resetGame(mode = "survival") {
     if (mode === "campaign") {
         STATE.money = 0; // will be set by startCampaignLevel from level.budget
         STATE.upkeepEnabled = true;
-        STATE.trafficDistribution = { STATIC: 0.3, READ: 0.2, WRITE: 0.15, UPLOAD: 0.05, SEARCH: 0.1, MALICIOUS: 0.2 };
+        STATE.trafficDistribution = { STATIC: 0.3, READ: 0.2, WRITE: 0.15, UPLOAD: 0.05, SEARCH: 0.1, MALICIOUS: 0.2, INFERENCE: 0 };
         STATE.currentRPS = 1; // overridden by level.rps
     } else if (mode === "sandbox") {
         STATE.sandboxBudget = CONFIG.sandbox.defaultBudget;
@@ -334,6 +336,7 @@ function resetGame(mode = "survival") {
             UPLOAD: CONFIG.sandbox.trafficDistribution.UPLOAD / 100,
             SEARCH: CONFIG.sandbox.trafficDistribution.SEARCH / 100,
             MALICIOUS: CONFIG.sandbox.trafficDistribution.MALICIOUS / 100,
+            INFERENCE: CONFIG.sandbox.trafficDistribution.INFERENCE / 100,
         };
         STATE.burstCount = CONFIG.sandbox.defaultBurstCount;
         STATE.currentRPS = CONFIG.sandbox.defaultRPS;
@@ -357,7 +360,12 @@ function resetGame(mode = "survival") {
         UPLOAD: 0,
         SEARCH: 0,
         MALICIOUS: 0,
+        INFERENCE: 0,
     };
+    // AI Wave session counter (#87) + the power grid derivation over the
+    // (now empty) service list.
+    STATE.inference = { expired: 0 };
+    recomputePower();
     STATE.isRunning = true;
     STATE.lastTime = performance.now();
     STATE.timeScale = 0;
@@ -437,6 +445,9 @@ function resetGame(mode = "survival") {
                 stream: 0,
                 dns: 0,
                 warehouse: 0,
+                gpu: 0,
+                infgw: 0,
+                power: 0,
             },
             countByService: {
                 // Count of each service purchased
@@ -463,6 +474,9 @@ function resetGame(mode = "survival") {
                 stream: 0,
                 dns: 0,
                 warehouse: 0,
+                gpu: 0,
+                infgw: 0,
+                power: 0,
             },
         },
     };
@@ -544,6 +558,7 @@ function resetGame(mode = "survival") {
             syncInput("upload", STATE.trafficDistribution.UPLOAD * 100);
             syncInput("search", STATE.trafficDistribution.SEARCH * 100);
             syncInput("malicious", STATE.trafficDistribution.MALICIOUS * 100);
+            syncInput("inference", (STATE.trafficDistribution.INFERENCE || 0) * 100);
             syncInput("burst", STATE.burstCount);
             // Reset upkeep toggle button
             const upkeepBtn = document.getElementById("upkeep-toggle");
@@ -846,6 +861,7 @@ let tooltipRefreshAcc = 0;
             STATE.failures.WRITE=0;
             STATE.failures.UPLOAD=0;
             STATE.failures.SEARCH=0;
+            STATE.failures.INFERENCE=0;
             // when click on clear button, update ui immediately
             document.getElementById('failures-panel').classList.add('hidden');
             document.getElementById('failures-total').textContent = `0 ${i18n.t('total')}`;
@@ -976,6 +992,10 @@ function animate(time) {
 
     updateMaliciousSpike(dt);
 
+    // AI Wave (#87): stage the survival INFERENCE base share (0 → 3% → 10%).
+    // Pure re-derivation over game time + GPU ownership, so no dt needed.
+    updateInferenceStaging();
+
     // Intervention mechanics updates
     updateTrafficShift(dt);
     updateRandomEvents(dt);
@@ -1077,6 +1097,34 @@ function animate(time) {
         if (maliciousEl && !STATE.maliciousSpikeActive)
             maliciousEl.textContent =
                 Math.round((STATE.trafficDistribution.MALICIOUS || 0) * 100) + "%";
+        const inferenceEl = document.getElementById("mix-inference");
+        if (inferenceEl)
+            inferenceEl.textContent =
+                Math.round((STATE.trafficDistribution.INFERENCE || 0) * 100) + "%";
+    }
+
+    // Power HUD badge (#87): kW used/cap, shown only once a GPU or a
+    // Substation exists — before the AI wave touches a board, the grid is
+    // invisible.
+    const powerRow = document.getElementById("power-row");
+    if (powerRow) {
+        const powered = STATE.services.some(
+            (s) => s.type === "gpu" || s.type === "power"
+        );
+        powerRow.classList.toggle("hidden", !powered);
+        if (powered) {
+            const powerEl = document.getElementById("power-display");
+            if (powerEl) {
+                powerEl.textContent = i18n.t("power_hud", {
+                    used: STATE.power.usedKw,
+                    cap: STATE.power.capKw,
+                });
+                powerEl.className =
+                    STATE.power.usedKw >= STATE.power.capKw
+                        ? "text-red-400 font-mono"
+                        : "text-yellow-300 font-mono";
+            }
+        }
     }
 
     STATE.reputation = Math.min(100, STATE.reputation);
@@ -1155,6 +1203,7 @@ function animate(time) {
         document.getElementById("fail-write").textContent = STATE.failures.WRITE;
         document.getElementById("fail-upload").textContent = STATE.failures.UPLOAD;
         document.getElementById("fail-search").textContent = STATE.failures.SEARCH;
+        document.getElementById("fail-inference").textContent = STATE.failures.INFERENCE;
 
         // Update reputation loss (malicious = -8, others = -2)
         document.getElementById("fail-malicious-rep").textContent =
@@ -1169,6 +1218,8 @@ function animate(time) {
             STATE.failures.UPLOAD * Math.abs(points.FAIL_REPUTATION);
         document.getElementById("fail-search-rep").textContent =
             STATE.failures.SEARCH * Math.abs(points.FAIL_REPUTATION);
+        document.getElementById("fail-inference-rep").textContent =
+            STATE.failures.INFERENCE * Math.abs(points.FAIL_REPUTATION);
 
         // Hide rows with 0 failures
         document.getElementById("fail-row-malicious").style.display =
@@ -1183,6 +1234,8 @@ function animate(time) {
             STATE.failures.UPLOAD > 0 ? "" : "none";
         document.getElementById("fail-row-search").style.display =
             STATE.failures.SEARCH > 0 ? "" : "none";
+        document.getElementById("fail-row-inference").style.display =
+            STATE.failures.INFERENCE > 0 ? "" : "none";
     }
 
     if (STATE.internetNode.ring) {

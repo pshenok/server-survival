@@ -32,6 +32,7 @@
 // Service.processQueue() (requests are blocked on intake, before they ever
 // become processing jobs), outside the job-dispatch chain this registry owns.
 
+import { TRAFFIC_TYPES } from "../../config.js";
 import { STATE } from "../../state.js";
 import { failOrPark } from "../../core/actions.js";
 import { FAIL_REASONS } from "../../core/failure-reasons.js";
@@ -52,16 +53,38 @@ import { process as serverless } from "./serverless.js";
 import { process as sqs } from "./sqs.js";
 import { process as warehouse } from "./warehouse.js";
 
-// Shared fallback: round-robin the job to any live connected service.
-// Logic lifted unchanged from the final `else` of the old if-chain, except
-// that "live" now means isRoutable (#196): offline OR breaker-open, and a
-// Dead-Letter Queue (#197) is never a normal forward target — it is a failure
-// SINK reached only via failOrPark, so it is excluded here; with no other
-// candidate the request falls through to failOrPark and can still be parked.
-export function genericForward(service, job) {
-  const candidates = service.connections
+// Forward-candidate filter, shared by genericForward and the apigw handler
+// (whose forward block is the same exclusion filter). "Live" means isRoutable
+// (#196): offline OR breaker-open are skipped, and a Dead-Letter Queue (#197)
+// is never a normal forward target — it is a failure SINK reached only via
+// failOrPark, so it is excluded here; with no other candidate the request
+// falls through to failOrPark and can still be parked.
+//
+// The AI Wave (#87) makes this minimally TYPE-aware: for INFERENCE it prefers
+// Inference Gateway targets, then direct GPUs, then the generic set (a
+// compute downstream still knows the way); for everything else infgw/gpu join
+// the dlq in the exclusion — they are single-type nodes, and round-robining a
+// READ onto one would just teach "fail_gpu_only" the hard way.
+export function forwardCandidates(service, req) {
+  const live = service.connections
     .map((id) => STATE.services.find((s) => s.id === id))
     .filter((s) => s && s.type !== "dlq" && isRoutable(s));
+
+  if (req.type === TRAFFIC_TYPES.INFERENCE) {
+    const infgws = live.filter((s) => s.type === "infgw");
+    if (infgws.length > 0) return infgws;
+    const gpus = live.filter((s) => s.type === "gpu");
+    if (gpus.length > 0) return gpus;
+    return live;
+  }
+  return live.filter((s) => s.type !== "infgw" && s.type !== "gpu");
+}
+
+// Shared fallback: round-robin the job to any live connected service.
+// Logic lifted unchanged from the final `else` of the old if-chain; the
+// candidate set is forwardCandidates() above.
+export function genericForward(service, job) {
+  const candidates = forwardCandidates(service, job.req);
 
   if (candidates.length > 0) {
     const target = candidates[service.rrIndex % candidates.length];
