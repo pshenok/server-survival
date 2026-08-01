@@ -8,6 +8,8 @@ Learn cloud by playing:
 
 [![PLAY NOW](https://img.shields.io/badge/PLAY_NOW-Server_Survival-2ea44f?style=for-the-badge)](https://pshenok.github.io/server-survival/)
 
+> 🏭 **New: [Datacenter Survival](https://github.com/pshenok/datacenter-survival)** — the sister game. This one teaches the *logical* layer of the cloud; that one teaches the *physical* layer it runs on: power chains, heat, cooling, PUE. [Play it here](https://pshenok.github.io/datacenter-survival/).
+
 ## Game Modes
 
 - **Survival** — the core experience: survive as long as possible against escalating traffic, DDoS spikes, random events, and service degradation.
