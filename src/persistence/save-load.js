@@ -7,6 +7,7 @@ import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
 import { updateScoreUI } from "../core/actions.js";
 import { updateRepairCostTable } from "../core/economy.js";
+import { recomputePower } from "../sim/power.js";
 import { createConnection, restoreService } from "../sim/topology.js";
 // Runtime-only cycle (game.js ⇄ save-load.js) — established pattern: these
 // are hoisted function declarations / top-level consts in game.js, only
@@ -233,7 +234,10 @@ function loadGameState(saveData = null) {
             UPLOAD: 0.05,
             SEARCH: 0.1,
             MALICIOUS: 0.2,
+            INFERENCE: 0,
         };
+        // AI Wave session counter (#87). Old saves lack the field → fresh 0.
+        STATE.inference = { expired: Number(saveData.inference?.expired) || 0 };
         STATE.burstCount = saveData.burstCount || 10;
         STATE.gameStarted = saveData.gameStarted || true;
         STATE.previousTimeScale = saveData.previousTimeScale || 1;
@@ -280,8 +284,8 @@ function loadGameState(saveData = null) {
                 autoRepair: 0,
                 mitigation: 0,
                 breach: 0,
-                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0, monitor: 0, dlq: 0, pubsub: 0, auth: 0, scheduler: 0, notify: 0, container: 0, stream: 0, dns: 0, warehouse: 0 },
-                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0, monitor: 0, dlq: 0, pubsub: 0, auth: 0, scheduler: 0, notify: 0, container: 0, stream: 0, dns: 0, warehouse: 0 },
+                byService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0, monitor: 0, dlq: 0, pubsub: 0, auth: 0, scheduler: 0, notify: 0, container: 0, stream: 0, dns: 0, warehouse: 0, gpu: 0, infgw: 0, power: 0 },
+                countByService: { waf: 0, alb: 0, compute: 0, db: 0, s3: 0, cache: 0, sqs: 0, search: 0, replica: 0, apigw: 0, nosql: 0, cdn: 0, serverless: 0, monitor: 0, dlq: 0, pubsub: 0, auth: 0, scheduler: 0, notify: 0, container: 0, stream: 0, dns: 0, warehouse: 0, gpu: 0, infgw: 0, power: 0 },
             },
         };
         STATE.finances = saveData.finances
@@ -292,6 +296,9 @@ function loadGameState(saveData = null) {
             : defaultFinances;
 
         restoreServices(saveData.services);
+        // Power grid (#87): re-derive after the restore loop — spec-listed
+        // call site (restoreServices does it too; the recompute is idempotent).
+        recomputePower();
 
         const autoRepairBtn = document.getElementById("auto-repair-toggle");
         if (autoRepairBtn) {
@@ -338,6 +345,7 @@ function loadGameState(saveData = null) {
             syncInput("upload", (STATE.trafficDistribution.UPLOAD || 0) * 100);
             syncInput("search", (STATE.trafficDistribution.SEARCH || 0) * 100);
             syncInput("malicious", (STATE.trafficDistribution.MALICIOUS || 0) * 100);
+            syncInput("inference", (STATE.trafficDistribution.INFERENCE || 0) * 100);
             syncInput("burst", STATE.burstCount);
             const upkeepBtn = document.getElementById("upkeep-toggle");
             if (upkeepBtn) {
@@ -393,6 +401,9 @@ function restoreServices(savedServices) {
 
         restoreService(serviceData, position);
     });
+    // Power grid (#87): the restore path constructs services outside
+    // createService, so the derivation has to be re-run here.
+    recomputePower();
 }
 
 function restoreConnections(savedConnections, internetConnections) {

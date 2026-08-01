@@ -61,6 +61,11 @@ function initBreaker(service) {
 // instead of queueing on a node that is already drowning.
 function isRoutable(service) {
     if (!service || service.isDisabled) return false;
+    // A GPU loading its model (#87) is unroutable — the one line the AI Wave
+    // adds here. modelLoading is a DEDICATED flag, never isDisabled: the
+    // event system re-enables disabled services, and using it would let a
+    // pause cancel a model load.
+    if (service.modelLoading) return false;
     if (service.breakerState === "open") return false;
     if (service.breakerState === "half-open") return service.breakerProbes > 0;
     return true;

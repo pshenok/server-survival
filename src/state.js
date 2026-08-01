@@ -18,7 +18,8 @@ export const STATE = {
         WRITE: 0,
         UPLOAD: 0,
         SEARCH: 0,
-        MALICIOUS: 0
+        MALICIOUS: 0,
+        INFERENCE: 0
     },
 
     activeTool: 'select',
@@ -105,6 +106,22 @@ export const STATE = {
         trips: 0,       // circuit breakers opened this session
         retries: 0,     // requests retried via a healthy peer
         outages: 0,     // SERVICE_OUTAGE events (random or campaign-forced)
+    },
+
+    // AI Wave session counters (#87), the resilience-counter precedent:
+    // reset by resetGame(), bumped by the Inference Gateway's deadline sweep,
+    // read by CampaignObjectives.expiredRequests().
+    inference: {
+        expired: 0,     // SLO-expired requests at Inference Gateways
+    },
+
+    // The power grid (#87). ALWAYS a derivation over live services — never
+    // mutated directly; recomputePower() in src/sim/power.js is the single
+    // writer (8 = CONFIG.power.baseCapKw, restated here only so the field
+    // exists before the first recompute).
+    power: {
+        usedKw: 0,
+        capKw: 8,
     },
 
     // Campaign mode runtime state. Populated by CampaignController when active.

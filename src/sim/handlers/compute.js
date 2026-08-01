@@ -8,6 +8,7 @@
 // Runtime-only cycle (compute.js ⇄ serverless.js) — established pattern:
 // hoisted function declarations, dereferenced long after both evaluate.
 
+import { TRAFFIC_TYPES } from "../../config.js";
 import { failOrPark } from "../../core/actions.js";
 import { FAIL_REASONS } from "../../core/failure-reasons.js";
 import { chargeServerlessInvocation } from "./serverless.js";
@@ -18,6 +19,20 @@ export function process(service, job) {
   const chargePerRequest = () => chargeServerlessInvocation(service);
 
   const destType = job.req.destination;
+
+  // The AI Wave (#87): the explicit INFERENCE branch. Prefer the Inference
+  // Gateway (it buffers warming/full GPUs with deadline honesty), fall back
+  // to a directly-wired GPU, else there is genuinely no route — the cache /
+  // db decision tree below has nothing to say about generation traffic.
+  if (job.req.type === TRAFFIC_TYPES.INFERENCE) {
+    const infgwTarget = service.findConnectedService("infgw");
+    if (infgwTarget) { chargePerRequest(); job.req.flyTo(infgwTarget); return "next"; }
+    const gpuTarget = service.findConnectedService("gpu");
+    if (gpuTarget) { chargePerRequest(); job.req.flyTo(gpuTarget); return "next"; }
+    chargePerRequest();
+    failOrPark(job.req, service, FAIL_REASONS.NO_ROUTE);
+    return "next";
+  }
 
   if (destType === "blocked") {
     chargePerRequest();

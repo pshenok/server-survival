@@ -71,7 +71,8 @@ describe("completeness invariant", () => {
 describe("rendering", () => {
     it("renders only the active category's buttons", () => {
         setToolbarCategory("compute");
-        expect(buttonIds()).toEqual(["tool-lambda", "tool-serverless", "tool-container"]);
+        // gpu + infgw joined Compute with the AI Wave (#87), 3 → 5.
+        expect(buttonIds()).toEqual(["tool-lambda", "tool-serverless", "tool-container", "tool-gpu", "tool-infgw"]);
         expect(document.getElementById("tool-db")).toBeNull();
     });
 

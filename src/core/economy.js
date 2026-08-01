@@ -83,6 +83,12 @@ function updateFinancesDisplay() {
             color: "text-cyan-400",
             rate: CONFIG.trafficTypes.SEARCH.reward,
         },
+        {
+            key: "INFERENCE",
+            label: i18n.t('income_inference'),
+            color: "text-fuchsia-400",
+            rate: CONFIG.trafficTypes.INFERENCE.reward,
+        },
         { key: "blocked", label: i18n.t('income_blocked'), color: "text-red-400", rate: 0.5 },
     ];
 
@@ -202,6 +208,28 @@ function updateFinancesDisplay() {
             label: i18n.t('monitor'),
             color: "text-teal-400",
             cost: CONFIG.services.monitor.cost,
+        },
+        // The AI Wave (#87): with an inference-heavy economy the GPU's very
+        // high upkeep is the whole lesson — it must show up right here.
+        // (This list still omits the wave-2 nodes dlq…warehouse: a
+        // pre-existing gap, deliberately not widened by the new nodes.)
+        {
+            key: "gpu",
+            label: i18n.t('gpu'),
+            color: "text-fuchsia-400",
+            cost: CONFIG.services.gpu.cost,
+        },
+        {
+            key: "infgw",
+            label: i18n.t('infgw'),
+            color: "text-pink-400",
+            cost: CONFIG.services.infgw.cost,
+        },
+        {
+            key: "power",
+            label: i18n.t('power'),
+            color: "text-yellow-400",
+            cost: CONFIG.services.power.cost,
         },
     ];
 

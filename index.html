@@ -36,6 +36,17 @@
           <span data-i18n="elapsed_time" class="text-gray-500">Elapsed Time</span>
           <span id="elapsed-time" class="text-gray-400 font-mono">00:00</span>
         </div>
+        <!-- Power grid (#87): shown only once a GPU or Substation exists -->
+        <div id="power-row" class="flex justify-between items-center text-xs hidden">
+          <span class="flex items-center gap-1 text-gray-500">
+            <svg viewBox="0 0 16 16" class="w-3 h-3 text-yellow-400" fill="none" stroke="currentColor"
+              stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 1.5 3.5 9h3L7 14.5 12.5 7h-3Z" />
+            </svg>
+            <span data-i18n="power_label">Power</span>
+          </span>
+          <span id="power-display" class="text-yellow-300 font-mono">0/8 kW</span>
+        </div>
         <div class="flex justify-between items-center">
           <span data-i18n="reputation" class="text-gray-400 text-sm">REPUTATION</span>
           <div class="flex items-center gap-2">
@@ -65,6 +76,7 @@
             <span class="text-orange-400" id="mix-write" data-i18n-title="traffic_write" title="Write POST">WR</span>
             <span class="text-yellow-400" id="mix-upload" data-i18n-title="traffic_upload" title="Upload">UP</span>
             <span class="text-cyan-400" id="mix-search" data-i18n-title="traffic_search" title="Search">SR</span>
+            <span class="text-fuchsia-400" id="mix-inference" data-i18n-title="traffic_inference" title="Inference">AI</span>
             <span class="text-red-400" id="mix-malicious" data-i18n-title="traffic_malicious" title="Malicious">⚠️</span>
           </div>
         </div>
@@ -120,6 +132,13 @@
                 <td data-i18n="fail_search">SR Search</td>
                 <td class="text-right" id="fail-search">0</td>
                 <td class="text-right text-red-400" id="fail-search-rep">
+                  0
+                </td>
+              </tr>
+              <tr class="text-fuchsia-400" id="fail-row-inference">
+                <td data-i18n="fail_inference">AI Inference</td>
+                <td class="text-right" id="fail-inference">0</td>
+                <td class="text-right text-red-400" id="fail-inference-rep">
                   0
                 </td>
               </tr>
@@ -437,6 +456,16 @@
             onchange="setTrafficMix('SEARCH',this.value)"
             class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-cyan-400 text-xs text-center font-mono" />
         </div>
+        <!-- INFERENCE (#87) -->
+        <div class="flex items-center gap-2 mb-1">
+          <span data-i18n="traffic_inference" class="text-xs text-fuchsia-400 truncate max-w-[6rem]">INFERENCE</span>
+          <input type="range" id="inference-slider" min="0" max="100" value="0"
+            oninput="setTrafficMix('INFERENCE',this.value)"
+            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-fuchsia-500" />
+          <input type="number" id="inference-input" value="0" min="0" max="100"
+            onchange="setTrafficMix('INFERENCE',this.value)"
+            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-fuchsia-400 text-xs text-center font-mono" />
+        </div>
         <!-- MALICIOUS -->
         <div class="flex items-center gap-2">
           <span data-i18n="traffic_attack" class="text-xs text-red-400 truncate max-w-[6rem]">ATTACK</span>
@@ -745,7 +774,7 @@
         <button onclick="openCampaignSelect()"
           class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-yellow-400/50 flex justify-between items-center">
           <span data-i18n="campaign_mode">Campaign</span>
-          <span id="campaign-progress-label" class="text-xs opacity-75 font-normal">0/14 ★0</span>
+          <span id="campaign-progress-label" class="text-xs opacity-75 font-normal">0/25 ★0</span>
         </button>
 
         <button onclick="startSandbox()"
@@ -1364,6 +1393,37 @@
               An analytics store with the inverse profile of a database: it completes WRITE and UPLOAD traffic — slowly and cheaply at high volume — but fails any realtime READ or SEARCH that reaches it, because a warehouse is OLAP, not OLTP. You load it, you do not serve user reads from it. Feed it an analytics copy from a Pub/Sub fan-out, a scheduled batch load from the Scheduler, or a Stream. That read-rejection plus cheap-high-capacity is the OLTP-vs-OLAP lesson. Real-world equivalents: Amazon Redshift · Azure Synapse · Google BigQuery.
             </p>
             <p data-i18n="warehouse_flow" class="text-xs text-gray-500 mt-1">Flow: Pub/Sub / Scheduler / Stream → Data Warehouse (analytics terminal)</p>
+          </div>
+          <!-- The AI Wave (#87) -->
+          <div class="bg-gray-800/50 p-3 rounded border border-fuchsia-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="gpu_full" class="text-fuchsia-400">GPU Cluster</strong>
+              <span class="text-green-400 font-mono text-sm">$300</span>
+            </div>
+            <p data-i18n="gpu_desc_long" class="text-sm text-gray-400 mt-1">
+              The only node that batches: INFERENCE requests accumulate (up to the batch size, or 1.5s from the first arrival) and run as ONE job, so a full batch amortizes the fixed cost and a lonely request pays nearly full price — utilization IS the economics. Tiers are model size: bigger batches AND a lower bad-answer risk (10%/4%/1%, printed on the upgrade card), paid for with a longer model load (12/20/30s) during which the node serves nothing — upgrade in a lull, never mid-surge. It draws 6 kW from the power grid. Real-world equivalents: AWS P5/Inferentia · Azure ND-series · GCP A3/TPU.
+            </p>
+            <p data-i18n="gpu_flow" class="text-xs text-gray-500 mt-1">Flow: Compute / Serverless / Cluster / Inference GW → GPU (terminal; batches INFERENCE only)</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-fuchsia-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="infgw_full" class="text-fuchsia-500">Inference Gateway</strong>
+              <span class="text-green-400 font-mono text-sm">$70</span>
+            </div>
+            <p data-i18n="infgw_desc_long" class="text-sm text-gray-400 mt-1">
+              The honest pitch: a direct-wired GPU has only its tiny bounded intake — during a model load or an overload, requests die fast. The gateway holds up to 20 requests with deadline honesty: anything older than 6 seconds is failed as an SLO breach (a stale answer is worthless), everything else is dispatched to the least-loaded GPU with room in its batch. Its value is measured in reputation saved during warmup and burst windows, not in revenue. Real-world equivalents: vLLM router · NVIDIA Triton · Amazon Bedrock.
+            </p>
+            <p data-i18n="infgw_flow" class="text-xs text-gray-500 mt-1">Flow: LB / API GW / Compute tier → Inference GW → GPU (deadline queue, INFERENCE only)</p>
+          </div>
+          <div class="bg-gray-800/50 p-3 rounded border border-yellow-900/50">
+            <div class="flex justify-between items-center">
+              <strong data-i18n="power_full" class="text-yellow-400">Substation</strong>
+              <span class="text-green-400 font-mono text-sm">$150</span>
+            </div>
+            <p data-i18n="power_desc_long" class="text-sm text-gray-400 mt-1">
+              Not a traffic node — it is never wired to anything. The base grid supplies 8 kW, every GPU draws 6, and a GPU cannot be placed past the cap: each substation adds +6 kW, so a three-GPU fleet needs two of them. Watts are a standing marginal cost of AI capacity, not a one-time unlock — and a substation whose loss would strand powered GPUs refuses to be demolished until the GPUs go first. Real-world equivalents: datacenter power provisioning · rack power budgets · utility interconnect queues.
+            </p>
+            <p data-i18n="power_flow" class="text-xs text-gray-500 mt-1">Flow: standalone — no connections; +6 kW grid capacity per substation</p>
           </div>
         </div>
       </div>

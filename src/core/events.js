@@ -99,6 +99,9 @@ function startMaliciousSpike() {
             WRITE: (STATE.normalTrafficDist.WRITE / otherTotal) * remaining,
             UPLOAD: (STATE.normalTrafficDist.UPLOAD / otherTotal) * remaining,
             SEARCH: (STATE.normalTrafficDist.SEARCH / otherTotal) * remaining,
+            // INFERENCE (#87) is one of the classic shares during a spike —
+            // scaled down like the rest, restored with the rest.
+            INFERENCE: ((STATE.normalTrafficDist.INFERENCE || 0) / otherTotal) * remaining,
             MALICIOUS: maliciousPct,
         };
     }
@@ -226,7 +229,16 @@ function startTrafficShift() {
     if (!STATE.intervention || STATE.maliciousSpikeActive) return;
 
     const config = CONFIG.survival.trafficShift;
-    const shifts = config.shifts;
+    // AI hype gating (#87): a shift may declare requiresService, and it joins
+    // the rotation only while such a service exists — evaluated HERE, at
+    // shift-SELECTION time only, so losing the last GPU mid-shift does not
+    // cancel a hype wave already running.
+    const shifts = config.shifts.filter(
+        (sh) =>
+            !sh.requiresService ||
+            STATE.services.some((s) => s.type === sh.requiresService)
+    );
+    if (shifts.length === 0) return;
 
     // Pick a random shift
     const shift = shifts[Math.floor(Math.random() * shifts.length)];
@@ -268,6 +280,61 @@ function endTrafficShift() {
     }
 
     STATE.intervention.currentShift = null;
+}
+
+// ==================== INFERENCE SURVIVAL STAGING (#87) ====================
+//
+// The AI wave arrives in stages, with no chicken-and-egg deadlock and no dead
+// GPU: survival starts at a 0 base INFERENCE share; after 300s of game time
+// the base moves to 3% — a legible slow bleed (−1 rep per unserved request)
+// that arms the "AI demand is emerging" smart hint; and once the player owns
+// ≥1 GPU it rebalances to 10%, taken proportionally from the other shares, so
+// the GPU has steady food between hype waves.
+//
+// The rebalance targets the BASE distribution — whichever object an active
+// malicious spike or traffic shift is going to restore — never a shift's own
+// mix, so a staging step taken mid-shift survives the restore instead of
+// being overwritten by it.
+
+const INFERENCE_STAGE_AT_SEC = 300; // the 3% bleed begins here
+const INFERENCE_BASE_SHARE = 0.03;
+const INFERENCE_FED_SHARE = 0.1; // once a GPU exists
+
+function updateInferenceStaging() {
+    if (STATE.gameMode !== "survival") return;
+
+    const hasGpu = STATE.services.some((s) => s.type === "gpu");
+    const target = hasGpu
+        ? INFERENCE_FED_SHARE
+        : STATE.elapsedGameTime >= INFERENCE_STAGE_AT_SEC
+            ? INFERENCE_BASE_SHARE
+            : 0;
+
+    const base =
+        STATE.maliciousSpikeActive && STATE.normalTrafficDist
+            ? STATE.normalTrafficDist
+            : STATE.intervention?.trafficShiftActive &&
+                STATE.intervention.originalTrafficDist
+                ? STATE.intervention.originalTrafficDist
+                : STATE.trafficDistribution;
+
+    const current = base.INFERENCE || 0;
+    if (Math.abs(current - target) < 1e-9) return;
+
+    // Take (or give back) the delta proportionally across the other shares.
+    let othersTotal = 0;
+    for (const key of Object.keys(base)) {
+        if (key !== "INFERENCE") othersTotal += base[key] || 0;
+    }
+    if (othersTotal <= 0) {
+        base.INFERENCE = target;
+        return;
+    }
+    const scale = (1 - target) / othersTotal;
+    for (const key of Object.keys(base)) {
+        if (key !== "INFERENCE") base[key] = (base[key] || 0) * scale;
+    }
+    base.INFERENCE = target;
 }
 
 function updateRandomEvents(dt) {
@@ -619,6 +686,13 @@ function triggerRegionOutage(durationSec) {
         const caught = [
             ...s.queue.splice(0),
             ...s.processing.splice(0).map((job) => job.req),
+            // The AI Wave (#87): a GPU's live batch and an Inference
+            // Gateway's deadline entries die with their region too. Unlike a
+            // stream (whose heads fail on their own once every consumer goes
+            // dark), a mid-run batch would otherwise COMPLETE inside the dark
+            // region — so these must be swept here explicitly.
+            ...(s.batch ? s.batch.splice(0) : []),
+            ...(s.pending ? s.pending.splice(0).map((entry) => entry.req) : []),
         ];
         for (const req of caught) terminateInDeadRegion(req);
     }
@@ -694,6 +768,7 @@ export {
     triggerRandomEvent,
     triggerRegionOutage,
     updateActiveEventTimer,
+    updateInferenceStaging,
     updateMaliciousSpike,
     updateRandomEvents,
     updateRegionOutage,

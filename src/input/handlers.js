@@ -333,7 +333,7 @@ container.addEventListener("mousedown", (e) => {
             new Audio("assets/sounds/click-5.mp3").play();
         }
     } else if (
-        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw", "search", "replica", "serverless", "dlq", "pubsub", "auth", "scheduler", "notify"].includes(
+        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw", "search", "replica", "serverless", "dlq", "pubsub", "auth", "scheduler", "notify", "gpu", "infgw", "power"].includes(
             STATE.activeTool
         )
     ) {
@@ -345,7 +345,8 @@ container.addEventListener("mousedown", (e) => {
             (STATE.activeTool === "apigw" && i.type === "service") ||
             (STATE.activeTool === "nosql" && i.type === "service") ||
             (STATE.activeTool === "search" && i.type === "service") ||
-            (STATE.activeTool === "replica" && i.type === "service")
+            (STATE.activeTool === "replica" && i.type === "service") ||
+            (STATE.activeTool === "gpu" && i.type === "service")
         ) {
             const svc = STATE.services.find((s) => s.id === i.id);
             if (
@@ -356,7 +357,8 @@ container.addEventListener("mousedown", (e) => {
                     (STATE.activeTool === "apigw" && svc.type === "apigw") ||
                     (STATE.activeTool === "nosql" && svc.type === "nosql") ||
                     (STATE.activeTool === "search" && svc.type === "search") ||
-                    (STATE.activeTool === "replica" && svc.type === "replica"))
+                    (STATE.activeTool === "replica" && svc.type === "replica") ||
+                    (STATE.activeTool === "gpu" && svc.type === "gpu"))
             ) {
                 svc.upgrade();
                 return;
@@ -387,6 +389,9 @@ container.addEventListener("mousedown", (e) => {
                 stream: "stream",
                 dns: "dns",
                 warehouse: "warehouse",
+                gpu: "gpu",
+                infgw: "infgw",
+                power: "power",
             };
 
             const serviceType = typeMap[STATE.activeTool];
@@ -568,6 +573,26 @@ container.addEventListener("mousemove", (e) => {
                 content += `${i18n.t('buffered_label')} <span class="${loadColor}">${s.queue.length}/${maxQ}</span><br>
                 ${i18n.t('processing_label')} ${s.processing.length}/${s.config.capacity}<br>
                 ${i18n.t('status_label')} <span class="${statusColor}">${status}</span>`;
+            } else if (s.type === "gpu") {
+                // The AI Wave (#87): batch fill, bad answers with the tier's
+                // printed risk, and the model-load state — the three numbers
+                // that explain what a GPU is doing.
+                const size = s.config.batchSize || 8;
+                const fill = s.batch ? s.batch.length : 0;
+                const fillColor = fill >= size ? "text-green-400" : fill > 0 ? "text-yellow-400" : "text-gray-400";
+                content += `${i18n.t('queue_label')} <span class="${loadColor}">${s.queue.length}</span><br>
+                ${i18n.t('gpu_batch_fill', { n: `<span class="${fillColor}">${fill}</span>`, size })}<br>
+                ${i18n.t('gpu_bad_answers', { n: s.badAnswers || 0, pct: Math.round((s.config.qualityRisk || 0) * 100) })}`;
+                if (s.modelLoading) {
+                    const left = Math.max(0, Math.ceil((s.config.loadTimeSec || 0) - (s.modelLoadTimer || 0)));
+                    content += `<br><span class="text-amber-300">${i18n.t('gpu_loading', { s: left })}</span>`;
+                }
+            } else if (s.type === "infgw") {
+                // The AI Wave (#87): held backlog vs cap, the deadline, and
+                // how many entries have already expired against it.
+                content += `${i18n.t('infgw_held', { n: s.pending ? s.pending.length : 0, cap: s.config.maxQueueSize || 20 })}<br>
+                ${i18n.t('infgw_deadline', { s: s.config.deadlineSec })}<br>
+                ${i18n.t('infgw_expired', { n: s.expiredCount || 0 })}`;
             } else {
                 content += `${i18n.t('queue_label')} <span class="${loadColor}">${s.queue.length}</span><br>
                 ${i18n.t('load_label')} <span class="${loadColor}">${s.processing.length}/${s.getEffectiveCapacity()}</span>`;
@@ -600,13 +625,20 @@ container.addEventListener("mousemove", (e) => {
                 (STATE.activeTool === "apigw" && s.type === "apigw") ||
                 (STATE.activeTool === "nosql" && s.type === "nosql") ||
                 (STATE.activeTool === "search" && s.type === "search") ||
-                (STATE.activeTool === "replica" && s.type === "replica")
+                (STATE.activeTool === "replica" && s.type === "replica") ||
+                (STATE.activeTool === "gpu" && s.type === "gpu")
             ) {
                 const tiers = CONFIG.services[s.type].tiers;
                 if (s.tier < tiers.length) {
                     cursor = "pointer";
                     const nextCost = tiers[s.tier].cost;
                     content += `<div class="mt-1 pt-1 border-t border-gray-700"><span class="text-green-300 text-xs font-bold">${i18n.t('upgrade_label')} $${nextCost}</span></div>`;
+                    // GPU tiers sell QUALITY as much as size (#87) — the
+                    // percentage is printed right on the upgrade card.
+                    if (s.type === "gpu") {
+                        const next = tiers[s.tier];
+                        content += `<div><span class="text-fuchsia-300 text-xs">${i18n.t('gpu_upgrade_quality', { size: next.batchSize, pct: Math.round(next.qualityRisk * 100) })}</span></div>`;
+                    }
                     if (s.mesh.material.emissive)
                         s.mesh.material.emissive.setHex(0x333333);
                 } else {
@@ -615,7 +647,7 @@ container.addEventListener("mousemove", (e) => {
             }
 
             // SHOW UPGRADE INDICATOR (Green Arrow)
-            if (["compute", "db", "cache", "apigw", "nosql", "search", "replica"].includes(s.type)) {
+            if (["compute", "db", "cache", "apigw", "nosql", "search", "replica", "gpu"].includes(s.type)) {
                 const tiers = CONFIG.services[s.type].tiers;
                 if (s.tier < tiers.length) {
                     // Clear any pending hide timer since we are hovering a valid service

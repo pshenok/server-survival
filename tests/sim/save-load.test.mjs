@@ -85,8 +85,9 @@ describe("fallback defaults (the PR-1 dead-fallback fix)", () => {
 
   it("a save without trafficDistribution gets the default mix", () => {
     loadGameState(baseSave());
+    // INFERENCE (#87) joins the fallback at 0 — old saves stay inference-free.
     expect(STATE.trafficDistribution).toEqual({
-      STATIC: 0.3, READ: 0.2, WRITE: 0.15, UPLOAD: 0.05, SEARCH: 0.1, MALICIOUS: 0.2,
+      STATIC: 0.3, READ: 0.2, WRITE: 0.15, UPLOAD: 0.05, SEARCH: 0.1, MALICIOUS: 0.2, INFERENCE: 0,
     });
   });
 
@@ -94,6 +95,20 @@ describe("fallback defaults (the PR-1 dead-fallback fix)", () => {
     loadGameState(baseSave());
     expect(STATE.finances.income.total).toBe(0);
     expect(STATE.finances.expenses.byService.serverless).toBe(0);
+  });
+
+  it("recomputes the power grid from a restored gpu+substation build (#87)", () => {
+    loadGameState(baseSave({
+      services: [
+        { id: "svc_gpu1", type: "gpu", position: [0, 0, 0], connections: [], tier: 1 },
+        { id: "svc_pow1", type: "power", position: [8, 0, 0], connections: [], tier: 1 },
+      ],
+    }));
+    // The restore path constructs outside createService — the derivation
+    // has to re-run, or a loaded fleet would dodge the placement gate.
+    expect(STATE.power).toEqual({ usedKw: 6, capKw: 14 });
+    // And the restored GPU cold-boots its model — a load is a cold start.
+    expect(STATE.services.find((s) => s.type === "gpu").modelLoading).toBe(true);
   });
 
   it("saved finances survive the load instead of being wiped", () => {

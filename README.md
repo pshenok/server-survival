@@ -11,8 +11,8 @@ Learn cloud by playing:
 ## Game Modes
 
 - **Survival** — the core experience: survive as long as possible against escalating traffic, DDoS spikes, random events, and service degradation.
-- **Campaign** — 20 hand-crafted levels across 4 chapters (Basics → Optimization → Defense & Mastery → Production Readiness). Each level teaches one architecture concept with pre-built diagrams, objectives, and a debrief.
-- **Sandbox** — a free-play lab: any budget, any traffic mix, no game over. Experiment with all 23 services.
+- **Campaign** — 25 hand-crafted levels across 5 chapters (Basics → Optimization → Defense & Mastery → Production Readiness → The AI Wave). Each level teaches one architecture concept with pre-built diagrams, objectives, and a debrief.
+- **Sandbox** — a free-play lab: any budget, any traffic mix, no game over. Experiment with all 26 services.
 
 ## What It Teaches
 
@@ -23,6 +23,10 @@ Every mechanic is a real cloud concept in miniature:
 - **Queue-depth scaling** — a queue-fed fleet scales on queue pressure, not just CPU, so backlogs trigger scale-out.
 - **Circuit breaking & retries** — overloaded downstreams trip a breaker (50% error rate over a rolling window), traffic is retried with backoff, and SPOFs get flagged.
 - **Multi-region failover** — GeoDNS splits traffic across regional stacks; region-outage events show why one region is never enough.
+- **Inference serving & batching** — the GPU Cluster batches INFERENCE requests (up to 8/12/16 by tier) into one job that amortizes a fixed per-batch cost, so profit is all utilization: a full batch prints money, a half-fed GPU bleeds its $60/min upkeep.
+- **Model cold starts & quality** — a GPU loads its model for 12/20/30s before serving anything, and every tier upgrade reloads it; bigger models also answer better (10% → 4% → 1% bad-answer risk, −0.5 reputation per bad answer).
+- **Inference SLOs** — the Inference Gateway buffers for warming or busy GPUs but expires anything older than its 6s deadline: a stale generation is failed honestly, never served.
+- **Power as the constraint** — the grid carries 8 kW, every GPU draws 6, and a Substation adds 6: the fleet's ceiling is bought in watts before it is bought in dollars.
 - **OLTP vs OLAP** — the Data Warehouse takes analytics writes cheaply but refuses realtime reads; the Relational DB does the opposite trade.
 - **Failure-reason badges** — every dropped request pops a badge on the node that dropped it, saying *why* (no route, capacity, read-only replica, search-only index...).
 
@@ -47,10 +51,11 @@ Survive as long as possible! Manage your **Budget ($)**, **Reputation (%)**, and
 | **UPLOAD**    | Yellow | Storage / Warehouse               | $1.50  | File uploads                           |
 | **SEARCH**    | Cyan   | Search Engine / SQL DB            | $1.20  | Search queries (Search Engine preferred, SQL DB fallback) |
 | **MALICIOUS** | Red    | Blocked by Firewall / Identity Provider | $0 | DDoS attacks — block them or bleed reputation! |
+| **INFERENCE** | Fuchsia | GPU Cluster (via Inference Gateway) | $0.50 | AI generation requests — batched on GPUs, with per-request generation length |
 
 ### Infrastructure & Services
 
-Build your architecture using the toolbar. All 23 services are organized into five category tabs — the same taxonomy as the table below. Each service has a cost, capacity, and per-minute upkeep:
+Build your architecture using the toolbar. All 26 services are organized into five category tabs — the same taxonomy as the table below. Each service has a cost, capacity, and per-minute upkeep:
 
 | Category   | Service                 | Cost | Capacity        | Upkeep              | Role                                                                 |
 | :--------- | :---------------------- | :--- | :-------------- | :------------------ | :------------------------------------------------------------------- |
@@ -63,6 +68,8 @@ Build your architecture using the toolbar. All 23 services are organized into fi
 | Compute    | **Compute**             | $60  | 4               | $12/min             | Processes requests. Auto-scales into a fleet (with cold start). **Upgradeable T1–T3.** |
 | Compute    | **Serverless Function** | $45  | 30              | $2/min + $0.03/req  | Auto-scales with traffic. Very low upkeep but pays per completed request — cheap when idle, expensive at high RPS. |
 | Compute    | **Container Cluster**   | $120 | 12              | $16/min             | Dense fixed capacity at a flat fee. Slow node-pool warmup on scale-out. |
+| Compute    | **GPU Cluster**         | $300 | 8               | $60/min             | Batches INFERENCE into one amortized job. Model cold-starts on placement and on every tier upgrade; draws 6 kW. **Upgradeable T1–T3.** |
+| Compute    | **Inference Gateway**   | $70  | 10 (queue 20)   | $5/min              | Holds INFERENCE for warming/full GPUs, dispatches to the least-loaded one — and expires anything older than its 6s deadline. |
 | Data       | **Relational DB**       | $150 | 8               | $24/min             | Destination for READ/WRITE/SEARCH traffic. **Upgradeable T1–T3.**     |
 | Data       | **NoSQL DB**            | $80  | 15              | $14/min             | Fast for READ/WRITE, but cannot handle SEARCH queries. **Upgradeable T1–T3.** |
 | Data       | **Memory Cache**        | $60  | 30              | $8/min              | Caches responses to reduce DB load. **Upgradeable T1–T3.**            |
@@ -77,6 +84,7 @@ Build your architecture using the toolbar. All 23 services are organized into fi
 | Async      | **Scheduler**           | $50  | 1               | $5/min              | Injects its own scheduled batch-job bursts on a timer.                |
 | Async      | **Notification**        | $40  | 20              | $4/min              | Terminal "send": success earns reputation, failures are silent.       |
 | Ops        | **Monitoring**          | $75  | 1               | $8/min              | Unlocks the live metrics dashboard and alerts.                        |
+| Ops        | **Substation**          | $150 | 1               | $8/min              | +6 kW of grid capacity on the 8 kW base. GPUs draw 6 kW each and cannot be placed past the cap. |
 
 ### Scoring & Economy
 
@@ -87,6 +95,8 @@ Build your architecture using the toolbar. All 23 services are organized into fi
 | DB Write       | +$1.20 | +8    | +0.1       |
 | File Upload    | +$1.50 | +10   | +0.1       |
 | Search Query   | +$1.20 | +5    | +0.1       |
+| Inference      | +$0.50 | +15   | +0.1       |
+| GPU Bad Answer | -      | -     | -0.5       |
 | Cache Hit      | +20% reward | - | -         |
 | Attack Blocked | -$1 (mitigation) | +10 | -    |
 | Request Failed | -      | -half | -1         |
@@ -113,12 +123,13 @@ The core experience - survive as long as possible against escalating traffic wit
 
 ### Campaign Mode
 
-20 levels across 4 chapters, each one a scenario built around a single lesson:
+25 levels across 5 chapters, each one a scenario built around a single lesson:
 
 1. **Basics** (levels 1-3) — your first server, storage, and edge caching with a CDN.
 2. **Optimization** (levels 4-10) — caching, queues, read scaling, search, NoSQL, rate limiting, serverless vs compute.
 3. **Defense & Mastery** (levels 11-14) — defense in depth, high availability, cost crunches, and Black Friday.
 4. **Production Readiness** (levels 15-20) — observability, auto-scaling, node failures, dead-letter queues, fan-out, and two-region failover.
+5. **The AI Wave** (levels 21-25) — GPU inference: model cold starts, batch-fill economics, SLO deadlines, the power wall, and a capstone that has to end in the black.
 
 Levels come with pre-built starting architectures, primary and bonus objectives, speedrun stars, and a debrief tip. Later chapters throw forced outages — including a whole region going dark — at your build.
 
@@ -130,7 +141,7 @@ A fully customizable testing environment for experimenting with any architecture
 | :---------------- | :---------------------------------------------------------------- |
 | **Budget**        | Set any starting budget (slider 0-10K, or type any amount)        |
 | **RPS**           | Control traffic rate (0 = stopped, or type 100+ for stress tests) |
-| **Traffic Mix**   | Adjust all 6 traffic type percentages independently               |
+| **Traffic Mix**   | Adjust all 7 traffic type percentages independently               |
 | **Burst**         | Spawn instant bursts of specific traffic types                    |
 | **Upkeep Toggle** | Enable/disable service costs                                      |
 | **Clear All**     | Reset all services and restore budget                             |

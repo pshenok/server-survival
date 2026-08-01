@@ -10,6 +10,7 @@ import { CAMPAIGN_LEVELS } from "../campaign/levels.js";
 import { renderArchitectureSVG } from "../campaign/diagram.js";
 import { Service } from "../entities/Service.js";
 import { updateRepairCostTable } from "../core/economy.js";
+import { recomputePower } from "../sim/power.js";
 import { createConnection } from "../sim/topology.js";
 import { applyToolbarGating } from "./toolbar.js";
 // Runtime-only cycle (game.js ⇄ campaign-ui.js) — established pattern:
@@ -200,6 +201,10 @@ function startCampaignLevel(levelId) {
         const toId = placed[to].id;
         createConnection(fromId, toId);
     }
+    // Power grid (#87): the prebuild loop constructs via `new Service`
+    // directly (bypassing createService), so the derivation must be re-run
+    // here — a call-site-driven recompute would go stale exactly at this spot.
+    recomputePower();
     updateRepairCostTable();
 
     // Apply level-specific forced settings

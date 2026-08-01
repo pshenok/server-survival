@@ -5,6 +5,7 @@ export const TRAFFIC_TYPES = {
   UPLOAD: "UPLOAD",
   SEARCH: "SEARCH",
   MALICIOUS: "MALICIOUS",
+  INFERENCE: "INFERENCE",
 };
 
 export const CONFIG = {
@@ -38,6 +39,9 @@ export const CONFIG = {
     stream: 0x2dd4bf, // Teal — an ordered flow of records (#198)
     dns: 0xa3e635, // Lime — global routing / a resolver globe (#198)
     warehouse: 0xb45309, // Amber — a big cold analytics store (#198)
+    gpu: 0xd946ef, // Fuchsia — the INFERENCE color, worn by the node that serves it (#87)
+    infgw: 0xa21caf, // Deep fuchsia — the gateway in front of the GPUs (#87)
+    power: 0xfacc15, // Electric yellow — the substation pylon (#87)
   },
   trafficTypes: {
     STATIC: {
@@ -104,6 +108,21 @@ export const CONFIG = {
       cacheable: false,
       cacheHitRate: 0,
       destination: "blocked",
+      processingWeight: 1.0,
+    },
+    INFERENCE: {
+      // AI Wave (#87). The only traffic with PER-REQUEST duration variance:
+      // req.genLength is rolled at spawn (70% short 0.6–1.0, 30% long 1.8–3.0,
+      // mean 1.28 — see entities/Request.js) and scales the GPU batch time.
+      // Never cacheable — every generation is unique output.
+      name: "INFERENCE",
+      method: "POST",
+      color: 0xd946ef,
+      reward: 0.5,
+      score: 15,
+      cacheable: false,
+      cacheHitRate: 0,
+      destination: "gpu",
       processingWeight: 1.0,
     },
   },
@@ -520,6 +539,103 @@ export const CONFIG = {
         desc: "<b>Data Warehouse.</b> Stores analytics WRITES cheaply and slowly. Cannot serve realtime READ.",
       },
     },
+    // ===== The AI Wave (#87) — GPU inference archetypes =====
+    // Spec: docs/superpowers/specs/2026-07-30-ai-wave-design.md. Both traffic
+    // nodes are TICK-NODES (like stream/dlq/scheduler): no SERVICE_HANDLERS
+    // entry, processQueue() skips them, and their mechanics live in
+    // src/sim/gpu.js / src/sim/infgw.js, ticked from Service.update().
+    gpu: {
+      // GPU Cluster. The ONLY node that BATCHES: it accumulates INFERENCE
+      // requests (to batchSize or batchWindowSec from first arrival) and runs
+      // the whole batch as ONE job of (batchBaseMs + batchPerItemMs·n) ×
+      // meanGenLength — a full batch amortizes the base cost, a lonely
+      // request pays nearly full price. Tiers are MODEL SIZE: bigger batches
+      // (the economic half) and a lower bad-answer risk (the flavor half),
+      // bought with a longer model (re)load during which the node is not
+      // routable (modelLoading — a dedicated flag, never isDisabled).
+      // Accepts INFERENCE only; the intake queue is BOUNDED at batchSize —
+      // the big buffer is the Inference Gateway's job, not the GPU's.
+      // Economics (spec §2): at reward $0.50 the saturated pipelined regime
+      // profits ≈ +$29/min at full fill and breaks even around half fill —
+      // the profit/min-at-fill harness in tests/sim/ai-wave.test.mjs is the
+      // authority on the curve. Draws CONFIG.power.gpuDrawKw from the grid.
+      name: "GPU Cluster",
+      cost: 300,
+      type: "gpu",
+      processingTime: 900, // unused — batch time is batchBaseMs-driven
+      capacity: 8,
+      maxQueueSize: 8, // bounded intake = batchSize, tier-linked
+      upkeep: 60,
+      batchSize: 8,
+      batchWindowSec: 1.5, // window from FIRST arrival before a partial batch runs
+      batchBaseMs: 900, // per-batch fixed cost...
+      batchPerItemMs: 150, // ...plus this per request, × meanGenLength
+      qualityRisk: 0.1, // per-request bad-answer chance, tier-linked
+      loadTimeSec: 12, // model (re)load, tier-linked
+      tooltip: {
+        upkeep: "Very High",
+        desc: "<b>GPU Cluster.</b> Batches INFERENCE. Bigger tiers batch more and answer better, but reload the model. <b>Upgradeable (Tiers 1-3).</b>",
+      },
+      tiers: [
+        { level: 1, capacity: 8, batchSize: 8, qualityRisk: 0.1, loadTimeSec: 12, cost: 0 },
+        { level: 2, capacity: 12, batchSize: 12, qualityRisk: 0.04, loadTimeSec: 20, cost: 200 },
+        { level: 3, capacity: 16, batchSize: 16, qualityRisk: 0.01, loadTimeSec: 30, cost: 320 },
+      ],
+    },
+    infgw: {
+      // Inference Gateway. The honest pitch (told on its concept card): a
+      // direct-wired GPU has only its tiny bounded intake — during warmup or
+      // overload requests die fast; the gateway holds up to maxQueueSize with
+      // DEADLINE honesty (an entry older than deadlineSec is failed as an SLO
+      // breach, never dispatched — sweep-then-dispatch, src/sim/infgw.js) and
+      // dispatches heads to the least-loaded routable GPU. Its value is
+      // reputation saved during those windows, not revenue — hence the low
+      // price (below apigw: single-type scope). One carve-out keeps that
+      // pitch true: deadlineSec (6) is shorter than EVERY tier's model load
+      // (12/20/30s), so while the whole connected fleet is mid-load the
+      // deadline clock waits (the warmup grace in tickInfgw) — otherwise the
+      // gateway expires requests a bare GPU's queue would have held, and the
+      // card's "reputation saved during warmup" inverts at low rates.
+      name: "Inference Gateway",
+      cost: 70,
+      type: "infgw",
+      processingTime: 20, // unused — the deadline array is the mechanic
+      capacity: 10,
+      maxQueueSize: 20, // the held backlog cap ("holds up to 20")
+      upkeep: 5,
+      deadlineSec: 6, // SLO: entries older than this expire
+      tooltip: {
+        upkeep: "Low",
+        desc: "<b>Inference Gateway.</b> Holds INFERENCE for warming/full GPUs, but expires anything older than its deadline.",
+      },
+    },
+    power: {
+      // Substation. Not a traffic node at all: UNWIREABLE (no isValidEdge
+      // rows, like Monitoring) and never routable — it exists only as a term
+      // in recomputePower() (src/sim/power.js): each one adds substationKw of
+      // grid capacity, and GPUs cannot be placed past the cap. +6 kW per
+      // substation on a 6 kW GPU draw means a 3-GPU fleet needs TWO of them —
+      // watts stay a real marginal decision, not a one-time unlock.
+      name: "Substation",
+      cost: 150,
+      type: "power",
+      processingTime: 100, // never used — it processes nothing
+      capacity: 1, // dummy (keeps totalLoad finite)
+      upkeep: 8,
+      tooltip: {
+        upkeep: "Medium",
+        desc: "<b>Substation.</b> +6 kW of grid capacity. GPUs draw 6 kW each and cannot be placed past the cap.",
+      },
+    },
+  },
+  // The power grid (#87). One tiny model: GPUs draw, the base grid + placed
+  // substations supply, and src/sim/power.js derives STATE.power from it.
+  // baseCapKw 8 lets exactly ONE free GPU; every further GPU costs a real
+  // substation decision (see the placement + deletion gates in topology.js).
+  power: {
+    baseCapKw: 8,
+    gpuDrawKw: 6,
+    substationKw: 6,
   },
   // Auto-Scaling Group tuning (#195). Only Compute can run an ASG; every
   // knob here is expressed in seconds of GAME time (so fast-forward scales
@@ -607,6 +723,17 @@ export const CONFIG = {
       [TRAFFIC_TYPES.UPLOAD]: 0.05,
       [TRAFFIC_TYPES.SEARCH]: 0.1,
       [TRAFFIC_TYPES.MALICIOUS]: 0.2,
+      // AI Wave (#87): survival starts with NO inference — the base share is
+      // staged in over the run (0 → 3% after 300s → 10% once a GPU exists)
+      // by updateInferenceStaging() in core/events.js.
+      // Deliberate economics: the 10% share (1.2 rps at 12 RPS) feeds a GPU
+      // BELOW its 2.0 rps revenue break-even, and late-game upkeep scaling
+      // doubles that bar past even a full tier-1's ceiling — in survival a
+      // GPU is REPUTATION INSURANCE (the no-GPU 3% share bleeds ≈ −21
+      // rep/min measured; ownership buys that off), not a profit center.
+      // The margin lives in the hype waves (25% ≈ 3 rps, above break-even)
+      // and in the classic stack that pays the bills between them.
+      [TRAFFIC_TYPES.INFERENCE]: 0,
     },
 
     SCORE_POINTS: {
@@ -618,6 +745,15 @@ export const CONFIG = {
       MALICIOUS_MITIGATION_COST: 1.0, // Cost per blocked attack
       MALICIOUS_BREACH_PENALTY: 50.0, // Cost per successful attack
       THROTTLED_REPUTATION: -0.2, // Soft fail from API Gateway rate limiting
+      // A GPU bad answer (#87): the request COMPLETED and paid — this is the
+      // quiet quality tax rolled per request in tickGpu, not a failure. At
+      // −0.5 against +0.1 SUCCESS a tier-1 GPU still nets +0.05 rep per
+      // served request, so the tax never drags the rep number down by
+      // itself — it halves the recovery rate. Intended: quality is made
+      // legible through the amber badge, the tooltip line and the
+      // badAnswers bonus objectives (spec §2d); rep collapses stay the
+      // province of real failures (drops, expiries, breaches).
+      QUALITY_RISK_REPUTATION: -0.5,
     },
 
     upkeepScaling: {
@@ -719,6 +855,24 @@ export const CONFIG = {
             MALICIOUS: 0.15,
           },
         },
+        {
+          // AI Wave (#87): INFERENCE jumps to 25%, the classic base shares
+          // scaled proportionally (×0.75). `requiresService` keeps it out of
+          // the rotation until a GPU exists — evaluated at shift-SELECTION
+          // time only (see startTrafficShift), so losing the last GPU
+          // mid-shift does not cancel it.
+          name: "AI Hype Wave",
+          requiresService: "gpu",
+          distribution: {
+            STATIC: 0.225,
+            READ: 0.15,
+            WRITE: 0.1125,
+            UPLOAD: 0.0375,
+            SEARCH: 0.075,
+            MALICIOUS: 0.15,
+            INFERENCE: 0.25,
+          },
+        },
       ],
     },
 
@@ -785,6 +939,7 @@ export const CONFIG = {
       UPLOAD: 5,
       SEARCH: 10,
       MALICIOUS: 20,
+      INFERENCE: 0,
     },
   },
 };

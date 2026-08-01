@@ -24,6 +24,18 @@ export class Request {
         this.value = this.typeConfig.reward;
         this.cached = false;
 
+        // AI Wave (#87): INFERENCE is the only traffic with per-request
+        // duration variance. genLength scales the GPU batch time (a long
+        // generation slows its whole batch): 70% short 0.6–1.0, 30% long
+        // 1.8–3.0 — mean 1.28. Rolled here rather than in spawnRequest so
+        // sandbox bursts and test-injected requests vary too.
+        if (type === "INFERENCE") {
+            this.genLength =
+                Math.random() < 0.7
+                    ? 0.6 + Math.random() * 0.4
+                    : 1.8 + Math.random() * 1.2;
+        }
+
         const color = this.typeConfig.color;
 
         const geo = new THREE.SphereGeometry(0.4, 8, 8);
