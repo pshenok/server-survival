@@ -1,144 +1,181 @@
 # The AI Wave — GPU inference archetypes + Chapter 5
 
-**Date:** 2026-07-30
-**Status:** approved (packaging + lean power confirmed by KP; detail sections below)
-**Issue:** #87 (community ask: GPU/NPU cluster + electricity management)
+**Date:** 2026-07-30 (rev 2 — after a 3-lens adversarial critique; 8 blockers integrated)
+**Status:** approved (packaging + lean power confirmed by KP)
+**Issue:** #87
 
 ## Why
 
-AI inference is the cloud story of right now, nobody teaches its infrastructure
-interactively, and the community asked for exactly this (#87). Every mechanic
-below passes the Wave 1 bar: distinguishable simulation behavior, or it doesn't
-ship.
+AI inference is the cloud story of right now, nobody teaches its
+infrastructure interactively, and the community asked (#87). Every mechanic
+passes the Wave 1 bar: distinguishable behavior or it doesn't ship.
 
-Packaging: archetypes into the existing modes + a teaching chapter — the proven
-Wave 1 pattern. Electricity ships in its lean form: a power cap that exists
-only once GPUs enter the picture.
+Critique summary (what rev 2 fixes): the batch/deadline mechanics cannot live
+in the per-job handler registry (both nodes are tick-nodes); the economy was
+off by 4–8× (reward retuned $2.50 → $0.50); the power gate was cheesable via
+substation delete-refund; level 22's lesson was physically wrong (smoothing
+starves batches); level 23's objective was uncheckable (per-reason counters
+violate the #156 inertness contract); survival gating was a chicken-and-egg
+deadlock.
 
 ## 1. INFERENCE traffic
 
-New `TRAFFIC_TYPES.INFERENCE`, color `0xd946ef` (fuchsia — unused), destination
-`"gpu"`, reward `$2.50`, score 15, not cacheable.
+`TRAFFIC_TYPES.INFERENCE`, color `0xd946ef`, destination `"gpu"`,
+**reward $0.50**, score 15, not cacheable. STATE.failures gains
+`INFERENCE: 0`; the save-load trafficDistribution fallback and the sandbox
+mix panel gain the INFERENCE slider.
 
-**Variable duration** — the new behavior: each INFERENCE request gets
-`genLength` at spawn (generation length multiplier): 70% short (0.6–1.0), 30%
-long (1.8–3.0). Processing time scales by it. No existing traffic type has
+**Variable duration**: `req.genLength` at spawn — 70% short (0.6–1.0),
+30% long (1.8–3.0), mean 1.28. Processing scales by it. No other traffic has
 per-request duration variance.
 
-- Sandbox: INFERENCE slider in the traffic mix.
-- Survival: new traffic shift **"AI hype wave"** (INFERENCE jumps to ~25%) —
-  enters the shift rotation **only when the player owns ≥1 GPU** (otherwise the
-  shift is a death sentence with no counter); a smart hint suggests GPUs when
-  INFERENCE share > 0 and none exist.
-- Routing: front door as usual; compute-tier nodes and gateways forward
-  INFERENCE toward `infgw`/`gpu` (preference: infgw first, direct gpu second,
-  else NO_ROUTE).
+**Survival staging (no deadlock, no dead GPU):**
+- Before 300s game time: base INFERENCE share 0.
+- After 300s: base share 3% — a legible slow bleed (−1 rep per unserved) that
+  arms a smart hint ("AI demand is emerging — GPUs serve it").
+- Once the player owns ≥1 GPU: base rebalances to 10% (taken proportionally
+  from other shares), so the GPU has steady food between hypes.
+- **"AI hype wave" shift** (INFERENCE → 25%, classic shares scaled
+  proportionally; written out in CONFIG like existing shifts) enters the shift
+  rotation only while a GPU exists, evaluated at shift-SELECTION time only —
+  losing the last GPU mid-shift does not cancel it.
 
-## 2. GPU Cluster (`gpu`) — the star
+**Routing** (exact `isValidEdge` additions):
+`alb|apigw|compute|serverless|container → infgw`; `infgw → gpu`;
+`compute|serverless|container → gpu`; `power`: no edges (unwireable, like
+monitor). `genericForward` becomes minimally type-aware: for INFERENCE it
+prefers infgw then gpu targets; for everything else it EXCLUDES infgw/gpu from
+candidates (they join dlq in the exclusion filter). The compute handler gets an
+explicit INFERENCE branch: infgw first, direct gpu second, else NO_ROUTE.
+A MALICIOUS request reaching gpu/infgw follows the existing failRequest breach
+relabel — the attack got through, consistent with #156.
 
-Three distinguishable behaviors in one node:
+## 2. GPU Cluster (`gpu`)
 
-**a) Batching.** The GPU does not process requests one by one. It accumulates
-up to `batchSize`, or waits `batchWindowSec` (1.5s) since the first arrival,
-then runs the whole batch as ONE processing job:
-`batchTimeMs = 900 + 150·n`, scaled by the mean `genLength` of the batch.
-A full batch amortizes beautifully; a lonely request pays almost the full
-price. The only node whose per-request latency and unit cost depend on how
-full the batch is.
+**A tick-node** (like stream/dlq/scheduler): `processQueue()` skips type gpu,
+no `SERVICE_HANDLERS` entry. `tickGpu(service, dt)` drains `service.queue`
+into `service.batch` while accumulating (game-time window timer → freezes on
+pause), then runs the whole batch as one job.
 
-**b) Model cold start.** On placement the GPU loads its model:
-`modelLoadSec` = 12s (tier 1) / 20s (tier 2) / 30s (tier 3) of game time.
-While loading: accepts nothing (not routable as a dispatch target), draws full
-power, shows a progress ring. **A tier upgrade swaps to a bigger model and
-re-triggers the load** — upgrading mid-spike is the classic self-inflicted
-outage, now teachable.
+**a) Batching.** Accumulate to `batchSize` or `batchWindowSec` 1.5s from
+first arrival; `batchTimeMs = (900 + 150·n) × meanGenLength(batch)`.
+Full batch amortizes; a lonely request pays nearly full price.
+`service.batch` depth is folded into `totalLoad`, into `deleteObject`'s
+orphan set, and into `triggerRegionOutage`'s teardown — exactly as
+`stream.partitions` already are in all three sites (leak-battery mandatory).
 
-**c) Model quality (tiers = model size).**
-- Tier 1 (small): batchSize 8, qualityRisk 10% — a completed INFERENCE has a
-  10% chance to still ding reputation slightly ("bad answer").
-- Tier 2 (medium): batchSize 12, qualityRisk 4%.
-- Tier 3 (large): batchSize 16, qualityRisk 1%.
-Small models are fast, cheap, and embarrassing; big models are slow to boot and
-expensive but trustworthy.
+**b) Model cold start.** `service.modelLoading` — a DEDICATED flag; never
+`isDisabled` (the event system re-enables disabled services — using it would
+let a pause cancel a model load). `isRoutable` gains one line:
+`modelLoading ⇒ false`. Load times 12s/20s/30s by tier; tier upgrade
+re-triggers the load. **Held-arrival rule:** mid-air arrivals and entries
+queued when a (re)load starts stay in `gpu.queue`, age untouched, and batch
+normally when the load completes — the stall IS the lesson; holding satisfies
+the termination invariant. The intake queue is BOUNDED at `maxQueueSize`
+= batchSize (no big hidden buffer — that's infgw's job); overflow = existing
+QUEUE_FULL path.
 
-**Economics (brutal, by design):** cost $300, upkeep $60/min. An idle GPU
-bleeds; a well-batched one prints. Tuning target: break-even at roughly half
-batch utilization; the implementation must produce a measured profit/min curve
-at ~20% / 60% / 100% fill and document the break-even.
+**c) Tiers = model size.** batchSize 8/12/16 (the economic half);
+qualityRisk 10%/4%/1% (the flavor half — sold on the upgrade card with the
+percentage printed).
 
-Accepts INFERENCE only (anything else → `fail_gpu_only`). Power draw 6 kW.
+**d) Quality.** The roll runs in tickGpu's completion loop only:
+`finishRequest(req, "gpu", service)` as usual, then on a hit
+`STATE.reputation += SCORE_POINTS.QUALITY_RISK_REPUTATION` (**−0.5**, new
+constant) and `service.badAnswers++`. Legibility (a success-side event must
+still be visible): an **amber "Bad answer" soft badge** over the GPU — a new
+spawn call in the badge module, never through failRequest, preserving the
+#156 inertness invariant — plus a `bad answers: N (risk 10%)` line in the GPU
+tooltip next to batch fill.
+
+**Economics.** Cost $300, upkeep $60/min, power draw 6 kW. At reward $0.50:
+full-fill saturated profit ≈ +$29/min; **break-even ≈ 52% batch fill in the
+saturated (pipelined) regime** — that regime is what the mandated
+profit/min-at-fill harness measures (20%/60%/100% fill, curve documented in
+the PR). Accepts INFERENCE only (`fail_gpu_only` at intake in the tick).
 Providers: AWS P5/Inferentia · Azure ND · GCP A3/TPU.
 
-## 3. Inference Gateway (`infgw`) — the deadline queue
+## 3. Inference Gateway (`infgw`)
 
-Cost $90, upkeep $10/min. Accepts INFERENCE only. Holds a queue where every
-entry carries its enqueue game-time; an entry older than `deadlineSec` (6s)
-**expires**: `failRequest` with new reason `fail_slo_timeout` ("Deadline
-exceeded"). Dispatches to the connected routable GPU with the fewest pending
-items (least-loaded, not round-robin). Holds while every GPU is warming or
-full; expiry keeps the hold honest.
+**A tick-node.** Cost **$70**, upkeep **$5/min** (below apigw — single-type
+scope). Accepts INFERENCE only. Owns an array of `{req, enqueuedAt:
+STATE.elapsedGameTime}`. `tickInfgw(service, dt)`:
+1. **Sweep first**: every entry older than `deadlineSec` 6s is spliced out,
+   then `failRequest(req, SLO_TIMEOUT)` — never `failOrPark` (an SLO breach is
+   not recoverable work; explicit decision), never dispatch an expired entry
+   (exactly-once).
+2. Then dispatch heads to the least-loaded routable GPU
+   (`gpu.queue + gpu.batch + gpu.incomingCount`). Warming/full fleet → entries
+   stay, bounded by maxQueueSize (arrival overflow = QUEUE_FULL) plus expiry.
 
-Queue overflow exists in the sim; **time-based expiry does not** — that is the
-distinguishable behavior, and the core inference-serving lesson: you measure an
-inference queue in milliseconds of waiting, not items.
+Expiry increments **`STATE.inference.expired`** (the resilience-counter
+precedent) and `service.expiredCount`; `CampaignObjectives.expiredRequests(s)`
+reads it. The #156 reason stays inert.
+The array joins totalLoad / deleteObject / region-outage teardown.
 
-Deadlines tick on game time → freeze on pause (the #183 discipline).
-Providers: vLLM router · NVIDIA Triton · Bedrock endpoints.
+**Why it exists** (the honest pitch, stated in its concept card): a
+direct-wired GPU has only its tiny bounded intake — during warmup or overload
+requests die fast; infgw holds up to 20 with deadline honesty and dispatches
+where the batch has room. Its value is measured in reputation saved during
+those windows, not revenue. Providers: vLLM router · Triton · Bedrock.
 
-## 4. Power (`power` substation + the cap)
+## 4. Power
 
-`CONFIG.power = { baseCapKw: 8, gpuDrawKw: 6, substationKw: 10 }`.
-Substation: cost $150, upkeep $8/min, Ops category, unwireable (like Monitor),
-adds +10 kW to the datacenter cap.
+`CONFIG.power = { baseCapKw: 8, gpuDrawKw: 6, substationKw: 6 }` —
+substation +6 kW (so a 3-GPU fleet needs TWO substations: watts are a real
+marginal decision, not one unlock). Substation: cost $150, upkeep $8/min, Ops
+category, unwireable.
 
-- `STATE.power = { usedKw, capKw }` — **derived**: recomputed from live
-  services on place/delete/restore/load (never persisted arithmetic).
-- Placement gate: placing a GPU that would exceed the cap is refused with an
-  i18n'd warning — the "insufficient funds" UX pattern, but for watts.
-- HUD: a small `kW 12/18` badge near the money display, rendered **only when**
-  a GPU or substation exists. The rest of the game never sees it.
-- Share links: the serializer orders `power` nodes before `gpu` nodes so a
-  rebuilt link passes its own placement gate.
-- Region outages: substations are unwireable → never inside a region subtree →
-  unaffected (noted as future work: killing a substation is a great chaos
-  event once there's a UI story for unpowered GPUs).
-
-Lesson: in 2026, GPUs are constrained by the socket and the cooling, not the
-wallet.
+- **`recomputePower()`** — ONE function deriving `STATE.power = {usedKw,
+  capKw}` from live services; called from createService, deleteObject,
+  restoreServices, loadGameState, AND the campaign prebuild loop (which
+  constructs via `new Service` directly — a call-site-driven recompute would
+  go stale there).
+- Placement gate: allowed when `usedKw + gpuDrawKw <= capKw` — **boundary
+  inclusive** (level 24's target sits exactly on it; one test pins this).
+- **Deletion gate (anti-cheese):** deleteObject REFUSES to remove a substation
+  when the reduced cap would strand powered GPUs ("unplug GPUs first",
+  i18n'd) — otherwise buy-place-refund runs 18 kW on an 8 kW cap forever and
+  level 24 is beaten by the exploit. GPU deletion stays free.
+- HUD `kW used/cap` badge only when a gpu or power node exists.
+- **Share links:** `encodeArch` sorts services power-first and **remaps every
+  index in `c` and `i` through the permutation** (positions `p` reordered in
+  lockstep) — the current serializer emits placement order, so this is a real
+  transform, not a comment. Share test: a power+gpu build round-trips to an
+  identical service set.
+- Region outages: substations unwireable → never in a region subtree.
 
 ## 5. Chapter 5 — "The AI Wave" (levels 21–25)
 
-Each level proven beatable AND proven to fail when its mechanic is ignored
-(the #218 discipline). Levels 1–20 byte-identical.
+Levels 1–20 byte-identical. Every level proven beatable AND proven to fail on
+its named ignore-run. Numbers below are tuning TARGETS — the beatability
+harness is the authority and the shipped comments document final arithmetic
+(the Chapter 4 convention).
 
-| # | Title | Teaches | Sketch |
-|---|---|---|---|
-| 21 | Hello, GPU | cold start + basic serving | first GPU, survive the model load, serve N INFERENCE |
-| 22 | Batch or Bleed | utilization economics | bursty inference; profit target impossible with half-empty batches — smooth the flow, feed the batch |
-| 23 | The Deadline | SLO / queue-time | infgw prebuilt, demand above one GPU; keep `fail_slo_timeout` under X while serving M |
-| 24 | The Power Wall | the power cap | money plentiful, watts scarce: target needs 3 GPUs, cap allows 1 — substation economics |
-| 25 | The AI Wave | capstone | classic + INFERENCE hype surges together; survive and profit |
+| # | Title | Teaches | Knobs (target) | Ignore-runs (must lose) |
+|---|---|---|---|---|
+| 21 | Hello, GPU | cold start + model quality | budget 480, rps 3.0, INF 60/READ 25/WR 10/MAL 5, prebuilt waf→alb→compute→db, allowed [gpu]. Two acts: serve on tier 1; announced surge at 45s that tier 1's bad-answer bleed can't hold — upgrade in the LULL (re-load done before the surge) wins; upgrading DURING the surge = self-inflicted outage | (a) no GPU → serve-N unreachable; (b) upgrade mid-surge → rep collapse |
+| 22 | Batch or Bleed | utilization economics — right-size the fleet | budget 750 (the 2nd-GPU trap is affordable), rps 3.5, INF 70%, allowed [gpu, infgw]; profit objective tuned so ONE near-full GPU clears it and TWO half-fed GPUs miss by ~$390 (least-loaded dispatch halves fill) | add a 2nd GPU → profit target missed |
+| 23 | The Deadline | SLO / queue time | prebuilt front door + infgw + 1 gpu + 1 substation (defuses the power lesson early), bursty INF ~5 rps, allowed [gpu]; primary: serve M AND `failureRate < 0.12` AND `expiredRequests < X` — the failure-rate leg kills the delete-the-gateway cheese (trading expiries for NO_ROUTEs still fails) | (a) do nothing → expiries breach X; (b) delete infgw + direct-wire → failureRate breaches |
+| 24 | The Power Wall | the cap is the constraint | budget 1400 (money plentiful), INF ~6.5 rps (above the tier-3 single-GPU ceiling ~3.8/s), allowed [gpu, power, infgw]; need 3 GPUs = 18 kW = base 8 + TWO substations; timeout sized for tier-3 30s cold starts | no substation → capped at 1 GPU → serve target unreachable |
+| 25 | The AI Wave | capstone | budget 900, rps 10, forced base INF 12% + enableSurvivalShifts (hype escalation; ownership gate applies — the base share does the teaching, the wave escalates), allowed all; objectives: survive 120s, rep ≥ 55, netProfit ≥ 0; bonus: badAnswers < 20 (a tier-1-only fleet provably can't hold rep) | no GPU at all → the 12% base bleeds rep to a provable loss |
 
 ## 6. Cross-cutting
 
-- **Cardinal invariant**: every batched request terminates when its batch
-  completes or its node dies; expired entries fail exactly once; a
-  warming/unpowered GPU never strands a request (infgw holds or expires;
-  direct-wired requests fail NO_ROUTE when the GPU is not routable). Leak
-  battery mandatory (batch mid-flight teardown, expiry storm, all-GPU-warming,
-  power-refused placement).
-- **Failure badges**: `fail_slo_timeout`, `fail_gpu_only` join the taxonomy;
-  existing aggregation handles the rest.
-- **Metrics (#194)**: GPUs appear as normal rows; batch fill and model-load
-  state in the node tooltip; the ASG "×n" pattern is reused for nothing here
-  (GPUs don't auto-scale in v1 — noted as future work with queue-pressure).
-- **Toolbar**: `gpu`, `infgw` → Compute tab (3→5); `power` → Ops (1→2).
-- **i18n**: every string ×9 locales. Concept cards for all three services with
-  provider mappings.
-- **Tests**: batching fill/window/economics; cold start incl. tier reload;
-  quality-risk tiers; deadline expiry + pause freeze; power gate
-  (refuse/raise/delete-recompute/save-load/share order); routing + leak
-  battery; survival shift gating; level invariants ride automatically;
-  beatability harness for 21–25.
+- **Cardinal invariant**: batch terminates with its batch or its node; expired
+  entries exactly once (never dispatched after expiry; the 500ms fail-fade
+  overlap is covered by splice-before-fail); held arrivals during model load
+  terminate post-load; teardown sites (deleteObject / region outage / clear)
+  drain `batch`, `infgw` array, and bounded queues. Leak battery: mid-batch
+  demolish, region outage over a busy GPU, expiry storm, all-GPU-warming,
+  share-rebuild of a power+gpu build.
+- **Badges**: `fail_slo_timeout` ("Deadline exceeded"), `fail_gpu_only`
+  ("GPUs serve inference only") + the amber success-side "Bad answer" soft
+  badge (new spawn path, #156 contract intact).
+- **Metrics**: gpu/infgw are normal rows; batch fill, model-load state and
+  badAnswers in tooltips. GPUs do NOT auto-scale in v1 (future: queue-pressure
+  hook, noted in #220's pattern).
+- **Toolbar**: gpu, infgw → Compute tab (3→5); power → Ops (1→2).
+- **i18n ×9**; concept cards ×3 with provider mappings.
 - **Constraints**: no build step; native ESM; no new deps; levels 1–20 and all
   existing behavior byte-identical unless listed here.
