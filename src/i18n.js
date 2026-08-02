@@ -7,6 +7,7 @@ import { KO_TRANSLATIONS } from "./locales/ko.js";
 import { RU_TRANSLATIONS } from "./locales/ru.js";
 import { IT_TRANSLATIONS } from "./locales/it.js";
 import { NE_TRANSLATIONS } from "./locales/nep.js";
+import { UK_TRANSLATIONS } from "./locales/uk.js";
 
 /**
  * Simple i18n manager for the game
@@ -23,7 +24,8 @@ export class I18nManager {
             ko: typeof KO_TRANSLATIONS !== 'undefined' ? KO_TRANSLATIONS : {},
             ru: typeof RU_TRANSLATIONS !== 'undefined' ? RU_TRANSLATIONS : {},
             it: typeof IT_TRANSLATIONS !== 'undefined' ? IT_TRANSLATIONS : {},
-            ne: typeof NE_TRANSLATIONS !== 'undefined' ? NE_TRANSLATIONS : {}
+            ne: typeof NE_TRANSLATIONS !== 'undefined' ? NE_TRANSLATIONS : {},
+            uk: typeof UK_TRANSLATIONS !== 'undefined' ? UK_TRANSLATIONS : {}
         };
     }
 
