@@ -46,6 +46,41 @@ import {
 
 const container = document.getElementById("canvas-container");
 
+// Tool id → CONFIG.services type for ground placement. This map IS the
+// placement gate: a click places iff the active tool has an entry here.
+// It used to be shadowed by a separate hardcoded allowlist that silently
+// drifted — five services were selectable in the toolbar but no-ops on the
+// canvas, which made Level 15 unwinnable (#227). tests/sim/placement.test.mjs
+// pins this map against CONFIG.services so it cannot drift again.
+export const PLACEMENT_TYPE_MAP = {
+    waf: "waf",
+    alb: "alb",
+    lambda: "compute",
+    db: "db",
+    nosql: "nosql",
+    s3: "s3",
+    sqs: "sqs",
+    cache: "cache",
+    apigw: "apigw",
+    cdn: "cdn",
+    search: "search",
+    replica: "replica",
+    serverless: "serverless",
+    monitor: "monitor",
+    dlq: "dlq",
+    pubsub: "pubsub",
+    auth: "auth",
+    scheduler: "scheduler",
+    notify: "notify",
+    container: "container",
+    stream: "stream",
+    dns: "dns",
+    warehouse: "warehouse",
+    gpu: "gpu",
+    infgw: "infgw",
+    power: "power",
+};
+
 let isDraggingNode = false;
 let draggedNode = null;
 let dragOffset = new THREE.Vector3();
@@ -332,11 +367,7 @@ container.addEventListener("mousedown", (e) => {
             STATE.selectedNodeId = i.id;
             new Audio("assets/sounds/click-5.mp3").play();
         }
-    } else if (
-        ["waf", "alb", "lambda", "db", "nosql", "s3", "sqs", "cache", "cdn", "apigw", "search", "replica", "serverless", "dlq", "pubsub", "auth", "scheduler", "notify", "gpu", "infgw", "power"].includes(
-            STATE.activeTool
-        )
-    ) {
+    } else if (PLACEMENT_TYPE_MAP[STATE.activeTool]) {
         // Handle upgrades for compute, db, cache, apigw, and nosql
         if (
             (STATE.activeTool === "lambda" && i.type === "service") ||
@@ -365,39 +396,7 @@ container.addEventListener("mousedown", (e) => {
             }
         }
         if (i.type === "ground") {
-            const typeMap = {
-                waf: "waf",
-                alb: "alb",
-                lambda: "compute",
-                db: "db",
-                nosql: "nosql",
-                s3: "s3",
-                sqs: "sqs",
-                cache: "cache",
-                apigw: "apigw",
-                cdn: "cdn",
-                search: "search",
-                replica: "replica",
-                serverless: "serverless",
-                monitor: "monitor",
-                dlq: "dlq",
-                pubsub: "pubsub",
-                auth: "auth",
-                scheduler: "scheduler",
-                notify: "notify",
-                container: "container",
-                stream: "stream",
-                dns: "dns",
-                warehouse: "warehouse",
-                gpu: "gpu",
-                infgw: "infgw",
-                power: "power",
-            };
-
-            const serviceType = typeMap[STATE.activeTool];
-            if (serviceType) {
-                createService(serviceType, snapToGrid(i.pos));
-            }
+            createService(PLACEMENT_TYPE_MAP[STATE.activeTool], snapToGrid(i.pos));
         }
     }
 });

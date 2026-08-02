@@ -273,6 +273,9 @@ export class Raycaster {
   intersectObjects() {
     return [];
   }
+  intersectObject() {
+    return [];
+  }
 }
 
 // Real point-to-segment math: getConnectionAtPoint uses this for line picking.
