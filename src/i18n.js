@@ -36,7 +36,13 @@ export class I18nManager {
             this.currentLocale = locale;
             localStorage.setItem('game_locale', locale);
             this.applyTranslations();
-            // Dispatch event for components that need to update manually
+            // Dispatch event for components that need to update manually.
+            // Achievements (#158) subscribe to this event (wired in game.js's
+            // boundary block): i18n must stay a LEAF module — importing the
+            // achievements engine here would drag the sim graph
+            // (circuit-breaker → metrics → events → game.js) into i18n's
+            // eval chain and break module ordering for every entry point
+            // that touches i18n before game.js.
             window.dispatchEvent(new CustomEvent('localeChanged', { detail: locale }));
         }
     }

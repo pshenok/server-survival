@@ -24,6 +24,11 @@ import {
     renderCampaignObjectives,
     showCampaignDebrief,
 } from "../ui/campaign-ui.js";
+// Achievements (#158): observation-only hook, fired as the LAST statement of
+// _persistWin so the freshly persisted progress (including the level just
+// won) is what chapter/completionist defs read — no off-by-one on a
+// chapter's final level.
+import { achievements } from "../achievements/achievements.js";
 
 const CAMPAIGN_STORAGE_KEY = "serverSurvivalCampaignProgress";
 const CAMPAIGN_PROGRESS_VERSION = 1;
@@ -103,6 +108,10 @@ export class CampaignController {
         STATE.campaign.failureReason = null;
         STATE.campaign.completedByType = { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0 };
         STATE.campaign.completedByService = {};
+        // Achievements (#158): per-level upgrade counter for no_upgrades.
+        // Incremented in Service.upgrade() strictly after the affordability
+        // check passes; read by achievements.onLevelWin.
+        STATE.campaign.upgradesPerformed = 0;
         STATE.campaign.burstTimer = 0;
         STATE.campaign.outageFired = false;
         STATE.campaign.regionOutageFired = false;
@@ -210,6 +219,21 @@ export class CampaignController {
         const level = STATE.campaign.level;
         if (!level) return;
 
+        // A win additionally requires the level to have actually been PLAYED:
+        // at least one completed request this attempt (#158 verification).
+        // Level 10's primaries (netProfit >= -210, rep >= 70) are vacuously
+        // true on an untouched board, so the very first 2 Hz check used to
+        // declare a 3-star win at t=0.5s — farming first_win / speed_demon /
+        // minimalist / no_upgrades (plus pacifist_run with one idle
+        // serverless) with zero play. completedByType is reset per attempt in
+        // loadLevel and fed only by onRequestCompleted (the finishRequest
+        // site), and campaign state is never restored from save files, so the
+        // gate cannot be pre-satisfied. Zero completions can never win; a
+        // timeout with zero completions is a loss.
+        const played = Object.values(STATE.campaign.completedByType || {})
+            .some((n) => n > 0);
+        const allPrimary = level.objectives.primary.every((o) => STATE.campaign.objectiveResults[o.id]);
+
         // FAIL conditions take priority
         const fc = level.failConditions || {};
         if (typeof fc.repBelow === "number" && STATE.reputation < fc.repBelow) {
@@ -219,14 +243,13 @@ export class CampaignController {
             return this._end("lose", `Money dropped below $${fc.moneyBelow}`);
         }
         if (typeof fc.timeoutSec === "number" && STATE.elapsedGameTime >= fc.timeoutSec) {
-            // Treat as lose if primary objectives not met yet
-            const allPrimary = level.objectives.primary.every((o) => STATE.campaign.objectiveResults[o.id]);
-            if (!allPrimary) return this._end("lose", "Ran out of time");
+            // Treat as lose if the win gate is not met yet — including the
+            // zero-completions case, so a gated level still terminates.
+            if (!allPrimary || !played) return this._end("lose", "Ran out of time");
         }
 
-        // WIN: all primary objectives met
-        const allPrimary = level.objectives.primary.every((o) => STATE.campaign.objectiveResults[o.id]);
-        if (allPrimary) {
+        // WIN: all primary objectives met on a level that served traffic
+        if (allPrimary && played) {
             return this._end("win");
         }
     }
@@ -276,6 +299,10 @@ export class CampaignController {
         };
         progress.highestUnlocked = Math.max(progress.highestUnlocked, levelId + 1);
         this.saveProgress(progress);
+        // MUST stay the last statement (after saveProgress): the hook passes
+        // the updated progress object, so winning a chapter's final level
+        // grants the chapter achievement in this very call.
+        achievements.onLevelWin(levelId, stars, elapsed, { progress });
     }
 
     exit() {

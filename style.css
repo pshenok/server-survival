@@ -325,3 +325,27 @@ body {
     opacity: 1;
   }
 }
+
+/* Achievement unlock toasts (#158) — celebration chrome, distinct from the
+   intervention-warning alarm styles above. */
+.achievement-toast {
+  animation: achievementSlideIn 0.35s ease-out;
+}
+
+.achievement-toast-out {
+  transition: all 0.35s ease-in;
+  opacity: 0;
+  transform: translateX(24px);
+}
+
+@keyframes achievementSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

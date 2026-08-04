@@ -14,6 +14,12 @@ import { formatTime } from "../../game.js";
 // dereferenced when an outage actually fires.
 import { failRequest, removeRequest } from "./actions.js";
 import { FAIL_REASONS } from "./failure-reasons.js";
+// Achievements (#158): fortress is an EVENT def — start/end of a malicious
+// spike each happen at exactly one code site (here), so the engine is told
+// explicitly instead of edge-sampling STATE.maliciousSpikeActive (which
+// cannot distinguish "spike ended" from "session reset/died"). Observation
+// only; runtime-only cycle on the established pattern.
+import { achievements } from "../achievements/achievements.js";
 
 function updateMaliciousSpike(dt) {
     if (STATE.gameMode === "campaign") {
@@ -80,6 +86,10 @@ function startMaliciousSpike() {
 
     STATE.maliciousSpikeActive = true;
 
+    // Arm fortress (#158) — deliberately AFTER the trafficShiftActive
+    // early-return, so a suppressed spike never arms.
+    achievements.onSpikeStart();
+
     STATE.normalTrafficDist = { ...STATE.trafficDistribution };
 
     const maliciousPct = CONFIG.survival.maliciousSpike.maliciousPercent;
@@ -123,6 +133,11 @@ function startMaliciousSpike() {
 }
 
 function endMaliciousSpike() {
+    // fortress (#158): the only genuine end-of-spike site — resetGame merely
+    // flips the flag and never reaches here, so a reset cannot fake a
+    // survived spike (the armed flag it strands dies in onSessionStart).
+    achievements.onSpikeEnd({ reputation: STATE.reputation });
+
     STATE.maliciousSpikeActive = false;
 
     // Restore normal distribution

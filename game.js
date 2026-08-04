@@ -112,6 +112,11 @@ import {
 // so that handlers.js is fully evaluated first — it listens for the
 // "toolbarRendered" event to re-wire the button tooltips.
 import { applyToolbarGating, renderToolbar } from "./src/ui/toolbar.js";
+// Achievements (#158): the engine observes the sim (never mutates it). Wired
+// here at the boundary: init once, onSessionStart from resetGame, tick(dt)
+// from animate, and the Trophies panel handlers re-exposed on window below.
+import { achievements } from "./src/achievements/achievements.js";
+import { closeTrophies, showTrophies } from "./src/achievements/ui.js";
 
 STATE.sound = new SoundService();
 
@@ -579,6 +584,12 @@ function resetGame(mode = "survival") {
         if (objectivesPanel) objectivesPanel.classList.remove("hidden");
     }
 
+    // Achievements (#158): session boundary. Clears armed/edge state and
+    // captures the live-play baselines the poll defs measure deltas from —
+    // called AFTER the state above is reset so the baselines read the fresh
+    // board (elapsed 0, failures 0).
+    achievements.onSessionStart();
+
     // Ensure loop is running
     if (!STATE.animationId) {
         animate(performance.now());
@@ -670,6 +681,22 @@ function retryWithSameArchitecture() {
 // the link. The param is stripped from the URL bar either way, so reloads
 // don't re-trigger and saves don't confuse.
 setTimeout(() => {
+    // Achievements (#158) boot wiring — in this deferred block, NOT the
+    // module body: game.js's body can run mid-graph through the established
+    // import cycles (achievements → circuit-breaker → metrics → events →
+    // game.js), where the engine's own bindings are still in TDZ. By the
+    // time this timer fires the whole graph has evaluated.
+    // init records the starting locale (polyglot counts it) and paints the
+    // main-menu Trophies badge from the persisted store.
+    achievements.init(i18n.currentLocale);
+    // Locale hook: i18n.setLocale is the single locale-change site, but
+    // i18n.js must stay a leaf module (see the note there), so the engine
+    // subscribes HERE — at the window boundary — to the localeChanged event
+    // that setLocale already dispatches synchronously.
+    window.addEventListener("localeChanged", (e) =>
+        achievements.onLocaleChange(e.detail)
+    );
+
     const sharedArch = consumeSharedArchParam();
     if (sharedArch) {
         document.getElementById("main-menu-modal").classList.add("hidden");
@@ -963,6 +990,11 @@ function animate(time) {
     // Failure badges (#156): age and fade the floating labels. Same
     // game-scaled dt as everything else, so they freeze with the board.
     tickFailureBadges(dt);
+
+    // Achievements (#158): 2 Hz poll cadence on game time (frozen while
+    // paused, the #183 timer class); skips entirely once every poll def is
+    // unlocked. Observation only — never mutates sim state.
+    achievements.tick(dt);
 
     // Live tooltip refresh (#173): while the pointer sits still over a service,
     // replay the last mousemove at ~4 Hz so the tooltip's load/queue/rate stats
@@ -1497,6 +1529,10 @@ window.closeSaveModal = closeSaveModal;
 window.saveGameState = saveGameState;
 window.onSaveGameFileUpload = onSaveGameFileUpload;
 window.onClickContinueGame = onClickContinueGame;
+
+// #158: the Trophies panel's inline handlers in index.html.
+window.showTrophies = showTrophies;
+window.closeTrophies = closeTrophies;
 
 // #157: the share modal's inline handlers in index.html.
 window.showShareModal = showShareModal;
