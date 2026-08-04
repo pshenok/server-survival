@@ -91,6 +91,8 @@ import {
     isPanning,
     keysPressed,
     lastPointerPos,
+    orbitCamera,
+    panCameraScreen,
     resetCamera,
 } from "./src/input/handlers.js";
 // Share Architecture (#157): the share modal, PNG export, and the ?arch=
@@ -882,87 +884,34 @@ function animate(time) {
     STATE.elapsedGameTime += dt;
     if (window.campaign?.active) window.campaign.tick(dt);
 
-    // Keyboard panning
-    const moveSpeed = 50 * clampedDt; // Use unscaled time so we can move while paused
-    // If zoomed in (zoom > 1), we might want to move slower, or just keep it constant world space
-    // Constant world space is usually better.
-    // Three.js OrthographicCamera zoom does not affect world coordinates directly, 
-    // so moving camera.position by X moves it by X world units regardless of zoom.
-
-    // Adjust speed based on zoom? Often players expect faster panning when zoomed out.
-    // Let's try constant world speed first, maybe scale by 1/zoom if needed.
+    // Keyboard panning + orbit. The direction math lives in
+    // src/input/handlers.js (panCameraScreen / orbitCamera) so the pan axes
+    // rotate with the camera azimuth (#231) — after a 90° orbit "up" is still
+    // "away from the camera". This block only reads held keys and picks
+    // magnitudes: unscaled time so the camera moves while paused, divided by
+    // zoom so the on-screen speed stays constant.
+    const moveSpeed = 50 * clampedDt;
     const effectivePanSpeed = moveSpeed / camera.zoom;
-
+    // Historical speeds, preserved exactly: the isometric key-pan stepped one
+    // unit on BOTH world axes per frame (a √2-long diagonal), top-down one.
+    const keyPanStep = effectivePanSpeed * (isIsometric ? Math.SQRT2 : 1);
     if (keysPressed["ArrowUp"] || keysPressed["w"] || keysPressed["W"]) {
-        // Move camera target and position "up" (-Z in isometric-ish view? No, usually up is -Z in 3D)
-        // Check pan logic: panY adds to Z. So Up should probably correspond to -Z.
-        // Let's match the mouse panning logic:
-        // dy (mouse down) -> panY (positive) -> z += panY.
-        // So moving mouse down moves camera +Z.
-        // Thus Up key should move camera -Z.
-        if (isIsometric) {
-            camera.position.x -= effectivePanSpeed;
-            camera.position.z -= effectivePanSpeed;
-            cameraTarget.x -= effectivePanSpeed;
-            cameraTarget.z -= effectivePanSpeed;
-        } else {
-            camera.position.z -= effectivePanSpeed;
-        }
+        panCameraScreen(0, keyPanStep);
     }
     if (keysPressed["ArrowDown"] || keysPressed["s"] || keysPressed["S"]) {
-        if (isIsometric) {
-            camera.position.x += effectivePanSpeed;
-            camera.position.z += effectivePanSpeed;
-            cameraTarget.x += effectivePanSpeed;
-            cameraTarget.z += effectivePanSpeed;
-        } else {
-            camera.position.z += effectivePanSpeed;
-        }
+        panCameraScreen(0, -keyPanStep);
     }
     if (keysPressed["ArrowLeft"] || keysPressed["a"] || keysPressed["A"]) {
-        // Mouse: dx (right) -> panX (negative) -> x += panX.
-        // So moving mouse right moves camera -X.
-        // Thus Right key should move camera +X? No wait.
-        // If I drag mouse right, I expect world to move right? Or camera to move left?
-        // Standard RTS: Mouse right -> Camera moves right -> World moves left.
-        // Wait, the pan logic: dx = e.clientX - lastMouseX. If I move mouse right, dx > 0.
-        // panX = (-dx...) -> panX < 0.
-        // camera.x += panX (so camera decreases X).
-        // So dragging mouse right moves camera LEFT. This is "drag the world" style.
-        // For KEYS, pressing Right should move camera RIGHT.
-        // So Right key should contain the OPPOSITE sign of panX for right-drag.
-        // mouse right -> camera left.
-        // key right -> camera right (x increasing).
-
-        if (isIsometric) {
-            camera.position.x -= effectivePanSpeed;
-            camera.position.z += effectivePanSpeed;
-            cameraTarget.x -= effectivePanSpeed;
-            cameraTarget.z += effectivePanSpeed;
-        } else {
-            camera.position.x -= effectivePanSpeed;
-        }
+        panCameraScreen(-keyPanStep, 0);
     }
     if (keysPressed["ArrowRight"] || keysPressed["d"] || keysPressed["D"]) {
-        if (isIsometric) {
-            camera.position.x += effectivePanSpeed;
-            camera.position.z -= effectivePanSpeed;
-            cameraTarget.x += effectivePanSpeed;
-            cameraTarget.z -= effectivePanSpeed;
-        } else {
-            camera.position.x += effectivePanSpeed;
-        }
+        panCameraScreen(keyPanStep, 0);
     }
-
-    if (isIsometric && (keysPressed["ArrowUp"] || keysPressed["w"] || keysPressed["W"] ||
-        keysPressed["ArrowDown"] || keysPressed["s"] || keysPressed["S"] ||
-        keysPressed["ArrowLeft"] || keysPressed["a"] || keysPressed["A"] ||
-        keysPressed["ArrowRight"] || keysPressed["d"] || keysPressed["D"])) {
-        camera.lookAt(cameraTarget);
-    } else if (!isIsometric) {
-        // Simple top down
-        // already handled by pos update
-    }
+    // Q/E orbit the view around the target (#231). Angular speed — no zoom
+    // scaling — and a no-op in top-down, which has no azimuth.
+    const orbitStep = 1.8 * clampedDt; // ~103°/s — brisk but trackable
+    if (keysPressed["q"] || keysPressed["Q"]) orbitCamera(-orbitStep);
+    if (keysPressed["e"] || keysPressed["E"]) orbitCamera(orbitStep);
 
     STATE.services.forEach((s) => s.update(dt));
     STATE.requests.forEach((r) => r.update(dt));

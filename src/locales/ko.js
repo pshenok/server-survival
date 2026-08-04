@@ -320,6 +320,8 @@ export const KO_TRANSLATIONS = {
     "hud_desc": "H 키를 눌러 HUD를 숨기거나 표시하세요.",
     "view": "뷰",
     "view_desc": "R 키를 눌러 뷰를 초기화하세요.",
+    "rotate": "회전",
+    "rotate_desc": "Q/E 키를 누르거나 마우스 휠 버튼으로 드래그하여 뷰를 회전하세요.",
     "mechanics": "게임 메커니즘",
     "mech_upgrades": "업그레이드",
     "mech_upgrades_desc": "기존 컴퓨트/DB/캐시 인스턴스를 클릭해 용량을 업그레이드하세요 (1~3단계).",
