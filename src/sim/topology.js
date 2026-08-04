@@ -47,7 +47,11 @@ function snapToGrid(vec) {
     );
 }
 
-function createService(type, pos) {
+// `opts.playerPlaced` (#158, default true): createService is the player's
+// placement path, so services born here count for the architecture-variety
+// achievements. The one non-player caller — the shared-arch rebuild in
+// ui/share.js, which places SOMEONE ELSE'S build — passes false.
+function createService(type, pos, opts = {}) {
     // Power placement gate (#87): a GPU cannot go on the grid past the cap —
     // boundary INCLUSIVE, so a draw landing exactly on the cap is legal (see
     // src/sim/power.js). Checked before any money moves.
@@ -69,7 +73,9 @@ function createService(type, pos) {
         STATE.finances.expenses.countByService[type] =
             (STATE.finances.expenses.countByService[type] || 0) + 1;
     }
-    STATE.services.push(new Service(type, pos));
+    const service = new Service(type, pos);
+    service.playerPlaced = opts.playerPlaced !== false;
+    STATE.services.push(service);
     recomputePower();
     STATE.sound.playPlace();
     updateRepairCostTable();

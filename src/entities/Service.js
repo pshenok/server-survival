@@ -72,6 +72,12 @@ export class Service {
     this.processing = [];
     this.connections = [];
     this.incomingCount = 0;
+    // Achievements (#158): true ONLY for services placed through the normal
+    // createService path (the player's own click). Campaign pre-builds,
+    // save restores, retry rebuilds and shared-arch rebuilds all construct
+    // outside that path (or opt out), so architecture-variety polls never
+    // grant for a board the player did not build this session.
+    this.playerPlaced = false;
 
     let geo, mat;
     const materialProps = { roughness: 0.2 };
@@ -385,6 +391,13 @@ export class Service {
         (STATE.finances.expenses.byService[this.type] || 0) + nextTier.cost;
     }
     this.tier++;
+    // Achievements (#158): the no_upgrades counter — bumped strictly AFTER
+    // the affordability check passed and the tier actually moved (the early
+    // returns above never count). Reset per level in CampaignController
+    // .loadLevel; only ever read at level win.
+    if (STATE.campaign) {
+      STATE.campaign.upgradesPerformed = (STATE.campaign.upgradesPerformed || 0) + 1;
+    }
     this.config = { ...this.config, capacity: nextTier.capacity };
 
     // Update cacheHitRate for cache type

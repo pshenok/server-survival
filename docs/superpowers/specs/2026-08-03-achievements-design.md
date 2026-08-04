@@ -1,7 +1,62 @@
 # Achievements — design
 
-**Date:** 2026-08-03
+**Date:** 2026-08-03 (amended 2026-08-03 per the integration critique)
 **Status:** approved direction (#158, addresses part of #74 "bored in 10 minutes")
+
+> **Amendments (binding, from the pre-implementation critique):**
+> 1. `fortress` is an **event** def, not a poll: edge-sampling
+>    `STATE.maliciousSpikeActive` cannot distinguish "spike ended" from
+>    "session reset/died" (resetGame flips the flag without calling
+>    endMaliciousSpike; a mid-spike game over strands the armed flag into the
+>    next session). `achievements.onSpikeStart()` fires from
+>    startMaliciousSpike (after the trafficShiftActive early-return) and
+>    `achievements.onSpikeEnd({ reputation })` from endMaliciousSpike.
+> 2. **Session-boundary hook**: `achievements.onSessionStart()` is called from
+>    `resetGame()` AND `loadGameState()`. It clears all armed/edge state and
+>    captures per-session baselines (`baselineElapsed`, the failure
+>    watermark). Time/cleanliness benchmarks measure LIVE-play deltas from
+>    those baselines — a restored save earns nothing for free. The 3s toast
+>    guard is cosmetics only; unlock correctness never depends on it.
+> 3. **Player-placed only**: architecture-variety polls count services with
+>    `Service.playerPlaced === true`, set exclusively by the createService
+>    placement path (the shared-arch rebuild opts out). Campaign pre-built
+>    boards (L13 pre-builds 12 services incl. db+nosql+replica+search; L23
+>    pre-builds gpu+infgw+power) and save restores grant nothing.
+> 4. **speed_demon** threshold is 45s (30s was unreachable on all 25 levels
+>    except via the level-10 instant-win bug) and is machine-proven on level 1
+>    through the real startCampaignLevel path.
+> 5. **no_upgrades** data source: `STATE.campaign.upgradesPerformed`,
+>    incremented in `Service.upgrade()` strictly after the affordability check
+>    passes (after `this.tier++`), reset in `CampaignController.loadLevel`.
+> 6. **onLevelWin ctx** is defined as `{ levelId, stars, elapsed, progress,
+>    level, servicesCount, usesServerlessOnly, upgradesPerformed }`.
+>    `pacifist_run` := `usesOnly(STATE, "serverless", ["compute"])` at win
+>    (identical to L10's machine-proven bonus objective; the
+>    place-then-sell loophole is accepted in writing). `minimalist` :=
+>    `servicesCount <= 4` alive at win, pre-built included.
+> 7. **Hook ordering**: `onLevelWin` fires as the LAST statement of
+>    `_persistWin`, after `saveProgress`, and receives the updated progress
+>    object — winning a chapter's final level grants the chapter def in the
+>    same call.
+> 8. **clean_two_minutes** never trusts the raw `STATE.failures` counters
+>    (the failures-panel clear-all button zeroes them mid-run): the engine
+>    watches the tally for INCREASES only; a decrease moves the watermark
+>    without restarting the clean window.
+> 9. `onGameOver(stats)` is CUT — no def in the final set consumes it, and a
+>    dead hook is untestable surface.
+> 10. The set is 26 defs (the "24" below was a miscount of its own list).
+> 11. **(post-verification)** The level-10 instant-win farm is closed at the
+>     root, campaign-side: `_checkEndConditions` declares a win only after
+>     ≥ 1 completed request this attempt (`STATE.campaign.completedByType`,
+>     reset per attempt in `loadLevel`, never restored from save files), and
+>     a timeout without that gate is a loss, so gated levels still
+>     terminate. An untouched L10 board — whose primaries were vacuously
+>     true, winning 3-star at the first 2 Hz check (t=0.5s) — or one idle
+>     serverless can no longer grant first_win / speed_demon / minimalist /
+>     no_upgrades / pacifist_run with zero play. Machine-probed through the
+>     real `startCampaignLevel(10)` path in
+>     `tests/sim/achievements-proofs.test.mjs`; the controller contract is
+>     pinned in `tests/sim/campaign.test.mjs`.
 
 ## Why
 

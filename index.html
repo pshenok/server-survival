@@ -784,6 +784,22 @@
           Sandbox Mode
         </button>
 
+        <button onclick="showTrophies()"
+          class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-amber-400/50 flex justify-between items-center">
+          <span class="flex items-center gap-2">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 21h8" />
+              <path d="M12 17v4" />
+              <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+              <path d="M7 6H4a1 1 0 0 0-1 1 4 4 0 0 0 4 4" />
+              <path d="M17 6h3a1 1 0 0 1 1 1 4 4 0 0 1-4 4" />
+            </svg>
+            <span data-i18n="trophies">Trophies</span>
+          </span>
+          <span id="trophies-progress-label" class="text-xs opacity-75 font-normal">0/26</span>
+        </button>
+
         <button onclick="document.getElementById('upload-file-input')?.click()" id="upload-btn"
           data-i18n="upload_game"
           class="w-full bg-blue-400 hover:bg-blue-300 text-black font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-cyan-400/50">
@@ -1525,6 +1541,35 @@
   </div>
 
   <!-- Campaign: Level Select Modal -->
+  <!-- Trophies (achievements) panel (#158) — reachable from the main menu only -->
+  <div id="trophies-modal"
+    class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden overflow-y-auto">
+    <div class="min-h-screen flex items-start justify-center p-6">
+      <div class="glass-panel rounded-2xl p-8 max-w-3xl w-full border border-amber-500/30">
+        <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+          <div class="flex items-center gap-3">
+            <svg class="w-8 h-8 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 21h8" />
+              <path d="M12 17v4" />
+              <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+              <path d="M7 6H4a1 1 0 0 0-1 1 4 4 0 0 0 4 4" />
+              <path d="M17 6h3a1 1 0 0 1 1 1 4 4 0 0 1-4 4" />
+            </svg>
+            <h2 class="text-3xl font-bold text-amber-400" data-i18n="trophies_title">TROPHIES</h2>
+            <span id="trophies-count"
+              class="text-sm bg-amber-900/50 px-3 py-1 rounded-full text-amber-300 border border-amber-700 font-mono">0/26</span>
+          </div>
+          <button onclick="closeTrophies()"
+            class="text-gray-400 hover:text-white text-2xl">×</button>
+        </div>
+        <div id="trophies-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- populated by renderTrophiesPanel() -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="campaign-select-modal"
     class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden overflow-y-auto">
     <div class="min-h-screen flex items-start justify-center p-6">

@@ -219,7 +219,9 @@ function rebuildSharedArch(arch) {
     const ids = arch.services.map((s) => {
         if (!s) return null;
         const before = STATE.services.length;
-        createService(s.type, new THREE.Vector3(s.x, 0, s.z));
+        // playerPlaced false (#158): this is someone else's build arriving
+        // via link — it must not grant architecture-variety achievements.
+        createService(s.type, new THREE.Vector3(s.x, 0, s.z), { playerPlaced: false });
         return STATE.services.length > before
             ? STATE.services[STATE.services.length - 1].id
             : null;

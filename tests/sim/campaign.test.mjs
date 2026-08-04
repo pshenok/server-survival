@@ -147,6 +147,45 @@ describe("onRequestCompleted", () => {
   });
 });
 
+// #158 verification: a win requires at least one completed request this
+// attempt. Level 10's primaries were vacuously true on an untouched board,
+// so the first 2 Hz check declared a 3-star win at t=0.5s and farmed five
+// achievements with zero play. The gate is the campaign-side root-cause fix;
+// the real-path L10 probes live in tests/sim/achievements-proofs.test.mjs.
+describe("_checkEndConditions win gate", () => {
+  function passAllPrimaries() {
+    for (const o of STATE.campaign.level.objectives.primary) {
+      STATE.campaign.objectiveResults[o.id] = true;
+    }
+  }
+
+  it("does not declare a win before any request has completed", () => {
+    c.loadLevel(1);
+    passAllPrimaries();
+    c._checkEndConditions();
+    expect(STATE.campaign.ended).toBe(false);
+  });
+
+  it("declares the win once a request has completed", () => {
+    c.loadLevel(1);
+    passAllPrimaries();
+    c.onRequestCompleted({ type: "READ" }, "db");
+    c._checkEndConditions();
+    expect(STATE.campaign.ended).toBe(true);
+    expect(STATE.campaign.outcome).toBe("win");
+  });
+
+  it("a timeout with zero completions loses even with all primaries met", () => {
+    c.loadLevel(1);
+    passAllPrimaries();
+    STATE.elapsedGameTime = STATE.campaign.level.failConditions.timeoutSec;
+    c._checkEndConditions();
+    expect(STATE.campaign.ended).toBe(true);
+    expect(STATE.campaign.outcome).toBe("lose");
+    expect(STATE.campaign.failureReason).toBe("Ran out of time");
+  });
+});
+
 describe("_calculateStars", () => {
   function level(durationSec) {
     return {

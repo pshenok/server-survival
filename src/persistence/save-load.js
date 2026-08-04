@@ -5,6 +5,11 @@
 
 import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
+// Achievements (#158): loading a save is a session boundary — baselines must
+// re-capture from the RESTORED board (elapsedGameTime is restored below but
+// STATE.failures is not), or a restored 300s save would instantly satisfy
+// every time/cleanliness benchmark with zero live play.
+import { achievements } from "../achievements/achievements.js";
 import { updateScoreUI } from "../core/actions.js";
 import { updateRepairCostTable } from "../core/economy.js";
 import { recomputePower } from "../sim/power.js";
@@ -361,6 +366,10 @@ function loadGameState(saveData = null) {
         }
 
         document.getElementById("main-menu-modal").classList.add("hidden");
+
+        // Achievements (#158): session boundary — AFTER elapsedGameTime and
+        // the board are restored, so the poll baselines read the loaded run.
+        achievements.onSessionStart();
 
         if (!STATE.animationId) {
             animate(performance.now());
