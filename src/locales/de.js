@@ -320,6 +320,8 @@ export const DE_TRANSLATIONS = {
     "hud_desc": "Drücke H, um das HUD auszublenden.",
     "view": "Ansicht",
     "view_desc": "Drücke R, um die Ansicht zurückzusetzen.",
+    "rotate": "Drehen",
+    "rotate_desc": "Drücke Q/E oder ziehe mit der mittleren Maustaste, um die Ansicht zu drehen.",
     "mechanics": "MECHANIKEN",
     "mech_upgrades": "Upgrades",
     "mech_upgrades_desc": "Klicke bestehende Compute/DB/Cache-Instanzen für Kapazitäts-Upgrades (Stufe 1-3).",

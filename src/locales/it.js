@@ -320,6 +320,8 @@ export const IT_TRANSLATIONS = {
     "hud_desc": "Premi H per nascondere l'HUD.",
     "view": "Visualizza",
     "view_desc": "Premi R per reimpostare la visualizzazione.",
+    "rotate": "Rotazione",
+    "rotate_desc": "Premi Q/E o trascina con il tasto centrale del mouse per ruotare la visuale.",
     "mechanics": "MECCANICHE",
     "mech_upgrades": "Aggiornamenti",
     "mech_upgrades_desc": "Fai clic sulle istanze Compute/DB/Cache esistenti per aggiornare la capacità (Livello 1-3).",

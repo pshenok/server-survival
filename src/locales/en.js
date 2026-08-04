@@ -320,6 +320,8 @@ export const EN_TRANSLATIONS = {
     "hud_desc": "Press H for hiding HUD.",
     "view": "View",
     "view_desc": "Press R for reset view.",
+    "rotate": "Rotate",
+    "rotate_desc": "Press Q/E or drag with the middle mouse button to rotate the view.",
     "mechanics": "MECHANICS",
     "mech_upgrades": "Upgrades",
     "mech_upgrades_desc": "Click existing Compute/DB/Cache instances to upgrade capacity (Tier 1-3).",

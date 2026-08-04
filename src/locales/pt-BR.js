@@ -320,6 +320,8 @@ export const PT_BR_TRANSLATIONS = {
     "hud_desc": "Pressione H para ocultar/mostrar interface (HUD).",
     "view": "Visão",
     "view_desc": "Pressione R para resetar a visão.",
+    "rotate": "Girar",
+    "rotate_desc": "Pressione Q/E ou arraste com o botão do meio do mouse para girar a visão.",
     "mechanics": "Mecânicas do Jogo",
     "mech_upgrades": "Atualizações",
     "mech_upgrades_desc": "Clique em instâncias existentes de computação, banco de dados ou cache para atualizar capacidade (níveis 1-3).",

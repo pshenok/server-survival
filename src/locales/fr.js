@@ -320,6 +320,8 @@ export const FR_TRANSLATIONS = {
     "hud_desc": "Appuyez sur H pour masquer le HUD.",
     "view": "Vue",
     "view_desc": "Appuyez sur R pour réinitialiser la vue.",
+    "rotate": "Rotation",
+    "rotate_desc": "Appuyez sur Q/E ou faites glisser avec le bouton du milieu de la souris pour faire pivoter la vue.",
     "mechanics": "MÉCANIQUES",
     "mech_upgrades": "Améliorations",
     "mech_upgrades_desc": "Cliquez sur les instances Calcul/DB/Cache existantes pour améliorer la capacité (Niveau 1-3).",

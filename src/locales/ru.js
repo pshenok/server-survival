@@ -320,6 +320,8 @@ export const RU_TRANSLATIONS = {
     "hud_desc": "Нажмите H, чтобы скрыть HUD.",
     "view": "Вид",
     "view_desc": "Нажмите R, чтобы сбросить камеру.",
+    "rotate": "Поворот",
+    "rotate_desc": "Нажмите Q/E или перетаскивайте средней кнопкой мыши, чтобы повернуть вид.",
     "mechanics": "МЕХАНИКИ",
     "mech_upgrades": "Улучшения",
     "mech_upgrades_desc": "Нажмите на Compute/DB/Cache для улучшения (Tier 1–3).",

@@ -320,6 +320,8 @@ export const ZH_TRANSLATIONS = {
     "hud_desc": "按 H 键隐藏/显示界面 (HUD)。",
     "view": "视角",
     "view_desc": "按 R 键重置视角。",
+    "rotate": "旋转",
+    "rotate_desc": "按 Q/E 键或按住鼠标中键拖动来旋转视角。",
     "mechanics": "游戏机制",
     "mech_upgrades": "升级",
     "mech_upgrades_desc": "点击现有的计算节点、数据库或缓存实例来升级容量 (1-3 级)。",

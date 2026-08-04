@@ -1,9 +1,9 @@
 // Input layer (#155 PR 8): the pointer/keyboard/camera handlers from
 // game.js — canvas raycast picking, wheel zoom, the upgrade indicator,
-// held-key tracking, the big mousedown/mousemove/mouseup drag/pan/connect/
-// place handlers with their state, hover + toolbar tooltips, window resize,
-// the document-level shortcuts (Esc/H/R/T), and the view toggle / camera
-// reset. Code moved verbatim from game.js; importing this module registers
+// held-key tracking, the big mousedown/mousemove/mouseup drag/pan/orbit/
+// connect/place handlers with their state, hover + toolbar tooltips, window
+// resize, the document-level shortcuts (Esc/H/R/T), and the view toggle /
+// camera reset / turntable orbit (#231). Code moved verbatim from game.js; importing this module registers
 // every listener as a side effect (no events can fire until the module
 // graph finishes evaluating, so registration order is unobservable).
 // game.js's animate loop reads the exported input state via live bindings.
@@ -90,6 +90,58 @@ let isPanning = false;
 let lastMouseX = 0;
 let lastMouseY = 0;
 const panSpeed = 0.1;
+
+// Camera orbit (#231): the isometric view rotates around cameraTarget on a
+// turntable — ONE azimuth angle, elevation fixed. A free trackball (Blender
+// style) would fight the orthographic projection and grid readability, so
+// pitch stays put. Session state only, like zoom — nothing persisted.
+const DEFAULT_AZIMUTH = Math.PI / 4; // camera at (+40, 40, +40) — the classic view
+const ORBIT_RADIUS = Math.SQRT2 * 40; // horizontal distance to the target
+const ORBIT_HEIGHT = 40; // fixed elevation — the isometric feel
+let cameraAzimuth = DEFAULT_AZIMUTH;
+let isOrbiting = false;
+
+// The one writer of camera.position in isometric view: pan moves
+// cameraTarget, orbit moves the angle, reset does both — and they all funnel
+// through here instead of hard-setting the position in three places.
+function applyCameraOrbit() {
+    camera.position.set(
+        cameraTarget.x + ORBIT_RADIUS * Math.cos(cameraAzimuth),
+        cameraTarget.y + ORBIT_HEIGHT,
+        cameraTarget.z + ORBIT_RADIUS * Math.sin(cameraAzimuth)
+    );
+    camera.lookAt(cameraTarget);
+}
+
+// Q/E and drag-orbit both land here. A no-op in top-down: that view has no
+// azimuth (the grid stays axis-aligned), and R/T reset the angle anyway, so
+// toggling never brings the board back sideways.
+function orbitCamera(deltaRadians) {
+    if (!isIsometric) return;
+    cameraAzimuth += deltaRadians;
+    applyCameraOrbit();
+}
+
+// Screen-relative pan: +rightUnits slides the view along the screen's X axis,
+// +upUnits along its Y (world units on the ground plane). In isometric view
+// the basis rotates WITH the azimuth — after a 90° orbit "up" is still "away
+// from the camera" — which is why callers can't just add to x/z anymore.
+function panCameraScreen(rightUnits, upUnits) {
+    if (isIsometric) {
+        const cos = Math.cos(cameraAzimuth);
+        const sin = Math.sin(cameraAzimuth);
+        // Ground projections at azimuth θ: screen-right = (sin θ, -cos θ),
+        // screen-up = (-cos θ, -sin θ). At the default 45° these reproduce
+        // the old hardcoded (±1, ±1) key-pan diagonals exactly.
+        cameraTarget.x += sin * rightUnits - cos * upUnits;
+        cameraTarget.z += -cos * rightUnits - sin * upUnits;
+        applyCameraOrbit();
+    } else {
+        camera.position.x += rightUnits;
+        camera.position.z -= upUnits;
+        camera.lookAt(camera.position.x, 0, camera.position.z);
+    }
+}
 
 function getIntersect(clientX, clientY) {
     mouse.x = (clientX / window.innerWidth) * 2 - 1;
@@ -306,7 +358,12 @@ container.addEventListener("mousedown", (e) => {
     if (!STATE.isRunning) return;
 
     if (e.button === 2 || e.button === 1) {
-        isPanning = true;
+        // Middle-drag (or Shift+right-drag, for mice without a wheel button)
+        // orbits — the CAD convention the issue asked for (#231); plain
+        // right-drag stays the pan it has always been. Top-down has no
+        // azimuth, so both buttons fall back to panning there.
+        isOrbiting = isIsometric && (e.button === 1 || e.shiftKey);
+        isPanning = !isOrbiting;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         container.style.cursor = "grabbing";
@@ -434,6 +491,16 @@ container.addEventListener("mousemove", (e) => {
         }
         return;
     }
+    if (isOrbiting) {
+        const dx = e.clientX - lastMouseX;
+        // Turntable-grab feel: a full-width drag is one full revolution, and
+        // the near edge of the board follows the cursor.
+        orbitCamera((dx * 2 * Math.PI) / window.innerWidth);
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        document.getElementById("tooltip").style.display = "none";
+        return;
+    }
     if (isPanning) {
         const dx = e.clientX - lastMouseX;
         const dy = e.clientY - lastMouseY;
@@ -443,18 +510,10 @@ container.addEventListener("mousemove", (e) => {
         const panY =
             ((dy * (camera.top - camera.bottom)) / window.innerHeight) * panSpeed;
 
-        if (isIsometric) {
-            camera.position.x += panX;
-            camera.position.z += panY;
-            cameraTarget.x += panX;
-            cameraTarget.z += panY;
-            camera.lookAt(cameraTarget);
-        } else {
-            camera.position.x += panX;
-            camera.position.z += panY;
-            camera.lookAt(camera.position.x, 0, camera.position.z);
-        }
-        camera.updateProjectionMatrix();
+        // panX slides along the screen's X, panY along its Y —
+        // panCameraScreen rotates that into world XZ by the current azimuth
+        // (#231), so dragging behaves the same from any angle.
+        panCameraScreen(panX, -panY);
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         document.getElementById("tooltip").style.display = "none";
@@ -788,6 +847,7 @@ window.addEventListener("toolbarRendered", setupUITooltips);
 container.addEventListener("mouseup", (e) => {
     if (e.button === 2 || e.button === 1) {
         isPanning = false;
+        isOrbiting = false;
         container.style.cursor = "default";
     }
     if (isDraggingNode && draggedNode) {
@@ -898,10 +958,13 @@ function toggleView() {
 }
 
 function resetCamera() {
+    // Azimuth resets in BOTH views: R snaps back to the classic angle, and
+    // since toggleView routes through here, T never re-enters isometric
+    // with a stale rotation either.
+    cameraAzimuth = DEFAULT_AZIMUTH;
     if (isIsometric) {
-        camera.position.set(40, 40, 40);
         cameraTarget.set(0, 0, 0);
-        camera.lookAt(cameraTarget);
+        applyCameraOrbit();
     } else {
         camera.position.set(0, 50, 0);
         camera.lookAt(0, 0, 0);
@@ -915,5 +978,7 @@ export {
     isPanning,
     keysPressed,
     lastPointerPos,
+    orbitCamera,
+    panCameraScreen,
     resetCamera,
 };
