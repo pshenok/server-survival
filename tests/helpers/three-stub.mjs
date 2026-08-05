@@ -154,6 +154,10 @@ export class Object3D {
     this.children = [];
     this.parent = null;
     this.position = new Vector3();
+    // Real THREE puts .up on every Object3D (cameras rotate it in top-down
+    // view, #231 follow-up) — the stub must match or resetCamera crashes at
+    // module load.
+    this.up = new Vector3(0, 1, 0);
     this.rotation = { x: 0, y: 0, z: 0 };
     this.scale = { x: 1, y: 1, z: 1 };
     this.userData = {};
