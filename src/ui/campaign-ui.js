@@ -18,6 +18,26 @@ import { applyToolbarGating } from "./toolbar.js";
 // runtime, long after both modules evaluate.
 import { resetGame } from "../../game.js";
 
+// Narrative strings live in the locales, looked up by convention (#238):
+// level_<id>_title / _scenario / _learn / _debrief and obj_<levelId>_<objId>.
+// levels.js carries no display text; tests/levels.test.mjs proves every key
+// exists in en, so a level added without its strings fails CI instead of
+// rendering raw keys.
+function levelText(levelId, suffix) {
+    return i18n.t(`level_${levelId}_${suffix}`);
+}
+
+function objLabel(levelId, o) {
+    return i18n.t(`obj_${levelId}_${o.id}`);
+}
+
+// Code-point-aware preview: .slice() on the string itself can cut a Devanagari
+// matra or an emoji surrogate in half at the ellipsis boundary.
+function scenarioPreview(scenario) {
+    const chars = [...scenario];
+    return chars.length > 80 ? chars.slice(0, 80).join("") + "…" : scenario;
+}
+
 function openCampaignSelect() {
     document.getElementById("main-menu-modal").classList.add("hidden");
     document.getElementById("campaign-select-modal").classList.remove("hidden");
@@ -69,8 +89,8 @@ function renderCampaignLevels() {
                 class="border border-gray-700 rounded-lg p-3 ${cursor} transition flex items-center gap-3">
                 <div class="text-3xl">${lvl.icon}</div>
                 <div class="flex-1">
-                    <div class="text-white font-bold">${lvl.id}. ${lvl.title}</div>
-                    <div class="text-gray-400 text-xs">${lvl.scenario.slice(0, 80)}${lvl.scenario.length > 80 ? "…" : ""}</div>
+                    <div class="text-white font-bold">${lvl.id}. ${levelText(lvl.id, "title")}</div>
+                    <div class="text-gray-400 text-xs">${scenarioPreview(levelText(lvl.id, "scenario"))}</div>
                 </div>
                 <div class="text-yellow-400 font-mono text-sm">${starStr}${time}</div>
             </div>`;
@@ -95,22 +115,22 @@ function showCampaignLevelTooltip(event, levelId) {
     const t = document.getElementById("tooltip");
     if (!t) return;
 
-    const goalsHtml = level.objectives.primary.map((o) => `<li>• ${o.label}</li>`).join("");
-    const bonusHtml = level.objectives.bonus.map((o) => `<li>• ${o.label}</li>`).join("");
+    const goalsHtml = level.objectives.primary.map((o) => `<li>• ${objLabel(level.id, o)}</li>`).join("");
+    const bonusHtml = level.objectives.bonus.map((o) => `<li>• ${objLabel(level.id, o)}</li>`).join("");
     // Shrink the diagram for tooltip use — viewBox stays the same, only displayed height.
     const diagram = renderArchitectureSVG(level.preBuilt, level.diagramHighlights)
         .replace('height="160"', 'height="90"');
 
     t.innerHTML = `
-        <div class="text-base font-bold text-cyan-400 mb-2">${level.icon} ${level.id}. ${level.title}</div>
-        <p class="text-xs text-gray-300 mb-2">${level.scenario}</p>
+        <div class="text-base font-bold text-cyan-400 mb-2">${level.icon} ${level.id}. ${levelText(level.id, "title")}</div>
+        <p class="text-xs text-gray-300 mb-2">${levelText(level.id, "scenario")}</p>
         <div class="bg-blue-900/40 rounded p-2 mb-2 border border-blue-700/30">
-            <div class="text-[10px] text-blue-400 uppercase font-bold mb-1">\u{1F4DA} Learn</div>
-            <p class="text-xs text-gray-200">${level.learn}</p>
+            <div class="text-[10px] text-blue-400 uppercase font-bold mb-1">\u{1F4DA} ${i18n.t("campaign_learn")}</div>
+            <p class="text-xs text-gray-200">${levelText(level.id, "learn")}</p>
         </div>
-        <div class="text-[10px] text-green-400 uppercase font-bold mb-1">\u{1F3AF} Goals</div>
+        <div class="text-[10px] text-green-400 uppercase font-bold mb-1">\u{1F3AF} ${i18n.t("campaign_goals")}</div>
         <ul class="text-xs text-gray-200 mb-2">${goalsHtml}</ul>
-        <div class="text-[10px] text-yellow-400 uppercase font-bold mb-1">⭐ Bonus</div>
+        <div class="text-[10px] text-yellow-400 uppercase font-bold mb-1">⭐ ${i18n.t("campaign_bonus")}</div>
         <ul class="text-xs text-gray-200 mb-2">${bonusHtml}</ul>
         <div class="mt-2 pt-2 border-t border-gray-700">${diagram}</div>
     `;
@@ -155,18 +175,19 @@ function openCampaignBriefing(levelId) {
 
     document.getElementById("campaign-briefing-icon").textContent = level.icon;
     document.getElementById("campaign-briefing-chapter").textContent =
-        `Chapter ${level.chapter} · Level ${level.id}`;
-    document.getElementById("campaign-briefing-title").textContent = level.title.toUpperCase();
-    document.getElementById("campaign-briefing-scenario").textContent = level.scenario;
-    document.getElementById("campaign-briefing-learn").textContent = level.learn;
+        i18n.t("campaign_chapter_level", { chapter: level.chapter, level: level.id });
+    document.getElementById("campaign-briefing-title").textContent =
+        levelText(level.id, "title").toUpperCase();
+    document.getElementById("campaign-briefing-scenario").textContent = levelText(level.id, "scenario");
+    document.getElementById("campaign-briefing-learn").textContent = levelText(level.id, "learn");
 
     document.getElementById("campaign-briefing-diagram").innerHTML =
         renderArchitectureSVG(level.preBuilt, level.diagramHighlights);
 
     document.getElementById("campaign-briefing-goals").innerHTML =
-        level.objectives.primary.map((o) => `<li>• ${o.label}</li>`).join("");
+        level.objectives.primary.map((o) => `<li>• ${objLabel(level.id, o)}</li>`).join("");
     document.getElementById("campaign-briefing-bonus").innerHTML =
-        level.objectives.bonus.map((o) => `<li>• ${o.label}</li>`).join("");
+        level.objectives.bonus.map((o) => `<li>• ${objLabel(level.id, o)}</li>`).join("");
 }
 
 function campaignStartCurrentLevel() {
@@ -241,25 +262,25 @@ function renderCampaignObjectives(level, primaryResults, bonusResults) {
         const done = primaryResults[o.id];
         const icon = done ? "☑" : "☐";
         const color = done ? "text-green-400" : "text-gray-400";
-        return `<li class="${color}"><span class="font-mono">${icon}</span> ${o.label}</li>`;
+        return `<li class="${color}"><span class="font-mono">${icon}</span> ${objLabel(level.id, o)}</li>`;
     }).join("");
 
     const bonusHtml = level.objectives.bonus.map((o) => {
         const done = bonusResults[o.id];
         const icon = done ? "⭐" : "☆";
         const color = done ? "text-yellow-300" : "text-gray-500";
-        return `<li class="${color}"><span class="font-mono">${icon}</span> ${o.label}</li>`;
+        return `<li class="${color}"><span class="font-mono">${icon}</span> ${objLabel(level.id, o)}</li>`;
     }).join("");
 
     panel.innerHTML = `
         <div class="flex justify-between items-center mb-2">
             <h3 class="text-xs font-bold text-yellow-400 uppercase tracking-wider">
-                Level ${level.id}: ${level.title}
+                ${i18n.t("campaign_hud_level", { id: level.id, title: levelText(level.id, "title") })}
             </h3>
             <span class="text-[10px] bg-yellow-900/50 px-2 py-0.5 rounded text-yellow-400 border border-yellow-800">${Math.round(STATE.elapsedGameTime)}s / ${level.durationSec}s</span>
         </div>
         <ul class="text-xs space-y-1 font-mono mb-2">${primaryHtml}</ul>
-        <div class="text-[10px] text-yellow-500 uppercase mt-2 mb-1">Bonus</div>
+        <div class="text-[10px] text-yellow-500 uppercase mt-2 mb-1">${i18n.t("campaign_bonus")}</div>
         <ul class="text-[11px] space-y-1 font-mono">${bonusHtml}</ul>`;
 }
 
@@ -276,22 +297,27 @@ function showCampaignDebrief(outcome, reason, level) {
     if (outcome === "win") {
         const stars = window.campaign._calculateStars();
         iconEl.textContent = "🎉";
-        titleEl.textContent = "LEVEL COMPLETE";
+        titleEl.textContent = i18n.t("campaign_level_complete");
         titleEl.className = "text-3xl font-bold mb-2 text-green-400";
         starsEl.textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
-        reasonEl.textContent = `Completed in ${Math.round(STATE.elapsedGameTime)}s`;
-        tipEl.textContent = level.debriefTip;
+        reasonEl.textContent = i18n.t("campaign_completed_in", { sec: Math.round(STATE.elapsedGameTime) });
+        tipEl.textContent = levelText(level.id, "debrief");
 
         const hasNext = CAMPAIGN_LEVELS.some((l) => l.id === level.id + 1);
         nextBtn.classList.toggle("hidden", !hasNext);
         if (typeof STATE.sound?.playSuccess === "function") STATE.sound.playSuccess();
     } else {
         iconEl.textContent = "❌";
-        titleEl.textContent = "LEVEL FAILED";
+        titleEl.textContent = i18n.t("campaign_level_failed");
         titleEl.className = "text-3xl font-bold mb-2 text-red-400";
         starsEl.textContent = "";
-        reasonEl.textContent = reason || "Objectives not met";
-        tipEl.textContent = level.debriefTip;
+        // The sim layer reports WHY as { key, vars } (campaign.js knows no
+        // display text); the boundary translates at render time so a locale
+        // switch between death and debrief still shows the right language.
+        reasonEl.textContent = reason
+            ? i18n.t(reason.key, reason.vars)
+            : i18n.t("campaign_objectives_not_met");
+        tipEl.textContent = levelText(level.id, "debrief");
         nextBtn.classList.add("hidden");
         if (typeof STATE.sound?.playGameOver === "function") STATE.sound.playGameOver();
     }

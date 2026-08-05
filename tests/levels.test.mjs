@@ -32,7 +32,54 @@ describe("campaign levels", () => {
     expect(missing).toEqual([]);
   });
 
-  describe.each(CAMPAIGN_LEVELS)("level $id — $title", (level) => {
+  it("every level's narrative keys exist in en (#238)", () => {
+    // campaign-ui looks narrative up by convention — levels.js holds no
+    // display strings. A level shipped without its locale entries would
+    // render raw keys in the briefing, tooltip, HUD, and debrief; this is
+    // the CI gate that turns that into a red build instead. The parity
+    // suite then propagates the requirement to every other locale.
+    const missing = [];
+    for (const l of CAMPAIGN_LEVELS) {
+      for (const suffix of ["title", "scenario", "learn", "debrief"]) {
+        const k = `level_${l.id}_${suffix}`;
+        if (!(k in en)) missing.push(k);
+      }
+      for (const kind of ["primary", "bonus"]) {
+        for (const o of l.objectives[kind]) {
+          const k = `obj_${l.id}_${o.id}`;
+          if (!(k in en)) missing.push(k);
+        }
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it("objective ids are unique within each level", () => {
+    // Two objectives sharing an id would collide on the same obj_<id>_<objId>
+    // locale key AND on objectiveResults[o.id] bookkeeping — one label would
+    // silently describe two different checks.
+    for (const l of CAMPAIGN_LEVELS) {
+      const ids = [...l.objectives.primary, ...l.objectives.bonus].map((o) => o.id);
+      expect(new Set(ids).size, `level ${l.id}`).toBe(ids.length);
+    }
+  });
+
+  it("levels carry no display-string fields (single source is the locales)", () => {
+    // The #238 extraction is only safe to rely on if strings can't creep
+    // back: a re-added `title:` would render nowhere and drift from en.js.
+    for (const l of CAMPAIGN_LEVELS) {
+      for (const f of ["title", "scenario", "learn", "debriefTip"]) {
+        expect(f in l, `level ${l.id} has stray "${f}"`).toBe(false);
+      }
+      for (const kind of ["primary", "bonus"]) {
+        for (const o of l.objectives[kind]) {
+          expect("label" in o, `level ${l.id}/${o.id} has stray "label"`).toBe(false);
+        }
+      }
+    }
+  });
+
+  describe.each(CAMPAIGN_LEVELS)("level $id", (level) => {
     it("traffic distribution sums to 1", () => {
       const sum = Object.values(level.trafficDistribution).reduce(
         (a, b) => a + b,

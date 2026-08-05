@@ -182,7 +182,9 @@ describe("_checkEndConditions win gate", () => {
     c._checkEndConditions();
     expect(STATE.campaign.ended).toBe(true);
     expect(STATE.campaign.outcome).toBe("lose");
-    expect(STATE.campaign.failureReason).toBe("Ran out of time");
+    // Reasons are { key, vars } since #238 — the sim layer names WHY via a
+    // locale key and the debrief translates at render time.
+    expect(STATE.campaign.failureReason).toEqual({ key: "campaign_fail_timeout" });
   });
 });
 
