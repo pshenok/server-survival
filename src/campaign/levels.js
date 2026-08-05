@@ -5,8 +5,10 @@
 //   id                 — 1..N, sequential from 1; used for unlock + persistence
 //   chapter            — 1=Basics, 2=Optimization, 3=Defense & Mastery,
 //                        4=Production Readiness
-//   title, scenario    — UI strings (EN)
-//   learn              — educational text (EN)
+//   (narrative)        — title/scenario/learn/debrief live in the LOCALES, not
+//                        here (#238), looked up by convention: level_<id>_title,
+//                        level_<id>_scenario, level_<id>_learn, level_<id>_debrief.
+//                        tests/levels.test.mjs fails if en is missing any.
 //   icon               — single emoji
 //   diagramHighlights  — { [preBuiltIndex]: "critical" } visual hints
 //   budget             — starting money (overrides survival.startBudget)
@@ -25,9 +27,11 @@
 //   allowedServices    — string[]; [] or undefined = all allowed
 //   forbiddenServices  — string[]; overrides allowedServices for explicit blocks
 //   objectives         — { primary: Obj[], bonus: Obj[] }
-//                         Obj: { id, label, check: (STATE) => bool }
+//                         Obj: { id, check: (STATE) => bool }; the player-facing
+//                         label is the locale key obj_<levelId>_<objId>, so ids
+//                         must be unique within a level and readable enough to
+//                         review label-vs-check adjacency in en.js
 //   failConditions     — { repBelow?, moneyBelow?, timeoutSec? }
-//   debriefTip         — shown on win
 
 import { CampaignObjectives } from "./objectives.js";
 
@@ -35,9 +39,6 @@ export const CAMPAIGN_LEVELS = [
     // ===== Chapter 1: Basics =====
     {
         id: 1, chapter: 1,
-        title: "The First Server",
-        scenario: "You're launching a brand-new web service. Build the basic pipeline: Internet → Firewall → Load Balancer → Compute → Database.",
-        learn: "Every request flows through the same chain. The Firewall blocks attacks, the Load Balancer distributes work, Compute does the processing, and the Database persists data.",
         icon: "🚀",
         diagramHighlights: {},
         budget: 300,
@@ -48,23 +49,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["waf", "alb", "compute", "db", "s3"],
         objectives: {
             primary: [
-                { id: "process_50_read", label: "Process 50 READ requests", check: (s) => CampaignObjectives.completedOfType(s, "READ") >= 50 },
-                { id: "rep_above_80", label: "Keep reputation above 80%", check: (s) => s.reputation >= 80 },
+                { id: "process_50_read", check: (s) => CampaignObjectives.completedOfType(s, "READ") >= 50 },
+                { id: "rep_above_80", check: (s) => s.reputation >= 80 },
             ],
             bonus: [
-                { id: "no_failures", label: "Zero failed requests", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
-                { id: "speedrun", label: "Complete under 48s", check: (s) => s.elapsedGameTime <= 48 },
+                { id: "no_failures", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
+                { id: "speedrun", check: (s) => s.elapsedGameTime <= 48 },
             ],
         },
         failConditions: { repBelow: 50, timeoutSec: 180 },
-        debriefTip: "The Firewall isn't optional — MALICIOUS traffic destroys reputation fast. Always put it first.",
     },
 
     {
         id: 2, chapter: 1,
-        title: "Store the Files",
-        scenario: "Users want to upload profile pictures. Your Compute nodes can't store files directly — they need Storage.",
-        learn: "UPLOAD traffic must be routed to Storage. Compute is stateless; persistent files live in S3-style storage.",
         icon: "📁",
         diagramHighlights: {},
         budget: 200,
@@ -83,22 +80,18 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["s3"],
         objectives: {
             primary: [
-                { id: "process_30_upload", label: "Process 30 UPLOAD requests", check: (s) => CampaignObjectives.completedOfType(s, "UPLOAD") >= 30 },
+                { id: "process_30_upload", check: (s) => CampaignObjectives.completedOfType(s, "UPLOAD") >= 30 },
             ],
             bonus: [
-                { id: "no_upload_fails", label: "Zero UPLOAD failures", check: (s) => (s.failures.UPLOAD || 0) === 0 },
-                { id: "speedrun", label: "Complete under 36s", check: (s) => s.elapsedGameTime <= 36 },
+                { id: "no_upload_fails", check: (s) => (s.failures.UPLOAD || 0) === 0 },
+                { id: "speedrun", check: (s) => s.elapsedGameTime <= 36 },
             ],
         },
         failConditions: { repBelow: 50, timeoutSec: 135 },
-        debriefTip: "Storage is cheap ($25) and handles UPLOAD/STATIC traffic without burdening Compute.",
     },
 
     {
         id: 3, chapter: 1,
-        title: "Edge with CDN",
-        scenario: "Your site went viral and 80% of traffic is static assets — images, JS, CSS. Your servers are drowning.",
-        learn: "CDN caches STATIC content at the edge with 95% hit rate. Traffic served by CDN never touches your origin servers.",
         icon: "🌍",
         diagramHighlights: {},
         budget: 150,
@@ -118,24 +111,20 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["cdn"],
         objectives: {
             primary: [
-                { id: "survive_60s", label: "Survive 60 seconds", check: (s) => s.elapsedGameTime >= 60 },
-                { id: "rep_above_70", label: "Keep reputation above 70%", check: (s) => s.reputation >= 70 },
+                { id: "survive_60s", check: (s) => s.elapsedGameTime >= 60 },
+                { id: "rep_above_70", check: (s) => s.reputation >= 70 },
             ],
             bonus: [
-                { id: "db_load_low", label: "DB load stays below 50%", check: (s) => CampaignObjectives.maxLoadOfType(s, "db") < 0.5 },
-                { id: "no_static_fails", label: "Zero STATIC failures", check: (s) => (s.failures.STATIC || 0) === 0 },
+                { id: "db_load_low", check: (s) => CampaignObjectives.maxLoadOfType(s, "db") < 0.5 },
+                { id: "no_static_fails", check: (s) => (s.failures.STATIC || 0) === 0 },
             ],
         },
         failConditions: { repBelow: 30, timeoutSec: 180 },
-        debriefTip: "CDN intercepts STATIC before it reaches your servers. Always pair Internet→CDN→Storage for static content.",
     },
 
     // ===== Chapter 2: Optimization =====
     {
         id: 4, chapter: 2,
-        title: "Cache the DB",
-        scenario: "Your e-commerce DB is melting under READ traffic. Players add the same items to cart over and over.",
-        learn: "Memory Cache stores responses in RAM and serves repeated READs without hitting the DB. ~40% of READs are cacheable.",
         icon: "🛒",
         diagramHighlights: { 3: "critical" },
         budget: 200,
@@ -157,23 +146,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["cache"],
         objectives: {
             primary: [
-                { id: "survive_60s", label: "Survive 60 seconds", check: (s) => s.elapsedGameTime >= 60 },
-                { id: "db_load_below_70", label: "Average DB load below 70%", check: (s) => CampaignObjectives.maxLoadOfType(s, "db") < 0.7 },
+                { id: "survive_60s", check: (s) => s.elapsedGameTime >= 60 },
+                { id: "db_load_below_70", check: (s) => CampaignObjectives.maxLoadOfType(s, "db") < 0.7 },
             ],
             bonus: [
-                { id: "no_drops", label: "Zero failed requests", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
-                { id: "rep_above_90", label: "Reputation above 90%", check: (s) => s.reputation >= 90 },
+                { id: "no_drops", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
+                { id: "rep_above_90", check: (s) => s.reputation >= 90 },
             ],
         },
         failConditions: { repBelow: 30, timeoutSec: 180 },
-        debriefTip: "Cache hit rate degrades for unique keys (e.g. SEARCH with random queries). Use it for repeated READs.",
     },
 
     {
         id: 5, chapter: 2,
-        title: "Buffer the Spikes",
-        scenario: "Your traffic is bursty — quiet for 5 seconds, then 20 requests at once. Compute can't keep up and requests drop.",
-        learn: "Message Queue (max 200) buffers bursts so Compute processes them at its own pace. But a queue only buys time — it can't add throughput. Sustained load here exceeds Compute Tier 1, so upgrade Compute too, or the queue will eventually saturate.",
         icon: "📊",
         diagramHighlights: { 2: "critical" },
         budget: 180,
@@ -193,23 +178,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["sqs"],
         objectives: {
             primary: [
-                { id: "survive_90s", label: "Survive 90 seconds", check: (s) => s.elapsedGameTime >= 90 },
-                { id: "fail_under_5_pct", label: "Failure rate under 5%", check: (s) => CampaignObjectives.failureRate(s) < 0.05 },
+                { id: "survive_90s", check: (s) => s.elapsedGameTime >= 90 },
+                { id: "fail_under_5_pct", check: (s) => CampaignObjectives.failureRate(s) < 0.05 },
             ],
             bonus: [
-                { id: "zero_drops", label: "Zero dropped requests", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
-                { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
+                { id: "zero_drops", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
+                { id: "rep_above_85", check: (s) => s.reputation >= 85 },
             ],
         },
         failConditions: { repBelow: 40, timeoutSec: 270 },
-        debriefTip: "Queues smooth peaks but add latency. Don't use them for low-latency reads.",
     },
 
     {
         id: 6, chapter: 2,
-        title: "Scale Reads",
-        scenario: "Read-heavy API traffic (45% READ). One DB can't keep up.",
-        learn: "Read Replica syphons READ traffic off the master DB. Compute prefers Replica → NoSQL → SQL automatically.",
         icon: "📖",
         diagramHighlights: { 3: "critical" },
         budget: 200,
@@ -231,23 +212,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["replica"],
         objectives: {
             primary: [
-                { id: "survive_75s", label: "Survive 75 seconds", check: (s) => s.elapsedGameTime >= 75 },
-                { id: "db_load_below_60", label: "DB load below 60%", check: (s) => CampaignObjectives.maxLoadOfType(s, "db") < 0.6 },
+                { id: "survive_75s", check: (s) => s.elapsedGameTime >= 75 },
+                { id: "db_load_below_60", check: (s) => CampaignObjectives.maxLoadOfType(s, "db") < 0.6 },
             ],
             bonus: [
-                { id: "replica_takes_half", label: "Replica handles ≥50% of READ", check: (s) => CampaignObjectives.replicaShareOfReads(s) >= 0.5 },
-                { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
+                { id: "replica_takes_half", check: (s) => CampaignObjectives.replicaShareOfReads(s) >= 0.5 },
+                { id: "rep_above_85", check: (s) => s.reputation >= 85 },
             ],
         },
         failConditions: { repBelow: 40, timeoutSec: 225 },
-        debriefTip: "Read Replica needs a master DB connection. Without it, READs to the replica fail.",
     },
 
     {
         id: 7, chapter: 2,
-        title: "Search Done Right",
-        scenario: "A Search Storm hits — 50% SEARCH traffic. SQL DB grinds to a halt under expensive full-text queries.",
-        learn: "Search Engine handles SEARCH 3× faster than SQL DB. Compute auto-routes SEARCH → Search Engine when available.",
         icon: "🔍",
         diagramHighlights: { 3: "critical" },
         budget: 250,
@@ -269,23 +246,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["search"],
         objectives: {
             primary: [
-                { id: "survive_60s", label: "Survive 60 seconds", check: (s) => s.elapsedGameTime >= 60 },
-                { id: "sql_load_below_40", label: "SQL DB load below 40%", check: (s) => CampaignObjectives.maxLoadOfType(s, "db") < 0.4 },
+                { id: "survive_60s", check: (s) => s.elapsedGameTime >= 60 },
+                { id: "sql_load_below_40", check: (s) => CampaignObjectives.maxLoadOfType(s, "db") < 0.4 },
             ],
             bonus: [
-                { id: "no_search_fails", label: "Zero SEARCH failures", check: (s) => (s.failures.SEARCH || 0) === 0 },
-                { id: "rep_above_80", label: "Reputation above 80%", check: (s) => s.reputation >= 80 },
+                { id: "no_search_fails", check: (s) => (s.failures.SEARCH || 0) === 0 },
+                { id: "rep_above_80", check: (s) => s.reputation >= 80 },
             ],
         },
         failConditions: { repBelow: 40, timeoutSec: 180 },
-        debriefTip: "Search Engine only handles SEARCH. Other traffic must keep going to DB/NoSQL.",
     },
 
     {
         id: 8, chapter: 2,
-        title: "NoSQL for Speed",
-        scenario: "Your SQL DB is the bottleneck. Most of your traffic is simple READ/WRITE — overkill for a relational DB.",
-        learn: "NoSQL is 2× faster than SQL for READ/WRITE (150ms vs 300ms). But it can't handle SEARCH — keep SQL for that.",
         icon: "⚡",
         diagramHighlights: { 3: "critical" },
         budget: 300,
@@ -307,23 +280,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["nosql"],
         objectives: {
             primary: [
-                { id: "survive_60s", label: "Survive 60 seconds", check: (s) => s.elapsedGameTime >= 60 },
-                { id: "rep_above_75", label: "Reputation above 75%", check: (s) => s.reputation >= 75 },
+                { id: "survive_60s", check: (s) => s.elapsedGameTime >= 60 },
+                { id: "rep_above_75", check: (s) => s.reputation >= 75 },
             ],
             bonus: [
-                { id: "nosql_takes_writes", label: "NoSQL handles ≥60% of WRITE", check: (s) => CampaignObjectives.nosqlShareOfWrites(s) >= 0.6 },
-                { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
+                { id: "nosql_takes_writes", check: (s) => CampaignObjectives.nosqlShareOfWrites(s) >= 0.6 },
+                { id: "rep_above_85", check: (s) => s.reputation >= 85 },
             ],
         },
         failConditions: { repBelow: 40, timeoutSec: 180 },
-        debriefTip: "NoSQL ≠ universal upgrade. SEARCH still needs SQL DB or a Search Engine.",
     },
 
     {
         id: 9, chapter: 2,
-        title: "Rate Limit Gateway",
-        scenario: "Traffic spikes randomly to 4× normal. Excess requests fail hard, costing -1 reputation each.",
-        learn: "API Gateway throttles excess traffic with only -0.2 reputation per throttle (vs -1 for failures). Soft-fail is much cheaper.",
         icon: "🚦",
         diagramHighlights: {},
         budget: 220,
@@ -346,23 +315,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["apigw"],
         objectives: {
             primary: [
-                { id: "survive_60s", label: "Survive 60 seconds", check: (s) => s.elapsedGameTime >= 60 },
-                { id: "fail_under_10_pct", label: "Failure rate under 10%", check: (s) => CampaignObjectives.failureRate(s) < 0.1 },
+                { id: "survive_60s", check: (s) => s.elapsedGameTime >= 60 },
+                { id: "fail_under_10_pct", check: (s) => CampaignObjectives.failureRate(s) < 0.1 },
             ],
             bonus: [
-                { id: "rep_above_80", label: "Reputation above 80%", check: (s) => s.reputation >= 80 },
-                { id: "rep_above_90", label: "Reputation above 90%", check: (s) => s.reputation >= 90 },
+                { id: "rep_above_80", check: (s) => s.reputation >= 80 },
+                { id: "rep_above_90", check: (s) => s.reputation >= 90 },
             ],
         },
         failConditions: { repBelow: 30, timeoutSec: 180 },
-        debriefTip: "Throttling > failing. Place API Gateway behind WAF (Internet→WAF→APIGW→ALB).",
     },
 
     {
         id: 10, chapter: 2,
-        title: "Serverless or Compute?",
-        scenario: "You have low, bursty traffic (~1.5 RPS) and a tight $500 budget. Always-on Compute bleeds upkeep.",
-        learn: "Serverless Function has very low upkeep but charges $0.03 per request. Cheap for low/bursty traffic, expensive at high RPS.",
         icon: "λ",
         diagramHighlights: {},
         budget: 500,
@@ -373,24 +338,20 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: [],
         objectives: {
             primary: [
-                { id: "profit_100", label: "Net profit ≥ -$210 in 90s", check: (s) => CampaignObjectives.netProfit(s) >= -210 },
-                { id: "rep_above_70", label: "Reputation above 70%", check: (s) => s.reputation >= 70 },
+                { id: "profit_100", check: (s) => CampaignObjectives.netProfit(s) >= -210 },
+                { id: "rep_above_70", check: (s) => s.reputation >= 70 },
             ],
             bonus: [
-                { id: "uses_serverless", label: "Used Serverless Function (no Compute)", check: (s) => CampaignObjectives.usesOnly(s, "serverless", ["compute"]) },
-                { id: "speedrun", label: "Complete under 72s", check: (s) => s.elapsedGameTime <= 72 },
+                { id: "uses_serverless", check: (s) => CampaignObjectives.usesOnly(s, "serverless", ["compute"]) },
+                { id: "speedrun", check: (s) => s.elapsedGameTime <= 72 },
             ],
         },
         failConditions: { moneyBelow: -50, repBelow: 30, timeoutSec: 270 },
-        debriefTip: "Pay-per-use only wins at low RPS. Once traffic stabilizes high, switch to always-on Compute.",
     },
 
     // ===== Chapter 3: Defense & Mastery =====
     {
         id: 11, chapter: 3,
-        title: "Defense in Depth",
-        scenario: "A DDoS wave is incoming — 70% malicious traffic. A single Firewall isn't enough; you need defense in layers.",
-        learn: "WAF blocks MALICIOUS hard. API Gateway throttles legitimate spikes. Together they form a layered defense.",
         icon: "🛡️",
         diagramHighlights: {},
         budget: 300,
@@ -410,23 +371,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["waf", "apigw"],
         objectives: {
             primary: [
-                { id: "survive_60s", label: "Survive 60 seconds", check: (s) => s.elapsedGameTime >= 60 },
-                { id: "no_leaks", label: "Zero MALICIOUS leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
+                { id: "survive_60s", check: (s) => s.elapsedGameTime >= 60 },
+                { id: "no_leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
             ],
             bonus: [
-                { id: "rep_above_70", label: "Reputation above 70%", check: (s) => s.reputation >= 70 },
-                { id: "uses_both", label: "Used both WAF and API Gateway", check: (s) => CampaignObjectives.hasService(s, "waf") && CampaignObjectives.hasService(s, "apigw") },
+                { id: "rep_above_70", check: (s) => s.reputation >= 70 },
+                { id: "uses_both", check: (s) => CampaignObjectives.hasService(s, "waf") && CampaignObjectives.hasService(s, "apigw") },
             ],
         },
         failConditions: { repBelow: 20, timeoutSec: 180 },
-        debriefTip: "MALICIOUS leaks are 5× worse than failures. WAF is non-negotiable for any production system.",
     },
 
     {
         id: 12, chapter: 3,
-        title: "High Availability",
-        scenario: "Single Firewall = single point of failure. A simulated outage will disable one of your services mid-game. Build redundancy.",
-        learn: "Multiple identical entry points share load via round-robin. If one fails, others absorb the traffic.",
         icon: "🔄",
         diagramHighlights: { 0: "critical" },
         budget: 250,
@@ -448,23 +405,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["waf"],
         objectives: {
             primary: [
-                { id: "survive_75s", label: "Survive 75 seconds", check: (s) => s.elapsedGameTime >= 75 },
-                { id: "rep_above_60", label: "Reputation above 60%", check: (s) => s.reputation >= 60 },
+                { id: "survive_75s", check: (s) => s.elapsedGameTime >= 75 },
+                { id: "rep_above_60", check: (s) => s.reputation >= 60 },
             ],
             bonus: [
-                { id: "two_wafs", label: "Run at least 2 Firewalls", check: (s) => CampaignObjectives.countServices(s, "waf") >= 2 },
-                { id: "no_leaks", label: "Zero MALICIOUS leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
+                { id: "two_wafs", check: (s) => CampaignObjectives.countServices(s, "waf") >= 2 },
+                { id: "no_leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
             ],
         },
         failConditions: { repBelow: 20, timeoutSec: 225 },
-        debriefTip: "Two cheap WAFs beat one expensive one. Redundancy > capacity for entry points.",
     },
 
     {
         id: 13, chapter: 3,
-        title: "Cost Crunch",
-        scenario: "Your over-engineered architecture is bleeding money. Upkeep is eating all your income. Trim the fat without breaking throughput.",
-        learn: "Every service has upkeep. Removing redundant or oversized services can keep you alive financially.",
         icon: "💰",
         diagramHighlights: {},
         budget: 100,
@@ -495,23 +448,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: [],
         objectives: {
             primary: [
-                { id: "survive_60s", label: "Survive 60 seconds", check: (s) => s.elapsedGameTime >= 60 },
-                { id: "net_profit", label: "Net profit > 0", check: (s) => CampaignObjectives.netProfit(s) > 0 },
+                { id: "survive_60s", check: (s) => s.elapsedGameTime >= 60 },
+                { id: "net_profit", check: (s) => CampaignObjectives.netProfit(s) > 0 },
             ],
             bonus: [
-                { id: "upkeep_low", label: "Total upkeep below $0.80/s", check: (s) => CampaignObjectives.totalUpkeepPerSec(s) < 0.8 },
-                { id: "rep_above_70", label: "Reputation above 70%", check: (s) => s.reputation >= 70 },
+                { id: "upkeep_low", check: (s) => CampaignObjectives.totalUpkeepPerSec(s) < 0.8 },
+                { id: "rep_above_70", check: (s) => s.reputation >= 70 },
             ],
         },
         failConditions: { moneyBelow: -200, timeoutSec: 180 },
-        debriefTip: "Over-provisioning is the silent killer. Right-size every service to actual load.",
     },
 
     {
         id: 14, chapter: 3,
-        title: "Black Friday",
-        scenario: "It's go time. 90 seconds of chaos: 4× normal RPS, DDoS waves, traffic shifts. Build whatever you need.",
-        learn: "Real production combines everything: WAF, API GW, Cache, Queue, Replicas, Search Engine, CDN — pick the right tools for each problem.",
         icon: "🔥",
         diagramHighlights: {},
         budget: 1000,
@@ -523,16 +472,15 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: [],
         objectives: {
             primary: [
-                { id: "survive_90s", label: "Survive 90 seconds", check: (s) => s.elapsedGameTime >= 90 },
-                { id: "rep_above_50", label: "Reputation above 50%", check: (s) => s.reputation >= 50 },
+                { id: "survive_90s", check: (s) => s.elapsedGameTime >= 90 },
+                { id: "rep_above_50", check: (s) => s.reputation >= 50 },
             ],
             bonus: [
-                { id: "rep_above_70", label: "Reputation above 70%", check: (s) => s.reputation >= 70 },
-                { id: "no_leaks", label: "Zero MALICIOUS leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
+                { id: "rep_above_70", check: (s) => s.reputation >= 70 },
+                { id: "no_leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
             ],
         },
         failConditions: { repBelow: 20, moneyBelow: -500, timeoutSec: 270 },
-        debriefTip: "Congratulations, Architect. You've mastered the basics of cloud system design. Now try Survival mode for the real grind.",
     },
 
     // ===== Chapter 4: Production Readiness (#217) =====
@@ -542,9 +490,6 @@ export const CAMPAIGN_LEVELS = [
     // who are mid-progress, so new mechanics get new levels.
     {
         id: 15, chapter: 4,
-        title: "Flying Blind",
-        scenario: "The architecture looks finished — Firewall, Load Balancer, Compute, Cache, Database, Storage — and it still buckles. One node in this chain is running far hotter than the rest. Guessing costs money you don't have; measuring costs $75.",
-        learn: "Monitoring never touches traffic. Placing it unlocks the live METRICS dashboard — per-service utilization, queue depth, error rate and latency — plus threshold alerts. The hottest node is almost never the most expensive one, and only the panel tells you which is which. Then upgrade THAT node.",
         icon: "📈",
         diagramHighlights: {},
         budget: 190,
@@ -571,23 +516,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["monitor"],
         objectives: {
             primary: [
-                { id: "deploy_monitoring", label: "Deploy a Monitoring node", check: (s) => CampaignObjectives.hasService(s, "monitor") },
-                { id: "serve_220", label: "Complete 220 requests", check: (s) => CampaignObjectives.totalCompleted(s) >= 220 },
+                { id: "deploy_monitoring", check: (s) => CampaignObjectives.hasService(s, "monitor") },
+                { id: "serve_220", check: (s) => CampaignObjectives.totalCompleted(s) >= 220 },
             ],
             bonus: [
-                { id: "nothing_hot", label: "No service above 30% load", check: (s) => CampaignObjectives.busiestLoad(s) < 0.3 },
-                { id: "fail_under_10_pct", label: "Failure rate under 10%", check: (s) => CampaignObjectives.failureRate(s) < 0.1 },
+                { id: "nothing_hot", check: (s) => CampaignObjectives.busiestLoad(s) < 0.3 },
+                { id: "fail_under_10_pct", check: (s) => CampaignObjectives.failureRate(s) < 0.1 },
             ],
         },
         failConditions: { repBelow: 25, timeoutSec: 210 },
-        debriefTip: "CloudWatch, Azure Monitor, Cloud Monitoring — every provider sells the dashboard separately, and every outage post-mortem starts with 'we had no visibility'. Buy the eyes before you buy the hardware.",
     },
 
     {
         id: 16, chapter: 4,
-        title: "The Traffic Spike",
-        scenario: "Marketing shipped the campaign without telling you, and the queries are expensive ones. Your single Compute node is already behind and there is no budget for a bigger one. Turn on AUTO and let the fleet grow itself.",
-        learn: "An Auto-Scaling Group boots a new instance when utilization stays above target — but a new instance carries NO traffic while it warms up. You pay for it from the moment it boots and get capacity only seconds later. That gap is the cold start: scaling out is a reaction, never a prediction.",
         icon: "🌊",
         diagramHighlights: { 2: "critical" },
         budget: 90,
@@ -612,25 +553,21 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["monitor"],
         objectives: {
             primary: [
-                { id: "fleet_scaled", label: "Let the Compute fleet scale itself out (AUTO)", check: (s) => CampaignObjectives.fleetScaledOut(s, "compute") },
-                { id: "serve_150", label: "Complete 150 requests", check: (s) => CampaignObjectives.totalCompleted(s) >= 150 },
+                { id: "fleet_scaled", check: (s) => CampaignObjectives.fleetScaledOut(s, "compute") },
+                { id: "serve_150", check: (s) => CampaignObjectives.totalCompleted(s) >= 150 },
             ],
             bonus: [
-                { id: "fail_under_25_pct", label: "Failure rate under 25%", check: (s) => CampaignObjectives.failureRate(s) < 0.25 },
-                { id: "rep_above_40", label: "Reputation above 40%", check: (s) => s.reputation >= 40 },
+                { id: "fail_under_25_pct", check: (s) => CampaignObjectives.failureRate(s) < 0.25 },
+                { id: "rep_above_40", check: (s) => s.reputation >= 40 },
             ],
         },
         // No survive-N objective: the goal is throughput, so a fixed fleet
         // fails by never getting there rather than by a stopwatch.
         failConditions: { repBelow: 15, timeoutSec: 150 },
-        debriefTip: "AWS Auto Scaling Groups, GCP Managed Instance Groups, Azure VM Scale Sets — all of them react to a metric, and all of them boot cold. Pre-warm before a known spike; auto-scaling saves you from the spikes you didn't know about.",
     },
 
     {
         id: 17, chapter: 4,
-        title: "Node Down",
-        scenario: "Ops is running a game day: 30 seconds in, they will pull the plug on your Firewall — the one node every single request enters through. A quarter of your traffic is hostile. Survive the outage without losing the customers.",
-        learn: "Redundancy is not spare capacity, it is a second path. Routing skips a node that is offline or whose circuit breaker has opened, so a second identical entry point absorbs the traffic automatically. One of anything on the request path is a single point of failure.",
         icon: "🔌",
         diagramHighlights: { 0: "critical" },
         // Roomy on purpose: a MALICIOUS leak costs $50, so a player who waits
@@ -654,23 +591,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["waf"],
         objectives: {
             primary: [
-                { id: "survived_outage", label: "Survive the outage with reputation above 75%", check: (s) => CampaignObjectives.survivedNodeFailure(s, 75) },
-                { id: "survive_70s", label: "Survive 70 seconds", check: (s) => s.elapsedGameTime >= 70 },
+                { id: "survived_outage", check: (s) => CampaignObjectives.survivedNodeFailure(s, 75) },
+                { id: "survive_70s", check: (s) => s.elapsedGameTime >= 70 },
             ],
             bonus: [
-                { id: "no_leaks", label: "Zero MALICIOUS leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
-                { id: "rep_above_90", label: "Reputation above 90%", check: (s) => s.reputation >= 90 },
+                { id: "no_leaks", check: (s) => (s.failures.MALICIOUS || 0) === 0 },
+                { id: "rep_above_90", check: (s) => s.reputation >= 90 },
             ],
         },
         failConditions: { repBelow: 30, timeoutSec: 270 },
-        debriefTip: "This is why clouds sell Availability Zones: two Firewalls in one rack are one power failure. Spread the redundant copies, and make sure traffic can actually reach the spare — an unwired standby is decoration.",
     },
 
     {
         id: 18, chapter: 4,
-        title: "Nothing Gets Lost",
-        scenario: "Two Compute nodes, both running hot. Some requests are already saved by an automatic retry to the healthy peer — the rest simply vanish, and every vanished request is a customer. Give the losers somewhere to land.",
-        learn: "A Dead-Letter Queue is the only node that HOLDS an already-failed request instead of dropping it. Wire it to the nodes whose final failures you want to catch: a parked request counts as neither success nor failure, and the slow auto-drain recovers it for a small fee. Let it overflow and you are worse off than with no DLQ at all.",
         icon: "📥",
         diagramHighlights: { 2: "critical", 3: "critical" },
         budget: 120,
@@ -696,23 +629,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["dlq"],
         objectives: {
             primary: [
-                { id: "deploy_dlq", label: "Catch failures in a Dead-Letter Queue", check: (s) => CampaignObjectives.hasService(s, "dlq") },
-                { id: "survive_70s", label: "Survive 70 seconds", check: (s) => s.elapsedGameTime >= 70 },
+                { id: "deploy_dlq", check: (s) => CampaignObjectives.hasService(s, "dlq") },
+                { id: "survive_70s", check: (s) => s.elapsedGameTime >= 70 },
             ],
             bonus: [
-                { id: "retries_worked", label: "At least 15 requests saved by a retry", check: (s) => CampaignObjectives.retriedRequests(s) >= 15 },
-                { id: "nothing_lost", label: "Zero requests lost outright", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
+                { id: "retries_worked", check: (s) => CampaignObjectives.retriedRequests(s) >= 15 },
+                { id: "nothing_lost", check: (s) => CampaignObjectives.totalFailures(s) === 0 },
             ],
         },
         failConditions: { repBelow: 40, timeoutSec: 270 },
-        debriefTip: "SQS dead-letter queues, Azure Service Bus dead-letter sub-queues, Pub/Sub dead-letter topics — same idea everywhere: retry a couple of times, then park the message for a human. A DLQ nobody drains is just a slower way to lose data.",
     },
 
     {
         id: 19, chapter: 4,
-        title: "Fan Out",
-        scenario: "Product wants a push notification for every order — without slowing the order down by one millisecond. Both consumers are provisioned and neither is plugged into the balancer. Stop chaining services one after another: publish the event once and let every subscriber take its own copy.",
-        learn: "A Pub/Sub Topic is the only node that MULTIPLIES a request: it delivers one copy to every subscriber wired to it, in parallel and independently. The order path and the notification path stop waiting for each other — and a slow subscriber can no longer take the fast one down with it.",
         icon: "📡",
         diagramHighlights: { 4: "critical" },
         budget: 150,
@@ -732,12 +661,12 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["pubsub"],
         objectives: {
             primary: [
-                { id: "notifications_sent", label: "Deliver 180 events to the Notification service", check: (s) => CampaignObjectives.completedByService(s, "notify") >= 180 },
-                { id: "orders_stored", label: "Store 180 orders in the Database", check: (s) => CampaignObjectives.completedByService(s, "db") >= 180 },
+                { id: "notifications_sent", check: (s) => CampaignObjectives.completedByService(s, "notify") >= 180 },
+                { id: "orders_stored", check: (s) => CampaignObjectives.completedByService(s, "db") >= 180 },
             ],
             bonus: [
-                { id: "fail_under_5_pct", label: "Failure rate under 5%", check: (s) => CampaignObjectives.failureRate(s) < 0.05 },
-                { id: "rep_above_90", label: "Reputation above 90%", check: (s) => s.reputation >= 90 },
+                { id: "fail_under_5_pct", check: (s) => CampaignObjectives.failureRate(s) < 0.05 },
+                { id: "rep_above_90", check: (s) => s.reputation >= 90 },
             ],
         },
         // Deliberately NOT the usual 3x durationSec. The tight deadline is what
@@ -745,7 +674,6 @@ export const CAMPAIGN_LEVELS = [
         // and it round-robins, so each gets half the events and neither target
         // lands in time). Fan-out delivers a copy to BOTH, which is the lesson.
         failConditions: { repBelow: 40, timeoutSec: 75 },
-        debriefTip: "SNS + SQS, Google Pub/Sub, Azure Event Grid — publish once, subscribe many. The point is not saving a call, it is decoupling: adding an audit-log subscriber tomorrow must not require touching the order path today.",
     },
 
     // ===== Chapter 4 (cont.): Multi-region failover (#221) =====
@@ -755,9 +683,6 @@ export const CAMPAIGN_LEVELS = [
     // away, and watch it shift back when the region returns.
     {
         id: 20, chapter: 4,
-        title: "Two Regions",
-        scenario: "Your service went global, and Ops has scheduled the drill to prove it: 35 seconds in, the entire pre-built stack behind your GeoDNS — Firewall, Load Balancer, Compute — goes dark for 25 seconds. One region cannot be trusted with all of your traffic. Build the second one before the lights go out.",
-        learn: "GeoDNS only resolves to front doors that are alive, so a second complete stack wired to it IS your failover: traffic shifts to it the moment region A dies, and spreads back on its own when it returns. That is active-active — both regions serve live traffic and either can carry the whole site. The bill is the catch: two of everything means double upkeep every second, outage or not.",
         icon: "🌐",
         diagramHighlights: { 1: "critical" },
         // Region B costs exactly $150 (WAF 40 + ALB 50 + Compute 60); the rest
@@ -788,16 +713,15 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["waf", "alb", "compute"],
         objectives: {
             primary: [
-                { id: "survived_region", label: "Survive the region outage with reputation above 70%", check: (s) => CampaignObjectives.survivedNodeFailure(s, 70) },
-                { id: "serve_300", label: "Complete 300 requests", check: (s) => CampaignObjectives.totalCompleted(s) >= 300 },
+                { id: "survived_region", check: (s) => CampaignObjectives.survivedNodeFailure(s, 70) },
+                { id: "serve_300", check: (s) => CampaignObjectives.totalCompleted(s) >= 300 },
             ],
             bonus: [
-                { id: "outage_throughput", label: "Complete 60 requests while region A is dark", check: (s) => CampaignObjectives.completedDuringRegionOutage(s) >= 60 },
-                { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
+                { id: "outage_throughput", check: (s) => CampaignObjectives.completedDuringRegionOutage(s) >= 60 },
+                { id: "rep_above_85", check: (s) => s.reputation >= 85 },
             ],
         },
         failConditions: { repBelow: 30, timeoutSec: 270 },
-        debriefTip: "Active-active means either region can lose the other — you just proved it in both directions, and paid double upkeep the whole time; that idle-looking second region IS the product. Active-passive halves the bill with a cold standby and pays in failover time and an untested region. Route 53 health checks · Azure Traffic Manager · Cloud DNS — same choice, same double bill.",
     },
 
     // ===== Chapter 5: The AI Wave (#87) =====
@@ -808,9 +732,6 @@ export const CAMPAIGN_LEVELS = [
     // docs/superpowers/specs/2026-07-30-ai-wave-design.md §5.
     {
         id: 21, chapter: 5,
-        title: "Hello, GPU",
-        scenario: "Product shipped an AI feature and 60% of your traffic is now inference. GPUs are the only nodes that serve it — and marketing just announced a launch-day surge, arriving in waves from second 45. Get a model serving, and get the bigger one loaded BEFORE the wave hits.",
-        learn: "A GPU Cluster serves INFERENCE only, and it cold-starts: the model loads for 12-30s before the node takes any traffic. Tiers are model size — bigger batches AND better answers (10% → 4% → 1% bad-answer risk) — but every upgrade RELOADS the model, and a reloading GPU serves nothing. Upgrade in a lull; upgrading during a surge is a self-inflicted outage.",
         icon: "🤖",
         diagramHighlights: { 2: "critical" },
         // Tuned by headless playthrough (5 consecutive runs, all three
@@ -851,23 +772,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["gpu"],
         objectives: {
             primary: [
-                { id: "serve_80_inference", label: "Serve 80 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 80 },
-                { id: "rep_above_65", label: "Reputation above 65%", check: (s) => s.reputation >= 65 },
+                { id: "serve_80_inference", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 80 },
+                { id: "rep_above_65", check: (s) => s.reputation >= 65 },
             ],
             bonus: [
-                { id: "few_bad_answers", label: "Fewer than 6 bad answers", check: (s) => CampaignObjectives.totalBadAnswers(s) < 6 },
-                { id: "rep_above_80", label: "Reputation above 80%", check: (s) => s.reputation >= 80 },
+                { id: "few_bad_answers", check: (s) => CampaignObjectives.totalBadAnswers(s) < 6 },
+                { id: "rep_above_80", check: (s) => s.reputation >= 80 },
             ],
         },
         failConditions: { repBelow: 30, timeoutSec: 90 },
-        debriefTip: "Model loads are why inference fleets pre-warm: AWS P5 / Inferentia, Azure ND, GCP A3 / TPU — every provider bills the GPU from boot, but your users only see it after the weights are in memory. Ship the bigger model BEFORE the launch, never during it.",
     },
 
     {
         id: 22, chapter: 5,
-        title: "Batch or Bleed",
-        scenario: "Inference is 70% of traffic and finance wants the AI feature to stop bleeding. The board has budget for a second GPU — everyone is asking for it. Look at the batch fill before you spend: a GPU earns only when its batches run full.",
-        learn: "A GPU amortizes a fixed per-batch cost across the requests in the batch, so profit is all utilization: one near-full GPU prints money where two half-fed ones bleed twice the upkeep for the same revenue. The Inference Gateway dispatches to the LEAST-loaded GPU — adding a second one halves the fill of both. Right-size the fleet to the demand.",
         icon: "📦",
         diagramHighlights: { 1: "critical" },
         // Tuned by headless playthrough. INFERENCE arrives at 3.5 × 0.7 =
@@ -901,23 +818,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["gpu", "infgw"],
         objectives: {
             primary: [
-                { id: "serve_120_inference", label: "Serve 120 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 120 },
-                { id: "profit_floor", label: "Net profit ≥ -$500", check: (s) => CampaignObjectives.netProfit(s) >= -500 },
+                { id: "serve_120_inference", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 120 },
+                { id: "profit_floor", check: (s) => CampaignObjectives.netProfit(s) >= -500 },
             ],
             bonus: [
-                { id: "rep_above_85", label: "Reputation above 85%", check: (s) => s.reputation >= 85 },
-                { id: "few_bad_answers", label: "Fewer than 20 bad answers", check: (s) => CampaignObjectives.totalBadAnswers(s) < 20 },
+                { id: "rep_above_85", check: (s) => s.reputation >= 85 },
+                { id: "few_bad_answers", check: (s) => CampaignObjectives.totalBadAnswers(s) < 20 },
             ],
         },
         failConditions: { repBelow: 40, timeoutSec: 150 },
-        debriefTip: "Batch fill IS the inference business model: vLLM's continuous batching, Triton's dynamic batcher, Bedrock's provisioned throughput — all of them exist to keep expensive accelerators full. An idle GPU costs exactly as much as a busy one.",
     },
 
     {
         id: 23, chapter: 5,
-        title: "The Deadline",
-        scenario: "Users abandon an AI answer that takes longer than a few seconds — a late response is a dead response. Your Inference Gateway enforces that as a hard 6-second SLO, and demand is bursty and already past what one GPU can serve. Expiries are climbing.",
-        learn: "The Inference Gateway holds a backlog with DEADLINE honesty: an entry older than 6s is expired as an SLO breach, never served stale. A queue only buys the time it promised — when demand outruns the fleet, the fix is capacity, not a deeper buffer. And don't delete the gateway: without its backlog, burst overflow dies at the GPU's tiny intake instead.",
         icon: "⏱️",
         diagramHighlights: { 4: "critical", 5: "critical" },
         // Tuned by headless playthrough. Demand: 3.0 base + 15-per-6s bursts
@@ -959,24 +872,20 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["gpu"],
         objectives: {
             primary: [
-                { id: "serve_250_inference", label: "Serve 250 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 250 },
-                { id: "fail_under_12_pct", label: "Failure rate under 12%", check: (s) => CampaignObjectives.failureRate(s) < 0.12 },
-                { id: "few_expiries", label: "Fewer than 30 expired requests", check: (s) => CampaignObjectives.expiredRequests(s) < 30 },
+                { id: "serve_250_inference", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 250 },
+                { id: "fail_under_12_pct", check: (s) => CampaignObjectives.failureRate(s) < 0.12 },
+                { id: "few_expiries", check: (s) => CampaignObjectives.expiredRequests(s) < 30 },
             ],
             bonus: [
-                { id: "rep_above_75", label: "Reputation above 75%", check: (s) => s.reputation >= 75 },
-                { id: "expiries_under_20", label: "Fewer than 20 expired requests", check: (s) => CampaignObjectives.expiredRequests(s) < 20 },
+                { id: "rep_above_75", check: (s) => s.reputation >= 75 },
+                { id: "expiries_under_20", check: (s) => CampaignObjectives.expiredRequests(s) < 20 },
             ],
         },
         failConditions: { repBelow: 30, timeoutSec: 240 },
-        debriefTip: "Every serious inference router ships a deadline: vLLM's scheduler, Triton's queue policy with max_queue_delay, Bedrock's SLA-backed throughput. Serving a stale generation wastes the GPU twice — once computing it, once apologizing for it.",
     },
 
     {
         id: 24, chapter: 5,
-        title: "The Power Wall",
-        scenario: "The AI feature went viral and inference demand is far past what any single GPU can serve — and still past two. Money is NOT the problem this quarter — the datacenter feed is: the base grid carries 8 kW and every GPU draws 6. Nobody sells you watts on the toolbar until you build them.",
-        learn: "GPU capacity is bought in watts before it is bought in dollars: the grid caps how many GPUs can physically run, and a Substation (+6 kW) is how the cap moves. Three GPUs draw 18 kW — base 8 plus TWO substations. Plan the power BEFORE the fleet: the placement gate is merciless and the demand does not wait.",
         icon: "🔋",
         diagramHighlights: { 1: "critical" },
         // Tuned by headless playthrough (8 runs per direction). INFERENCE
@@ -1014,23 +923,19 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: ["gpu", "power", "infgw"],
         objectives: {
             primary: [
-                { id: "serve_300_inference", label: "Serve 300 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 300 },
-                { id: "rep_above_55", label: "Reputation above 55%", check: (s) => s.reputation >= 55 },
+                { id: "serve_300_inference", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 300 },
+                { id: "rep_above_55", check: (s) => s.reputation >= 55 },
             ],
             bonus: [
-                { id: "rep_above_65", label: "Reputation above 65%", check: (s) => s.reputation >= 65 },
-                { id: "three_gpus", label: "Run 3 GPUs at once", check: (s) => CampaignObjectives.countServices(s, "gpu") >= 3 },
+                { id: "rep_above_65", check: (s) => s.reputation >= 65 },
+                { id: "three_gpus", check: (s) => CampaignObjectives.countServices(s, "gpu") >= 3 },
             ],
         },
         failConditions: { repBelow: 25, timeoutSec: 240 },
-        debriefTip: "Power is the real frontier of the AI buildout: GPU orders wait on substations, not on chips. AWS, Azure and Google all site new AI regions by the megawatt — your cluster's ceiling was set by an electrical engineer years before you clicked deploy.",
     },
 
     {
         id: 25, chapter: 5,
-        title: "The AI Wave",
-        scenario: "Your classic stack is battle-tested — redundant, serverless, boring. Now the AI wave arrives for real: 12% of all traffic is inference on a normal day, hype waves double it without warning, and the board wants the AI feature IN THE BLACK. Add the serving layer and make it pay.",
-        learn: "The capstone: everything Chapter 5 taught, priced honestly, on top of everything the earlier chapters built. GPUs only earn when their batches run full, models reload when you upgrade them, quality is a tier you pay for — and the classic stack still has to absorb DDoS waves and traffic shifts while inference finds its margin.",
         icon: "🧠",
         diagramHighlights: { 3: "critical", 4: "critical" },
         // Tuned by headless playthrough. The classic stack is PREBUILT and
@@ -1082,17 +987,16 @@ export const CAMPAIGN_LEVELS = [
         allowedServices: [],
         objectives: {
             primary: [
-                { id: "survive_120s", label: "Survive 120 seconds", check: (s) => s.elapsedGameTime >= 120 },
-                { id: "serve_150_inference", label: "Serve 150 INFERENCE requests", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 150 },
-                { id: "rep_above_55", label: "Reputation above 55%", check: (s) => s.reputation >= 55 },
-                { id: "net_profit", label: "Net profit ≥ 0", check: (s) => CampaignObjectives.netProfit(s) >= 0 },
+                { id: "survive_120s", check: (s) => s.elapsedGameTime >= 120 },
+                { id: "serve_150_inference", check: (s) => CampaignObjectives.completedOfType(s, "INFERENCE") >= 150 },
+                { id: "rep_above_55", check: (s) => s.reputation >= 55 },
+                { id: "net_profit", check: (s) => CampaignObjectives.netProfit(s) >= 0 },
             ],
             bonus: [
-                { id: "few_bad_answers", label: "Fewer than 20 bad answers", check: (s) => CampaignObjectives.totalBadAnswers(s) < 20 },
-                { id: "rep_above_75", label: "Reputation above 75%", check: (s) => s.reputation >= 75 },
+                { id: "few_bad_answers", check: (s) => CampaignObjectives.totalBadAnswers(s) < 20 },
+                { id: "rep_above_75", check: (s) => s.reputation >= 75 },
             ],
         },
         failConditions: { repBelow: 20, moneyBelow: -500, timeoutSec: 450 },
-        debriefTip: "You just ran the 2020s cloud in miniature: classic serving pays the bills, inference is the growth curve, and the margin lives in batch fill. Congratulations, Architect — now go check what your real cloud bill says about GPU utilization.",
     },
 ];

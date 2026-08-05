@@ -236,16 +236,18 @@ export class CampaignController {
 
         // FAIL conditions take priority
         const fc = level.failConditions || {};
+        // Reasons are { key, vars } — this module owns no display text (#238);
+        // the debrief translates them in the player's CURRENT locale.
         if (typeof fc.repBelow === "number" && STATE.reputation < fc.repBelow) {
-            return this._end("lose", `Reputation dropped below ${fc.repBelow}%`);
+            return this._end("lose", { key: "campaign_fail_rep", vars: { n: fc.repBelow } });
         }
         if (typeof fc.moneyBelow === "number" && STATE.money < fc.moneyBelow) {
-            return this._end("lose", `Money dropped below $${fc.moneyBelow}`);
+            return this._end("lose", { key: "campaign_fail_money", vars: { n: fc.moneyBelow } });
         }
         if (typeof fc.timeoutSec === "number" && STATE.elapsedGameTime >= fc.timeoutSec) {
             // Treat as lose if the win gate is not met yet — including the
             // zero-completions case, so a gated level still terminates.
-            if (!allPrimary || !played) return this._end("lose", "Ran out of time");
+            if (!allPrimary || !played) return this._end("lose", { key: "campaign_fail_timeout" });
         }
 
         // WIN: all primary objectives met on a level that served traffic
