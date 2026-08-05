@@ -105,19 +105,33 @@ let isOrbiting = false;
 // cameraTarget, orbit moves the angle, reset does both — and they all funnel
 // through here instead of hard-setting the position in three places.
 function applyCameraOrbit() {
-    camera.position.set(
-        cameraTarget.x + ORBIT_RADIUS * Math.cos(cameraAzimuth),
-        cameraTarget.y + ORBIT_HEIGHT,
-        cameraTarget.z + ORBIT_RADIUS * Math.sin(cameraAzimuth)
-    );
-    camera.lookAt(cameraTarget);
+    if (isIsometric) {
+        // Looking down at an angle: the default up vector is correct, but it
+        // must be RESTORED here — the top-down branch below rotates it, and a
+        // T toggle back would otherwise inherit a tilted horizon.
+        camera.up.set(0, 1, 0);
+        camera.position.set(
+            cameraTarget.x + ORBIT_RADIUS * Math.cos(cameraAzimuth),
+            cameraTarget.y + ORBIT_HEIGHT,
+            cameraTarget.z + ORBIT_RADIUS * Math.sin(cameraAzimuth)
+        );
+        camera.lookAt(cameraTarget);
+    } else {
+        // Top-down rotation (#231 follow-up): looking straight down, azimuth
+        // can't move the eye — it spins the camera's UP vector instead, which
+        // rotates the grid on screen. delta = 0 reproduces the pre-rotation
+        // orientation (screen-up = -z, "north up") exactly.
+        const delta = cameraAzimuth - DEFAULT_AZIMUTH;
+        camera.up.set(-Math.sin(delta), 0, -Math.cos(delta));
+        camera.lookAt(camera.position.x, 0, camera.position.z);
+    }
 }
 
-// Q/E and drag-orbit both land here. A no-op in top-down: that view has no
-// azimuth (the grid stays axis-aligned), and R/T reset the angle anyway, so
-// toggling never brings the board back sideways.
+// Q/E and drag-orbit both land here. In isometric view the eye orbits the
+// target; in top-down the grid spins in place (up-vector rotation) — same
+// azimuth state, so T toggles between the two without losing the angle,
+// and R resets both.
 function orbitCamera(deltaRadians) {
-    if (!isIsometric) return;
     cameraAzimuth += deltaRadians;
     applyCameraOrbit();
 }
@@ -137,9 +151,15 @@ function panCameraScreen(rightUnits, upUnits) {
         cameraTarget.z += -cos * rightUnits - sin * upUnits;
         applyCameraOrbit();
     } else {
-        camera.position.x += rightUnits;
-        camera.position.z -= upUnits;
-        camera.lookAt(camera.position.x, 0, camera.position.z);
+        // Same idea top-down: the pan basis rotates with the spun grid, so
+        // "up" always slides the board toward the top of the SCREEN. At
+        // delta = 0 this is the old (+x, -z) mapping exactly.
+        const delta = cameraAzimuth - DEFAULT_AZIMUTH;
+        const cos = Math.cos(delta);
+        const sin = Math.sin(delta);
+        camera.position.x += cos * rightUnits - sin * upUnits;
+        camera.position.z += -sin * rightUnits - cos * upUnits;
+        applyCameraOrbit();
     }
 }
 
@@ -360,9 +380,9 @@ container.addEventListener("mousedown", (e) => {
     if (e.button === 2 || e.button === 1) {
         // Middle-drag (or Shift+right-drag, for mice without a wheel button)
         // orbits — the CAD convention the issue asked for (#231); plain
-        // right-drag stays the pan it has always been. Top-down has no
-        // azimuth, so both buttons fall back to panning there.
-        isOrbiting = isIsometric && (e.button === 1 || e.shiftKey);
+        // right-drag stays the pan it has always been. Works in BOTH views
+        // since the top-down grid spins too (community follow-up on #231).
+        isOrbiting = e.button === 1 || e.shiftKey;
         isPanning = !isOrbiting;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
@@ -959,16 +979,15 @@ function toggleView() {
 
 function resetCamera() {
     // Azimuth resets in BOTH views: R snaps back to the classic angle, and
-    // since toggleView routes through here, T never re-enters isometric
-    // with a stale rotation either.
+    // since toggleView routes through here, T never re-enters either view
+    // with a stale rotation.
     cameraAzimuth = DEFAULT_AZIMUTH;
     if (isIsometric) {
         cameraTarget.set(0, 0, 0);
-        applyCameraOrbit();
     } else {
         camera.position.set(0, 50, 0);
-        camera.lookAt(0, 0, 0);
     }
+    applyCameraOrbit();
 }
 
 export {
