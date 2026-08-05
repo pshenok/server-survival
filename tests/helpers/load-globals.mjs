@@ -10,6 +10,7 @@ export const LOCALES = [
   { code: "ru", load: async () => (await import("../../src/locales/ru.js")).RU_TRANSLATIONS },
   { code: "ne", load: async () => (await import("../../src/locales/nep.js")).NE_TRANSLATIONS },
   { code: "it", load: async () => (await import("../../src/locales/it.js")).IT_TRANSLATIONS },
+  { code: "hi", load: async () => (await import("../../src/locales/hi.js")).HI_TRANSLATIONS },
 ];
 
 export function loadLocale(locale) {
