@@ -30,6 +30,7 @@
 // correctness never depends on it — unlocks land immediately, only the toast
 // display waits. See msUntilToastsAllowed / ui.js.
 
+import { CONFIG } from "../config.js";
 import { STATE } from "../state.js";
 import { CAMPAIGN_LEVELS } from "../campaign/levels.js";
 import { CampaignObjectives } from "../campaign/objectives.js";
@@ -96,6 +97,15 @@ const session = {
     spikeArmed: false,
     startedAtMs: 0,
     pollAcc: 0,
+    // Wave 2 (#234): resilience-counter baselines. resetGame zeroes the raw
+    // counters anyway, but a LOADED save keeps whatever the previous session
+    // accumulated in memory — the same restored-save rule as baselineElapsed,
+    // so the resilience defs only ever see live-play deltas.
+    baseTrips: 0,
+    baseOutages: 0,
+    baseRetries: 0,
+    baseDrained: 0,
+    breakerTripped: false, // armed by onBreakerTrip, dies with the session
 };
 
 function totalFailures() {
@@ -133,6 +143,15 @@ const pollCtx = {
     cleanElapsed: 0,
     score: 0,
     counts,
+    // Wave 2 (#234): sanitized session deltas + live readings. Predicates
+    // never touch the raw counters — restored-save baselines live here.
+    reputation: 0,
+    nodeFailures: 0,     // (outages + trips) since session start
+    retries: 0,          // retries since session start
+    drained: 0,          // DLQ drains since session start
+    outageCompletions: 0, // completions during the (campaign) region outage
+    gpuKw: 0,            // player-placed GPUs × gpuDrawKw
+    maxFleet: 0,         // largest READY ASG fleet among player-placed nodes
 };
 
 function evaluatePolls() {
@@ -152,6 +171,7 @@ function evaluatePolls() {
     counts.gpu = 0;
     counts.infgw = 0;
     counts.power = 0;
+    let maxFleet = 0;
     const services = STATE.services || [];
     for (let i = 0; i < services.length; i++) {
         const s = services[i];
@@ -163,13 +183,27 @@ function evaluatePolls() {
         } else if (t in counts) {
             counts[t]++;
         }
+        // fleet_of_five (#234): READY instances only — a warming instance
+        // carries no traffic and does not count, exactly like capacity math.
+        if (s.asgEnabled && (s.instances || 1) > maxFleet) {
+            maxFleet = s.instances || 1;
+        }
     }
 
     const elapsed = STATE.elapsedGameTime || 0;
+    const r = STATE.resilience || {};
     pollCtx.survival = STATE.gameMode === "survival";
     pollCtx.liveElapsed = elapsed - session.baselineElapsed;
     pollCtx.cleanElapsed = elapsed - Math.max(session.baselineElapsed, session.cleanSince);
     pollCtx.score = STATE.score?.total || 0;
+    pollCtx.reputation = STATE.reputation || 0;
+    pollCtx.nodeFailures =
+        ((r.outages || 0) + (r.trips || 0)) - (session.baseOutages + session.baseTrips);
+    pollCtx.retries = (r.retries || 0) - session.baseRetries;
+    pollCtx.drained = (r.drained || 0) - session.baseDrained;
+    pollCtx.outageCompletions = CampaignObjectives.completedDuringRegionOutage(STATE);
+    pollCtx.gpuKw = counts.gpu * (CONFIG.power?.gpuDrawKw || 6);
+    pollCtx.maxFleet = maxFleet;
 
     // Backwards: unlock() rebuilds lockedPolls, so never hold an index into it.
     for (let i = lockedPolls.length - 1; i >= 0; i--) {
@@ -233,6 +267,12 @@ export const achievements = {
         session.spikeArmed = false;
         session.startedAtMs = Date.now();
         session.pollAcc = 0;
+        const r = STATE.resilience || {};
+        session.baseTrips = r.trips || 0;
+        session.baseOutages = r.outages || 0;
+        session.baseRetries = r.retries || 0;
+        session.baseDrained = r.drained || 0;
+        session.breakerTripped = false;
     },
 
     // 2 Hz poll cadence, driven from animate() on game-scaled dt (frozen while
@@ -253,15 +293,30 @@ export const achievements = {
     // saveProgress — ctx.progress therefore includes the level just won, so
     // chapter_*_done / completionist grant in the same call (no off-by-one).
     onLevelWin(levelId, stars, elapsed, ctx = {}) {
+        // Wave 2 (#234): the AI-Wave feat readings, taken at the same win
+        // tick as everything else. gpuMaxTier follows the minimalist
+        // precedent — alive-at-win, pre-built included (L21/L22 pre-build no
+        // GPU, so the fleet on the board is the fleet the player ran).
+        const services = STATE.services || [];
+        let gpuCount = 0;
+        let gpuMaxTier = 0;
+        for (const s of services) {
+            if (s.type !== "gpu") continue;
+            gpuCount++;
+            if ((s.tier || 1) > gpuMaxTier) gpuMaxTier = s.tier || 1;
+        }
         runEventDefs("levelWin", {
             levelId,
             stars,
             elapsed,
             progress: ctx.progress || null,
             level: CAMPAIGN_LEVELS.find((l) => l.id === levelId) || null,
-            servicesCount: (STATE.services || []).length,
+            servicesCount: services.length,
             usesServerlessOnly: CampaignObjectives.usesOnly(STATE, "serverless", ["compute"]),
             upgradesPerformed: STATE.campaign?.upgradesPerformed || 0,
+            expiredRequests: CampaignObjectives.expiredRequests(STATE),
+            gpuCount,
+            gpuMaxTier,
         });
     },
 
@@ -283,6 +338,25 @@ export const achievements = {
         const armed = session.spikeArmed;
         session.spikeArmed = false;
         runEventDefs("spikeEnd", { armed, reputation });
+    },
+
+    // Fired from circuit-breaker trip() — arms breaker_comeback for this
+    // session. Latched (NOT cleared by a close): any later genuine recovery
+    // in the same session is still a comeback. Dies in onSessionStart, so a
+    // save restored with a breaker mid-open can never fake one.
+    onBreakerTrip() {
+        session.breakerTripped = true;
+    },
+
+    // Fired from circuit-breaker close() — the only genuine "breaker
+    // recovered" site: close is reachable exclusively via half-open probes
+    // after a trip, so a doomed node that never heals never fires it.
+    onBreakerClose({ reputation }) {
+        runEventDefs("breakerClose", {
+            armed: session.breakerTripped,
+            reputation,
+            survival: STATE.gameMode === "survival",
+        });
     },
 
     // ---- Read API for the Trophies panel / tests ----
@@ -319,5 +393,10 @@ export const achievements = {
         session.spikeArmed = false;
         session.startedAtMs = 0;
         session.pollAcc = 0;
+        session.baseTrips = 0;
+        session.baseOutages = 0;
+        session.baseRetries = 0;
+        session.baseDrained = 0;
+        session.breakerTripped = false;
     },
 };

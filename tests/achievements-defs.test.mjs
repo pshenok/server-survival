@@ -7,11 +7,11 @@ import { ACHIEVEMENT_DEFS, POLL_DEFS, eventDefs } from "../src/achievements/defi
 import { CAMPAIGN_LEVELS } from "../src/campaign/levels.js";
 import { EN_TRANSLATIONS as en } from "../src/locales/en.js";
 
-const VALID_EVENTS = ["levelWin", "locale", "spikeEnd"];
+const VALID_EVENTS = ["levelWin", "locale", "spikeEnd", "breakerClose"];
 
 describe("achievement definitions", () => {
-  it("ships exactly 26 defs with unique ids", () => {
-    expect(ACHIEVEMENT_DEFS).toHaveLength(26);
+  it("ships exactly 38 defs with unique ids (26 wave 1 + 12 wave 2)", () => {
+    expect(ACHIEVEMENT_DEFS).toHaveLength(38);
     const ids = ACHIEVEMENT_DEFS.map((d) => d.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -29,11 +29,12 @@ describe("achievement definitions", () => {
     }
   });
 
-  it("splits into 9 polls and 17 events", () => {
-    expect(POLL_DEFS).toHaveLength(9);
+  it("splits into 17 polls and 21 events", () => {
+    expect(POLL_DEFS).toHaveLength(17);
     expect(
-      eventDefs("levelWin").length + eventDefs("locale").length + eventDefs("spikeEnd").length
-    ).toBe(17);
+      eventDefs("levelWin").length + eventDefs("locale").length +
+        eventDefs("spikeEnd").length + eventDefs("breakerClose").length
+    ).toBe(21);
   });
 
   it("every def has ach_<id>_name and ach_<id>_desc in en", () => {

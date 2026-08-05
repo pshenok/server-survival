@@ -76,6 +76,9 @@ export function tickDLQ(dlq, dt) {
     while (dlq.drainTimer >= interval && dlq.parked.length > 0) {
         dlq.drainTimer -= interval;
         const req = dlq.parked.shift();
+        // Session counter (#234, the resilience-counter precedent): read by
+        // the achievements engine, reset by resetResilience().
+        if (STATE.resilience) STATE.resilience.drained++;
         STATE.money -= dlq.config.drainCost || 0;
         STATE.reputation += dlq.config.drainRepRefund || 0;
         if (STATE.finances) {

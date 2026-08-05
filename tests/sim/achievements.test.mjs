@@ -11,11 +11,19 @@ import { achievements } from "../../src/achievements/achievements.js";
 import { ACHIEVEMENT_DEFS, POLL_DEFS } from "../../src/achievements/definitions.js";
 import { CampaignController } from "../../src/campaign/campaign.js";
 import { CAMPAIGN_LEVELS } from "../../src/campaign/levels.js";
-import { updateMaliciousSpike } from "../../src/core/events.js";
+import { triggerRandomEvent, updateMaliciousSpike } from "../../src/core/events.js";
+import { Request } from "../../src/entities/Request.js";
 import { Service } from "../../src/entities/Service.js";
 import { i18n } from "../../src/i18n.js";
+import {
+  recordBreakerFailure,
+  recordBreakerSuccess,
+  updateBreaker,
+} from "../../src/sim/circuit-breaker.js";
+import { parkInDLQ } from "../../src/sim/dlq.js";
+import { recomputePower } from "../../src/sim/power.js";
 import { createService } from "../../src/sim/topology.js";
-import { CONFIG, STATE, resetWorld, place } from "../helpers/sim-world.mjs";
+import { CONFIG, STATE, resetWorld, place, connect, step } from "../helpers/sim-world.mjs";
 
 const ACH_KEY = "serverSurvivalAchievements";
 const CAMPAIGN_KEY = "serverSurvivalCampaignProgress";
@@ -553,5 +561,332 @@ describe("observation only", () => {
       mode: STATE.gameMode,
     });
     expect(after).toBe(snapshot);
+  });
+});
+
+// ===========================================================================
+// Wave 2 (#234): the depth set — engine semantics. The achievability proofs
+// (real replays, the survival marathon) live in achievements-proofs.test.mjs;
+// these pin the sanitized-ctx semantics, the session baselines and the
+// farmability gates.
+// ===========================================================================
+
+describe("wave 2 — resilience polls (survival-only, session deltas)", () => {
+  beforeEach(() => {
+    STATE.gameMode = "survival";
+    achievements.onSessionStart();
+  });
+
+  it("failover_proven: a REAL SERVICE_OUTAGE event + rep >= 90 grants", () => {
+    place("alb");
+    place("db");
+    triggerRandomEvent("SERVICE_OUTAGE"); // the real site bumps the counter
+    expect(STATE.resilience.outages).toBe(1);
+    STATE.reputation = 92;
+    pollOnce();
+    expect(achievements.isUnlocked("failover_proven")).toBe(true);
+  });
+
+  it("failover_proven: rep below 90 after the failure grants nothing", () => {
+    STATE.resilience.outages = 1;
+    STATE.reputation = 89.5;
+    pollOnce();
+    expect(achievements.isUnlocked("failover_proven")).toBe(false);
+  });
+
+  it("failover_proven: stale counters from a restored save earn nothing", () => {
+    // A loaded save leaves the previous session's counters in memory:
+    // baselines are captured AT onSessionStart, so only NEW failures count.
+    STATE.resilience.outages = 4;
+    STATE.resilience.trips = 2;
+    achievements.onSessionStart(); // the loadGameState call site
+    STATE.reputation = 100;
+    pollOnce();
+    expect(achievements.isUnlocked("failover_proven")).toBe(false);
+    STATE.resilience.outages++; // a LIVE failure
+    pollOnce();
+    expect(achievements.isUnlocked("failover_proven")).toBe(true);
+  });
+
+  it("second_chance wants 50 LIVE retries", () => {
+    STATE.resilience.retries = 30;
+    achievements.onSessionStart(); // stale 30 becomes the baseline
+    STATE.resilience.retries = 79; // +49 live
+    pollOnce();
+    expect(achievements.isUnlocked("second_chance")).toBe(false);
+    STATE.resilience.retries = 80; // +50 live
+    pollOnce();
+    expect(achievements.isUnlocked("second_chance")).toBe(true);
+  });
+
+  it("nothing_lost wants 25 LIVE drains", () => {
+    STATE.resilience.drained = 10;
+    achievements.onSessionStart();
+    STATE.resilience.drained = 34; // +24 live
+    pollOnce();
+    expect(achievements.isUnlocked("nothing_lost")).toBe(false);
+    STATE.resilience.drained = 35; // +25 live
+    pollOnce();
+    expect(achievements.isUnlocked("nothing_lost")).toBe(true);
+  });
+
+  it("none of the resilience polls grant outside survival", () => {
+    STATE.gameMode = "sandbox";
+    achievements.onSessionStart();
+    STATE.resilience.outages = 5;
+    STATE.resilience.retries = 500;
+    STATE.resilience.drained = 500;
+    STATE.reputation = 100;
+    pollOnce();
+    expect(achievements.isUnlocked("failover_proven")).toBe(false);
+    expect(achievements.isUnlocked("second_chance")).toBe(false);
+    expect(achievements.isUnlocked("nothing_lost")).toBe(false);
+  });
+});
+
+describe("wave 2 — the DLQ drain counter (the one-line #234 plumbing)", () => {
+  it("tickDLQ bumps STATE.resilience.drained once per recovered request", () => {
+    resetWorld();
+    const compute = place("compute");
+    const dlq = place("dlq");
+    connect(compute, dlq);
+    const req = new Request("WRITE");
+    expect(parkInDLQ(req, compute)).toBe(true);
+    expect(STATE.resilience.drained).toBe(0);
+    for (let i = 0; i < 20; i++) step(0.1); // > drainIntervalSec
+    expect(dlq.parked.length).toBe(0);
+    expect(STATE.resilience.drained).toBe(1);
+  });
+
+  it("resetResilience() zeroes it with the other session counters", () => {
+    STATE.resilience.drained = 7;
+    resetWorld(); // calls resetResilience()
+    expect(STATE.resilience.drained).toBe(0);
+  });
+});
+
+describe("wave 2 — breaker_comeback (breakerClose event from the real sites)", () => {
+  // Walk a placed service's breaker through its REAL state machine:
+  // 8 recorded failures trip it (rate 1.0 over tripMinEvents), openSec of
+  // game time half-opens it, probeCount successes close it.
+  function tripAndClose(svc) {
+    for (let i = 0; i < CONFIG.resilience.tripMinEvents; i++) {
+      recordBreakerFailure(svc);
+    }
+    expect(svc.breakerState).toBe("open");
+    updateBreaker(svc, CONFIG.resilience.openSec + 0.1);
+    expect(svc.breakerState).toBe("half-open");
+    for (let i = 0; i < CONFIG.resilience.probeCount; i++) {
+      recordBreakerSuccess(svc);
+    }
+    expect(svc.breakerState).toBe("closed");
+  }
+
+  beforeEach(() => {
+    STATE.gameMode = "survival";
+    achievements.onSessionStart();
+  });
+
+  it("grants when a tripped breaker closes with rep >= 90 in survival", () => {
+    const c = place("compute");
+    STATE.reputation = 93;
+    tripAndClose(c);
+    expect(achievements.isUnlocked("breaker_comeback")).toBe(true);
+  });
+
+  it("does not grant when the close lands below 90", () => {
+    const c = place("compute");
+    STATE.reputation = 88;
+    tripAndClose(c);
+    expect(achievements.isUnlocked("breaker_comeback")).toBe(false);
+  });
+
+  it("does not grant outside survival", () => {
+    STATE.gameMode = "sandbox";
+    const c = place("compute");
+    STATE.reputation = 100;
+    tripAndClose(c);
+    expect(achievements.isUnlocked("breaker_comeback")).toBe(false);
+  });
+
+  it("a session boundary between trip and close disarms (restored-save rule)", () => {
+    const c = place("compute");
+    STATE.reputation = 100;
+    for (let i = 0; i < CONFIG.resilience.tripMinEvents; i++) {
+      recordBreakerFailure(c);
+    }
+    expect(c.breakerState).toBe("open");
+    achievements.onSessionStart(); // load/reset mid-open
+    updateBreaker(c, CONFIG.resilience.openSec + 0.1);
+    for (let i = 0; i < CONFIG.resilience.probeCount; i++) {
+      recordBreakerSuccess(c);
+    }
+    expect(c.breakerState).toBe("closed"); // the close DID fire...
+    expect(achievements.isUnlocked("breaker_comeback")).toBe(false); // ...unarmed
+  });
+});
+
+describe("wave 2 — fleet_of_four poll semantics", () => {
+  beforeEach(() => {
+    STATE.gameMode = "survival";
+    achievements.onSessionStart();
+  });
+
+  it("wants 4 READY instances on a player-placed ASG node", () => {
+    const c = place("compute");
+    c.asgEnabled = true;
+    c.instances = 3;
+    c.warming = [{ remaining: 2 }]; // warming carries no traffic: no credit
+    pollOnce();
+    expect(achievements.isUnlocked("fleet_of_four")).toBe(false);
+    c.instances = 4;
+    c.warming = [];
+    pollOnce();
+    expect(achievements.isUnlocked("fleet_of_four")).toBe(true);
+  });
+
+  it("a pre-built fleet earns nothing (player-placed only)", () => {
+    createService("compute", new globalThis.THREE.Vector3(300, 0, 0), { playerPlaced: false });
+    const c = STATE.services[STATE.services.length - 1];
+    c.asgEnabled = true;
+    c.instances = 5;
+    pollOnce();
+    expect(achievements.isUnlocked("fleet_of_four")).toBe(false);
+  });
+
+  it("never grants in sandbox", () => {
+    STATE.gameMode = "sandbox";
+    const c = place("compute");
+    c.asgEnabled = true;
+    c.instances = 5;
+    pollOnce();
+    expect(achievements.isUnlocked("fleet_of_four")).toBe(false);
+  });
+});
+
+describe("wave 2 — megawatt (player-placed GPUs, mode-free per the variety precedent)", () => {
+  it("three player-placed GPUs (18 kW) grant, the second does not", () => {
+    place("power");
+    place("power");
+    place("gpu");
+    place("gpu");
+    pollOnce();
+    expect(achievements.isUnlocked("megawatt")).toBe(false);
+    place("gpu");
+    pollOnce();
+    expect(achievements.isUnlocked("megawatt")).toBe(true);
+  });
+
+  it("pre-built GPUs earn nothing", () => {
+    for (let i = 0; i < 3; i++) {
+      STATE.services.push(new Service("gpu", new globalThis.THREE.Vector3(200 + i * 8, 0, 40)));
+    }
+    pollOnce();
+    expect(achievements.isUnlocked("megawatt")).toBe(false);
+  });
+});
+
+describe("wave 2 — region_blackout poll (campaign-by-construction)", () => {
+  it("reads the latched outage-completion delta: 60 grants, 59 does not", () => {
+    STATE.campaign.regionOutage = { active: true, startedCompleted: 0 };
+    STATE.campaign.completedByType = { READ: 59 };
+    pollOnce();
+    expect(achievements.isUnlocked("region_blackout")).toBe(false);
+    STATE.campaign.completedByType.READ = 60;
+    pollOnce();
+    expect(achievements.isUnlocked("region_blackout")).toBe(true);
+  });
+
+  it("stays shut with no outage record (survival/sandbox boards)", () => {
+    STATE.campaign.regionOutage = null;
+    STATE.campaign.completedByType = { READ: 5000 };
+    pollOnce();
+    expect(achievements.isUnlocked("region_blackout")).toBe(false);
+  });
+});
+
+describe("wave 2 — AI Wave levelWin defs via _persistWin", () => {
+  let c;
+  beforeEach(() => {
+    c = new CampaignController();
+    STATE.inference.expired = 0;
+  });
+
+  it("slo_clean: level 23 win with zero expiries only", () => {
+    STATE.inference.expired = 1;
+    c._persistWin(23, 1, 90);
+    expect(achievements.isUnlocked("slo_clean")).toBe(false);
+    STATE.inference.expired = 0;
+    c._persistWin(22, 1, 90); // wrong level
+    expect(achievements.isUnlocked("slo_clean")).toBe(false);
+    c._persistWin(23, 1, 90);
+    expect(achievements.isUnlocked("slo_clean")).toBe(true);
+  });
+
+  it("one_gpu_economist: level 22 win with EXACTLY one GPU alive", () => {
+    c._persistWin(22, 1, 90); // zero GPUs: not the feat
+    expect(achievements.isUnlocked("one_gpu_economist")).toBe(false);
+    place("power");
+    place("gpu");
+    place("gpu");
+    c._persistWin(22, 1, 90); // two GPUs: the trap build
+    expect(achievements.isUnlocked("one_gpu_economist")).toBe(false);
+    STATE.services = STATE.services.filter((s) => s.type !== "gpu");
+    recomputePower(); // the test-side filter bypassed deleteObject
+    place("gpu");
+    c._persistWin(22, 1, 90);
+    expect(achievements.isUnlocked("one_gpu_economist")).toBe(true);
+  });
+
+  it("small_model_big_heart: level 21 win on a tier-1 GPU only", () => {
+    c._persistWin(21, 1, 90); // no GPU at all: no feat
+    expect(achievements.isUnlocked("small_model_big_heart")).toBe(false);
+    const gpu = place("gpu");
+    STATE.money = 100000;
+    gpu.upgrade(); // tier 2
+    c._persistWin(21, 1, 90);
+    expect(achievements.isUnlocked("small_model_big_heart")).toBe(false);
+    STATE.services = STATE.services.filter((s) => s.type !== "gpu");
+    recomputePower(); // the test-side filter bypassed deleteObject
+    place("gpu"); // fresh tier 1
+    c._persistWin(21, 1, 90);
+    expect(achievements.isUnlocked("small_model_big_heart")).toBe(true);
+  });
+});
+
+describe("wave 2 — late-game survival benchmarks", () => {
+  beforeEach(() => {
+    STATE.gameMode = "survival";
+    achievements.onSessionStart();
+  });
+
+  it("quarter_hour wants 900 LIVE seconds (restored saves earn nothing)", () => {
+    STATE.elapsedGameTime = 850;
+    achievements.onSessionStart(); // the loadGameState site
+    STATE.elapsedGameTime = 1749; // 899 live
+    pollOnce();
+    expect(achievements.isUnlocked("quarter_hour")).toBe(false);
+    STATE.elapsedGameTime = 1751; // 901 live
+    pollOnce();
+    expect(achievements.isUnlocked("quarter_hour")).toBe(true);
+  });
+
+  it("high_score_200k reads the live run score, survival only", () => {
+    STATE.score.total = 199999;
+    pollOnce();
+    expect(achievements.isUnlocked("high_score_200k")).toBe(false);
+    STATE.score.total = 200000;
+    pollOnce();
+    expect(achievements.isUnlocked("high_score_200k")).toBe(true);
+  });
+
+  it("neither grants in sandbox", () => {
+    STATE.gameMode = "sandbox";
+    achievements.onSessionStart();
+    STATE.elapsedGameTime = 2000;
+    STATE.score.total = 1e6;
+    pollOnce();
+    expect(achievements.isUnlocked("quarter_hour")).toBe(false);
+    expect(achievements.isUnlocked("high_score_200k")).toBe(false);
   });
 });
