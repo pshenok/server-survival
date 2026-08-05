@@ -3,6 +3,18 @@
 **Date:** 2026-08-03 (amended 2026-08-03 per the integration critique)
 **Status:** approved direction (#158, addresses part of #74 "bored in 10 minutes")
 
+> **Wave 2 addendum (2026-08-04, #234):** a second set of 12 depth defs
+> (resilience, the AI Wave, late-game survival) ships under the SAME
+> disciplines — machine-proven feats, session-baseline semantics,
+> player-placed-only counting, win-tick batching, poll short-circuit. Total
+> is now 38 defs. The wave-2 decisions (survival-only gating for the
+> resilience group, `fleet_of_four` vs the sketched "fleet_of_five",
+> `high_score_200k` vs the sketched 50k, region_blackout staying
+> campaign-granted) are documented with their measurements in
+> `src/achievements/definitions.js` and pinned by the replays in
+> `tests/sim/achievements-proofs.test.mjs`. This document below describes
+> wave 1 as shipped; its counts ("26 defs") are wave-1 scoped.
+
 > **Amendments (binding, from the pre-implementation critique):**
 > 1. `fortress` is an **event** def, not a poll: edge-sampling
 >    `STATE.maliciousSpikeActive` cannot distinguish "spike ended" from

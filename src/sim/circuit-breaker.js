@@ -41,6 +41,10 @@ import { STATE } from "../state.js";
 // is NOT gated on hasMonitoring() — only checkAlerts() is — which is exactly
 // what we want: a trip is a routing event, not a dashboard reading.
 import { fireAlert } from "../core/metrics.js";
+// Runtime-only cycle (circuit-breaker.js ⇄ achievements.js — the engine
+// imports isRoutable from here): same established pattern, the engine object
+// is only dereferenced when a breaker actually trips or closes (#234).
+import { achievements } from "../achievements/achievements.js";
 
 // Seeded from the Service constructor for EVERY type: a closed breaker is
 // invisible, and it keeps isRoutable() a two-line predicate.
@@ -107,6 +111,9 @@ function trip(service) {
     service.breakerEvents = [];
     if (STATE.resilience) STATE.resilience.trips++;
     fireAlert(service, "breaker_open", "alert_breaker_open", "danger");
+    // Achievements (#234): arm breaker_comeback. Observation only — the
+    // engine records "a breaker tripped this session" and nothing else.
+    achievements.onBreakerTrip();
 }
 
 function close(service) {
@@ -115,6 +122,9 @@ function close(service) {
     service.breakerProbes = 0;
     service.breakerEvents = [];
     fireAlert(service, "breaker_closed", "alert_breaker_closed", "info");
+    // Achievements (#234): the only genuine "breaker recovered" site — a
+    // close is reachable exclusively through half-open probes after a trip.
+    achievements.onBreakerClose({ reputation: STATE.reputation });
 }
 
 // One recorded job outcome. Three call sites, all documented where they live:
@@ -187,7 +197,7 @@ function updateBreaker(service, dt) {
 // Cleared from resetGame() alongside resetMetrics(). The per-service state
 // dies with the services themselves; only the session counters live here.
 function resetResilience() {
-    STATE.resilience = { trips: 0, retries: 0, outages: 0 };
+    STATE.resilience = { trips: 0, retries: 0, outages: 0, drained: 0 };
 }
 
 export {

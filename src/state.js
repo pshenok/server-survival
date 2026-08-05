@@ -106,6 +106,7 @@ export const STATE = {
         trips: 0,       // circuit breakers opened this session
         retries: 0,     // requests retried via a healthy peer
         outages: 0,     // SERVICE_OUTAGE events (random or campaign-forced)
+        drained: 0,     // requests recovered by a DLQ auto-drain (#234)
     },
 
     // AI Wave session counters (#87), the resilience-counter precedent:

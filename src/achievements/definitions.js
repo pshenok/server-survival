@@ -132,6 +132,91 @@ export const ACHIEVEMENT_DEFS = [
     // ---- Meta (event: locale) ----
     { id: "polyglot", tier: "bronze", checkKind: "event", event: "locale",
         check: (c) => c.localeCount >= 3 },
+
+    // ================= Wave 2 (#234): the depth set =================
+    //
+    // Farmability decisions, measured against the shipped tuning (see
+    // tests/sim/achievements-proofs.test.mjs for the replays):
+    //
+    //   SURVIVAL-ONLY — failover_proven, breaker_comeback, second_chance,
+    //   nothing_lost: campaign levels HAND these triggers (L17/L20 force the
+    //   outage; L18's primary requires the DLQ and its tuning produces the
+    //   retries/drains). The L17 winning replay measures rep ≥ 90 with
+    //   outages > 0 — the issue's rep gate alone would NOT have guarded it —
+    //   so the whole group is gated on gameMode === "survival", where the
+    //   triggers only come from the random-event system and real overload.
+    //
+    //   CAMPAIGN-BY-CONSTRUCTION — region_blackout: region outages exist
+    //   only through the campaign trigger (#221, L20), so survival-gating
+    //   would make the def dead. Measured: winning runs complete 98-120
+    //   during the 25s blackout, collapsed runs 28-42 — the 60 bar separates
+    //   "region B carried the blackout" from "region B drowned", which IS
+    //   the level's feat. A rep pairing was tried and rejected: the counter
+    //   latches after the restore while reputation recovers toward 100
+    //   before the win tick, so it added nothing but noise. Re-winning L20
+    //   re-performs the entire feat — that is not farming.
+    //
+    //   MODE-FREE — megawatt: the architecture-variety precedent
+    //   (city_block / full_stack_ai are already sandbox-grantable). Counts
+    //   PLAYER-PLACED GPUs only, so L23's pre-built GPU earns nothing.
+    //
+    // Session-baseline semantics: nodeFailures / retries / drained are
+    // engine-computed deltas from onSessionStart baselines — a restored save
+    // starts every counter at zero, like liveElapsed.
+
+    // ---- Resilience depth (poll; survival only) ----
+    // fleet_of_four: the issue sketched id "fleet_of_five" with threshold
+    // "4+ instances" — the threshold was right and the name was not. The
+    // failure roll (2×(load−0.5) past 50% load) prices every util-triggered
+    // scale-out in failures, and holding the pressure a FIFTH instance needs
+    // was measured rep-lethal (< −1000) on a standalone board, while 4 ready
+    // instances is provably reachable alive (proof run: fleet 4, rep floor
+    // 26, recovered past 90). The id says what the check counts.
+    { id: "failover_proven", tier: "gold", checkKind: "poll",
+        check: (c) => c.survival && c.nodeFailures > 0 && c.reputation >= 90 },
+    { id: "second_chance", tier: "silver", checkKind: "poll",
+        check: (c) => c.survival && c.retries >= 50 },
+    { id: "nothing_lost", tier: "silver", checkKind: "poll",
+        check: (c) => c.survival && c.drained >= 25 },
+    { id: "fleet_of_four", tier: "silver", checkKind: "poll",
+        check: (c) => c.survival && c.maxFleet >= 4 },
+
+    // ---- Resilience depth (event: breakerClose — trip armed + genuine
+    //      recovery through half-open probes, rep still >= 90) ----
+    { id: "breaker_comeback", tier: "gold", checkKind: "event", event: "breakerClose",
+        check: (c) => c.survival && c.armed && c.reputation >= 90 },
+
+    // ---- Resilience depth (poll; campaign-by-construction, see above) ----
+    { id: "region_blackout", tier: "gold", checkKind: "poll",
+        check: (c) => c.outageCompletions >= 60 },
+
+    // ---- The AI Wave (event: levelWin) ----
+    { id: "slo_clean", tier: "gold", checkKind: "event", event: "levelWin",
+        check: (c) => c.levelId === 23 && c.expiredRequests === 0 },
+    { id: "one_gpu_economist", tier: "gold", checkKind: "event", event: "levelWin",
+        check: (c) => c.levelId === 22 && c.gpuCount === 1 },
+    { id: "small_model_big_heart", tier: "gold", checkKind: "event", event: "levelWin",
+        check: (c) => c.levelId === 21 && c.gpuCount > 0 && c.gpuMaxTier === 1 },
+
+    // ---- The AI Wave (poll; player-placed GPUs only) ----
+    { id: "megawatt", tier: "silver", checkKind: "poll",
+        check: (c) => c.gpuKw >= 18 },
+
+    // ---- Late-game survival (poll; survival only) ----
+    //
+    // Calibration (the headless 1000s marathon in achievements-proofs):
+    // the proving build crosses the t=600 2x-upkeep wall with a five-figure
+    // bank and holds rep ~100 to 900s — quarter_hour is real but fair. Its
+    // score reads 213.9k at t=900; because failures bleed both reputation
+    // AND score, ANY build that survives to 900s serves nearly everything
+    // and the issue's sketched 50k falls at t≈425 — a mid-game rung, not a
+    // veteran feat. 200k is just under the strong build's 900s reading:
+    // it demands near-full throughput held for the whole quarter hour
+    // (playing FOR score), not mere survival.
+    { id: "quarter_hour", tier: "gold", checkKind: "poll",
+        check: (c) => c.survival && c.liveElapsed >= 900 },
+    { id: "high_score_200k", tier: "gold", checkKind: "poll",
+        check: (c) => c.survival && c.score >= 200000 },
 ];
 
 export const POLL_DEFS = ACHIEVEMENT_DEFS.filter((d) => d.checkKind === "poll");
