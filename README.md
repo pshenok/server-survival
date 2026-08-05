@@ -200,9 +200,20 @@ Built something you're proud of? The share panel exports your architecture two w
 
 ## Getting Started
 
-1.  Clone the repository.
-2.  Open `index.html` in your modern web browser.
-3.  Start building your cloud empire!
+**To play, click [PLAY NOW](https://pshenok.github.io/server-survival/).** No
+install, no build, no account.
+
+To run your own copy — a fork, or a change you just made — serve the folder
+instead of opening the file. The game is native ES modules, and browsers fetch
+module scripts in CORS mode, so a `file://` origin is blocked and
+double-clicking `index.html` gets you the UI shell over an empty canvas. Any
+static server works, and one is already on your machine:
+
+```bash
+git clone https://github.com/pshenok/server-survival.git
+cd server-survival
+python3 -m http.server 8000    # then open http://localhost:8000
+```
 
 ## For Contributors
 

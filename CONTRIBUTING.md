@@ -21,7 +21,9 @@ The following is a set of guidelines for contributing to Server Survival. These 
 
 This project uses vanilla JavaScript, HTML, and CSS with Three.js. No build step is currently required for the core game, but we use a modular structure in `src/`.
 
-1.  Open `index.html` in your browser to run the game.
+1.  Serve the folder — `python3 -m http.server 8000` — and open `http://localhost:8000`.
+
+    **Not `file://`.** The game is native ES modules, and browsers fetch module scripts in CORS mode, so a `file://` origin is blocked outright. Double-clicking `index.html` gives you the UI shell over an empty canvas, which looks exactly like a broken checkout. It is not; it was loaded wrong.
 2.  Make changes in the `src/` directory or `game.js`.
 3.  Reload the browser to see your changes.
 
