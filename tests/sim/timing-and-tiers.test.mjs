@@ -185,6 +185,63 @@ describe("random events expire on game time, not the wall clock (#242)", () => {
   });
 });
 
+// ------------------------------------------------- session boundary (restart)
+
+describe("a live event does not survive into the next run (#242)", () => {
+  // Caught by adversarial review of the fix above, and it was a REGRESSION the
+  // fix introduced: resetGame() zeroes elapsedGameTime but never touched
+  // STATE.intervention, so a game-time deadline from the dead run
+  // (elapsed 400 + 30) was suddenly measured against a clock restarting at 0.
+  // A player who died mid-TRAFFIC_BURST and hit Restart played the whole next
+  // run at 3x traffic. Under the old wall clock the same stranded event
+  // cleared itself within 30 real seconds, so this had to be fixed at the
+  // source: the run boundary now ends the event and reverses its effects.
+  it("Restart clears the event and its effects", async () => {
+    const { resetGame } = await import("../../game.js");
+    resetWorld({ gameMode: "survival" });
+    STATE.intervention = {
+      trafficShiftTimer: 0, trafficShiftActive: false, currentShift: null,
+      originalTrafficDist: null, randomEventTimer: 0, activeEvent: null,
+      eventEndTime: 0, currentMilestoneIndex: 0, rpsMultiplier: 1.0,
+      recentEvents: [], warnings: [], costMultiplier: 1.0,
+      trafficBurstMultiplier: 1.0,
+    };
+    STATE.animationId = 1; // keep resetGame from starting a real rAF loop
+    STATE.elapsedGameTime = 400;
+    triggerRandomEvent("TRAFFIC_BURST", 30000);
+    expect(STATE.intervention.trafficBurstMultiplier).toBeGreaterThan(1);
+
+    resetGame("survival");
+
+    expect(STATE.intervention.activeEvent).toBe(null);
+    expect(STATE.intervention.trafficBurstMultiplier).toBe(1);
+    expect(STATE.intervention.costMultiplier).toBe(1);
+    expect(STATE.intervention.eventEndTime).toBe(0);
+
+    // And the fresh run stays clean as its clock advances past the old deadline.
+    STATE.elapsedGameTime = 200;
+    updateRandomEvents(0);
+    expect(STATE.intervention.trafficBurstMultiplier).toBe(1);
+  });
+
+  it("a COST_SPIKE does not bill the next run", async () => {
+    const { resetGame } = await import("../../game.js");
+    resetWorld({ gameMode: "survival" });
+    STATE.intervention = {
+      randomEventTimer: 0, activeEvent: null, eventEndTime: 0,
+      recentEvents: [], warnings: [], costMultiplier: 1.0,
+      trafficBurstMultiplier: 1.0, currentMilestoneIndex: 0, rpsMultiplier: 1.0,
+    };
+    STATE.animationId = 1;
+    STATE.elapsedGameTime = 250;
+    triggerRandomEvent("COST_SPIKE", 30000);
+    expect(STATE.intervention.costMultiplier).toBeGreaterThan(1);
+
+    resetGame("survival");
+    expect(STATE.intervention.costMultiplier).toBe(1);
+  });
+});
+
 // ----------------------------------------------------------------- ramp math
 
 describe("the survival ramp is frame-rate independent (#242)", () => {

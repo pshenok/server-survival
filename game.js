@@ -186,12 +186,19 @@ function calculateTargetRPS(gameTimeSeconds) {
 
 window.handleGameState = (timeScale) => {
     if (timeScale === 0) { // pause state
-        STATE.intervention.pausedEvent = STATE.intervention.activeEvent;
-        STATE.intervention.remainingTime =
-            (STATE.intervention.eventEndTime - STATE.elapsedGameTime) * 1000;
-        // Remember which service the outage hit so resume re-disables the SAME one.
-        STATE.intervention.pausedOutageServiceId = STATE.intervention.outageServiceId || null;
-        endRandomEvent();
+        // Guard INSIDE the branch, not on it: pausing an already-paused game
+        // must not overwrite the parked event with null (endRandomEvent has
+        // already cleared activeEvent), but it must not fall through to the
+        // resume branch either — that would restart the parked event while
+        // the game is still paused.
+        if (STATE.intervention.activeEvent) {
+            STATE.intervention.pausedEvent = STATE.intervention.activeEvent;
+            STATE.intervention.remainingTime =
+                (STATE.intervention.eventEndTime - STATE.elapsedGameTime) * 1000;
+            // Remember which service the outage hit so resume re-disables the SAME one.
+            STATE.intervention.pausedOutageServiceId = STATE.intervention.outageServiceId || null;
+            endRandomEvent();
+        }
     } else if (STATE.intervention.pausedEvent) { // not paused state
         triggerRandomEvent(
             STATE.intervention.pausedEvent,
@@ -391,6 +398,26 @@ function resetGame(mode = "survival") {
     // Hide failures panel on reset
     const failuresPanel = document.getElementById("failures-panel");
     if (failuresPanel) failuresPanel.classList.add("hidden");
+
+    // A random event that is still live belongs to the run that just ended:
+    // end it BEFORE the clock rewinds. Its deadline is a game-time stamp
+    // (#242), so a stranded event would otherwise be measured against a clock
+    // restarting at 0 and hold its effects — doubled costs, tripled traffic,
+    // a disabled node — for the whole of the next run. endRandomEvent()
+    // reverses the effects; the timers below stop a half-elapsed interval
+    // from firing the next event early into a fresh session.
+    if (STATE.intervention) {
+        endRandomEvent();
+        STATE.intervention.eventEndTime = 0;
+        STATE.intervention.randomEventTimer = 0;
+        STATE.intervention.pausedEvent = null;
+        STATE.intervention.remainingTime = 0;
+        STATE.intervention.pausedOutageServiceId = null;
+        STATE.intervention.costMultiplier = 1.0;
+        STATE.intervention.trafficBurstMultiplier = 1.0;
+        STATE.intervention.currentMilestoneIndex = 0;
+        STATE.intervention.rpsMultiplier = 1.0;
+    }
 
     // Initialize balance overhaul state
     STATE.elapsedGameTime = 0;
