@@ -334,7 +334,7 @@ export const PT_BR_TRANSLATIONS = {
     "mq_desc": "Buffer massivo de 200 solicitações. Coloque após firewall para suavizar picos de DDoS, ou antes de computação para prevenir sobrecarga. Seguro barato contra rajadas de tráfego.",
     "mq_flow": "Fluxo: Firewall → Fila → Load Balancer, ou Load Balancer → Fila → Computação",
     "cache_full": "Cache de Memória",
-    "cache_desc_long": "Taxa de acerto de cache de 35-65%. Solicitações que acertam o cache são concluídas instantaneamente, sem acessar banco de dados ou armazenamento. Atualize níveis para taxas de acerto maiores. Ferramenta essencial para reduzir custos de banco de dados.",
+    "cache_desc_long": "Camada de cache. Solicitações que acertam o cache são concluídas instantaneamente, sem acessar banco de dados ou armazenamento. Quanto do tráfego é cacheável depende do tipo de tráfego, e cada nível aumenta as chances — um cache de nível 3 atende ~74% do tráfego READ contra 40% no nível 1. Ótimo para reduzir custos de banco de dados.",
     "cache_flow": "Fluxo: Computação → Cache → Banco de Dados/Armazenamento de Arquivos",
     "close_manual": "Fechar manual",
     "source": "Origem",

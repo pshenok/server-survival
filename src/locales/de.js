@@ -334,7 +334,7 @@ export const DE_TRANSLATIONS = {
     "mq_desc": "Massiver Puffer für 200 Anfragen. Platziere sie nach der Firewall um Spitzen zu glätten, oder vor Compute. Günstige Versicherung gegen Traffic-Bursts.",
     "mq_flow": "Fluss: Firewall → Queue → Load Balancer oder Load Balancer → Queue → Compute",
     "cache_full": "Memory Cache",
-    "cache_desc_long": "Caching-Layer mit 35-65% Hit-Rate. Cache-Hits enden sofort ohne DB/Storage. Upgrade Stufen für höhere Raten. Gut zur Reduzierung von DB-Kosten.",
+    "cache_desc_long": "Caching-Layer. Cache-Hits werden sofort abgeschlossen, ohne DB/Storage zu treffen. Wie viel sich cachen lässt, hängt vom Traffic-Typ ab, und jede Stufe erhöht die Hit-Rate — ein Cache auf Stufe 3 bedient ~74% der LESEN-Anfragen gegenüber 40% auf Stufe 1. Gut zur Reduzierung von DB-Kosten.",
     "cache_flow": "Fluss: Compute → Cache → DB/Storage",
     "close_manual": "Handbuch schließen",
     "source": "Quelle",

@@ -375,10 +375,14 @@ function updateRandomEvents(dt) {
         }
     }
 
-    // Check if active event should end
+    // Check if active event should end. Deadlines are GAME time (seconds),
+    // not wall clock: on Date.now() an event kept ticking while the game was
+    // paused, and at timeScale 3 a "30-second" outage lasted 90 seconds of
+    // game time — three times the intended punishment, and the one the
+    // player actually experiences.
     if (
         STATE.intervention.activeEvent &&
-        Date.now() >= STATE.intervention.eventEndTime
+        STATE.elapsedGameTime >= STATE.intervention.eventEndTime
     ) {
         endRandomEvent();
     }
@@ -397,7 +401,9 @@ function triggerRandomEvent(
     if (!duration) duration = 30000; // 30 seconds
 
     STATE.intervention.activeEvent = eventType;
-    STATE.intervention.eventEndTime = Date.now() + duration;
+    // `duration` stays in ms (the callers' and the HUD's unit); the deadline
+    // it produces is a game-time timestamp in seconds.
+    STATE.intervention.eventEndTime = STATE.elapsedGameTime + duration / 1000;
     STATE.intervention.eventDuration = duration;
 
     switch (eventType) {
@@ -557,7 +563,10 @@ function updateActiveEventTimer() {
     const timerEl = document.getElementById("active-event-timer");
     const progressEl = document.getElementById("active-event-progress");
 
-    const remaining = Math.max(0, STATE.intervention.eventEndTime - Date.now());
+    const remaining = Math.max(
+        0,
+        (STATE.intervention.eventEndTime - STATE.elapsedGameTime) * 1000
+    );
     const remainingSec = Math.ceil(remaining / 1000);
 
     if (timerEl) {

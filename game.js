@@ -141,6 +141,15 @@ function formatTime(totalSeconds) {
 
 // ==================== BALANCE OVERHAUL FUNCTIONS ====================
 
+// Frame-rate-independent exponential smoothing toward a target. Calibrated so
+// one 60 fps frame closes exactly 1% of the gap — the constant this replaces —
+// which keeps the shipped ramp feel identical on a 60 Hz machine while making
+// it identical on every OTHER machine too. Exported so the ramp can be pinned
+// by tests instead of re-derived in them.
+function smoothTowardsRPS(current, target, dt) {
+    return current + (target - current) * (1 - Math.pow(0.99, dt * 60));
+}
+
 function calculateTargetRPS(gameTimeSeconds) {
 
     const base = CONFIG.survival.baseRPS;
@@ -178,7 +187,8 @@ function calculateTargetRPS(gameTimeSeconds) {
 window.handleGameState = (timeScale) => {
     if (timeScale === 0) { // pause state
         STATE.intervention.pausedEvent = STATE.intervention.activeEvent;
-        STATE.intervention.remainingTime = STATE.intervention.eventEndTime - Date.now();
+        STATE.intervention.remainingTime =
+            (STATE.intervention.eventEndTime - STATE.elapsedGameTime) * 1000;
         // Remember which service the outage hit so resume re-disables the SAME one.
         STATE.intervention.pausedOutageServiceId = STATE.intervention.outageServiceId || null;
         endRandomEvent();
@@ -960,8 +970,15 @@ function animate(time) {
             const gameTime = STATE.elapsedGameTime;
             const targetRPS = calculateTargetRPS(gameTime);
 
-            // Smooth transition to target
-            STATE.currentRPS += (targetRPS - STATE.currentRPS) * 0.01;
+            // Smooth transition to target. The per-FRAME 0.01 this replaces
+            // made the whole ramp frame-rate dependent: a 144 Hz machine
+            // approached the target 2.4x faster in game time than a 60 Hz
+            // one, so two players at the same elapsed time faced different
+            // traffic. Exponential smoothing over dt is identical at 60 fps
+            // (0.99^1 = 0.01 of the gap) and now frame-rate independent —
+            // and because dt carries timeScale, fast-forward advances the
+            // ramp by game time rather than by frames drawn.
+            STATE.currentRPS = smoothTowardsRPS(STATE.currentRPS, targetRPS, dt);
             STATE.currentRPS = Math.min(STATE.currentRPS, CONFIG.survival.maxRPS);
         }
     }
@@ -1557,6 +1574,7 @@ window.STATE = STATE;
 export {
     animate,
     badgeGroup,
+    calculateTargetRPS,
     camera,
     cameraTarget,
     connectionGroup,
@@ -1571,5 +1589,6 @@ export {
     resetGame,
     scene,
     serviceGroup,
+    smoothTowardsRPS,
     syncInput,
 };

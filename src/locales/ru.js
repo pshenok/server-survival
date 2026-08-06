@@ -334,7 +334,7 @@ export const RU_TRANSLATIONS = {
     "mq_desc": "Огромный буфер на 200 запросов. Сглаживает DDoS и всплески.",
     "mq_flow": "Поток: Firewall → Queue → LB или LB → Queue → Compute",
     "cache_full": "Memory Cache",
-    "cache_desc_long": "Кэш с hit‑rate 35–65%. Уменьшает нагрузку на БД.",
+    "cache_desc_long": "Кэш‑слой. Попадания в кэш завершаются мгновенно, не доходя до БД/Хранилища. Доля кэшируемых запросов зависит от типа трафика, и каждый тир повышает шансы — кэш Tier 3 обслуживает ~74% READ-запросов против 40% на Tier 1. Отлично подходит для снижения расходов на БД.",
     "cache_flow": "Поток: Compute → Cache → DB/Storage",
     "close_manual": "Закрыть руководство",
     "source": "Источник",

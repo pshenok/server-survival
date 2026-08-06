@@ -334,7 +334,7 @@ export const IT_TRANSLATIONS = {
     "mq_desc": "Buffer massivo contenente 200 richieste. Posizionalo dopo il Firewall per attenuare i picchi DDoS, o prima di Compute per prevenire il sovraccarico. Una polizza economica contro le raffiche di traffico.",
     "mq_flow": "Flusso: Firewall → Coda → Load Balancer oppure Load Balancer → Coda → Compute",
     "cache_full": "Memory Cache",
-    "cache_desc_long": "Livello di memorizzazione in cache con hit rate del 35-65%. I successi della cache (hit) si completano all'istante senza toccare il DB o l'Archiviazione. Aggiorna i livelli per tassi di successo più elevati. Ottimo per ridurre i costi del DB.",
+    "cache_desc_long": "Livello di memorizzazione in cache. I successi della cache (hit) si completano all'istante senza toccare il DB o l'Archiviazione. Quanto sia memorizzabile in cache dipende dal tipo di traffico, e ogni livello aumenta le probabilità — una cache di livello 3 serve circa il 74% delle LETTURE contro il 40% al livello 1. Ottimo per ridurre i costi del DB.",
     "cache_flow": "Flusso: Compute → Cache → DB/Archiviazione",
     "close_manual": "Chiudi Manuale",
     "source": "Origine",
