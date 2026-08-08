@@ -368,7 +368,7 @@ export const HI_TRANSLATIONS = {
     "mq_desc": "200 requests रखने वाला बड़ा buffer। DDoS spikes को शांत करने के लिए Firewall के बाद रखें, या overload रोकने के लिए Compute से पहले। Traffic bursts के खिलाफ सस्ता बीमा।",
     "mq_flow": "Flow: Firewall → Queue → Load Balancer या Load Balancer → Queue → Compute",
     "cache_full": "Memory Cache",
-    "cache_desc_long": "35-65% hit rate वाली caching layer। Cache hits DB/Storage को छुए बिना तुरंत पूरे हो जाते हैं। ऊँचे hit rate के लिए tiers upgrade करें। DB की लागत घटाने के लिए बढ़िया।",
+    "cache_desc_long": "Caching layer। Cache hits DB/Storage को छुए बिना तुरंत पूरे हो जाते हैं। कितना cache हो सकता है, यह traffic के प्रकार पर निर्भर करता है, और हर tier इसकी संभावना बढ़ाता है — Tier 3 cache READs का करीब 74% serve करता है, Tier 1 के 40% के मुकाबले। DB की लागत घटाने के लिए बढ़िया।",
     "cache_flow": "Flow: Compute → Cache → DB/Storage",
     "close_manual": "Manual बंद करें",
     "source": "Source",

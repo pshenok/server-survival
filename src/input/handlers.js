@@ -633,7 +633,14 @@ container.addEventListener("mousemove", (e) => {
                 ${i18n.t('load_label')} <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span><br>
                 ${i18n.t('rate_limit_label')} <span class="${rateColor}">${rateUsed}/${rateLimit} RPS</span>`;
             } else if (s.type === "cache") {
-                const hitRate = Math.round((s.config.cacheHitRate || 0.35) * 100);
+                // Show the rate the SIM will actually roll for the commonest
+                // cacheable traffic (READ), not the raw tier quality — the
+                // tier is a multiplier against tier 1, so printing it bare
+                // used to advertise 35% while READs were being cached at 40%.
+                const base = CONFIG.services.cache.cacheHitRate;
+                const quality = (s.config.cacheHitRate || base) / base;
+                const readRate = CONFIG.trafficTypes.READ.cacheHitRate;
+                const hitRate = Math.round(Math.min(0.95, readRate * quality) * 100);
                 content += `${i18n.t('queue_label')} <span class="${loadColor}">${s.queue.length}</span><br>
                 ${i18n.t('load_label')} <span class="${loadColor}">${s.processing.length}/${s.config.capacity}</span><br>
                 ${i18n.t('hit_rate_label')} <span class="text-green-400">${hitRate}%</span>`;

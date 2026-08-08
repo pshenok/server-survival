@@ -334,7 +334,7 @@ export const FR_TRANSLATIONS = {
     "mq_desc": "Tampon massif contenant 200 requêtes. Placez après le Pare-feu pour lisser les pics DDoS, ou avant Calcul pour éviter la surcharge. Assurance bon marché contre les pics de trafic.",
     "mq_flow": "Flux : Pare-feu → File → Répartiteur de Charge ou Répartiteur de Charge → File → Calcul",
     "cache_full": "Cache mémoire",
-    "cache_desc_long": "Couche de cache avec 35-65% de taux de réussite. Les succès de cache se terminent instantanément sans toucher DB/Stockage. Améliorez les niveaux pour des taux de réussite plus élevés. Excellent pour réduire les coûts DB.",
+    "cache_desc_long": "Couche de cache. Les succès de cache se terminent instantanément sans toucher DB/Stockage. La part qui peut être mise en cache dépend du type de requête, et chaque niveau augmente les chances — un cache de niveau 3 sert ~74% des requêtes READ contre 40% au niveau 1. Excellent pour réduire les coûts DB.",
     "cache_flow": "Flux : Calcul → Cache → DB/Stockage",
     "close_manual": "Fermer le manuel",
     "source": "Source",

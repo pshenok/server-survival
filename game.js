@@ -141,6 +141,15 @@ function formatTime(totalSeconds) {
 
 // ==================== BALANCE OVERHAUL FUNCTIONS ====================
 
+// Frame-rate-independent exponential smoothing toward a target. Calibrated so
+// one 60 fps frame closes exactly 1% of the gap — the constant this replaces —
+// which keeps the shipped ramp feel identical on a 60 Hz machine while making
+// it identical on every OTHER machine too. Exported so the ramp can be pinned
+// by tests instead of re-derived in them.
+function smoothTowardsRPS(current, target, dt) {
+    return current + (target - current) * (1 - Math.pow(0.99, dt * 60));
+}
+
 function calculateTargetRPS(gameTimeSeconds) {
 
     const base = CONFIG.survival.baseRPS;
@@ -177,11 +186,19 @@ function calculateTargetRPS(gameTimeSeconds) {
 
 window.handleGameState = (timeScale) => {
     if (timeScale === 0) { // pause state
-        STATE.intervention.pausedEvent = STATE.intervention.activeEvent;
-        STATE.intervention.remainingTime = STATE.intervention.eventEndTime - Date.now();
-        // Remember which service the outage hit so resume re-disables the SAME one.
-        STATE.intervention.pausedOutageServiceId = STATE.intervention.outageServiceId || null;
-        endRandomEvent();
+        // Guard INSIDE the branch, not on it: pausing an already-paused game
+        // must not overwrite the parked event with null (endRandomEvent has
+        // already cleared activeEvent), but it must not fall through to the
+        // resume branch either — that would restart the parked event while
+        // the game is still paused.
+        if (STATE.intervention.activeEvent) {
+            STATE.intervention.pausedEvent = STATE.intervention.activeEvent;
+            STATE.intervention.remainingTime =
+                (STATE.intervention.eventEndTime - STATE.elapsedGameTime) * 1000;
+            // Remember which service the outage hit so resume re-disables the SAME one.
+            STATE.intervention.pausedOutageServiceId = STATE.intervention.outageServiceId || null;
+            endRandomEvent();
+        }
     } else if (STATE.intervention.pausedEvent) { // not paused state
         triggerRandomEvent(
             STATE.intervention.pausedEvent,
@@ -381,6 +398,26 @@ function resetGame(mode = "survival") {
     // Hide failures panel on reset
     const failuresPanel = document.getElementById("failures-panel");
     if (failuresPanel) failuresPanel.classList.add("hidden");
+
+    // A random event that is still live belongs to the run that just ended:
+    // end it BEFORE the clock rewinds. Its deadline is a game-time stamp
+    // (#242), so a stranded event would otherwise be measured against a clock
+    // restarting at 0 and hold its effects — doubled costs, tripled traffic,
+    // a disabled node — for the whole of the next run. endRandomEvent()
+    // reverses the effects; the timers below stop a half-elapsed interval
+    // from firing the next event early into a fresh session.
+    if (STATE.intervention) {
+        endRandomEvent();
+        STATE.intervention.eventEndTime = 0;
+        STATE.intervention.randomEventTimer = 0;
+        STATE.intervention.pausedEvent = null;
+        STATE.intervention.remainingTime = 0;
+        STATE.intervention.pausedOutageServiceId = null;
+        STATE.intervention.costMultiplier = 1.0;
+        STATE.intervention.trafficBurstMultiplier = 1.0;
+        STATE.intervention.currentMilestoneIndex = 0;
+        STATE.intervention.rpsMultiplier = 1.0;
+    }
 
     // Initialize balance overhaul state
     STATE.elapsedGameTime = 0;
@@ -960,8 +997,15 @@ function animate(time) {
             const gameTime = STATE.elapsedGameTime;
             const targetRPS = calculateTargetRPS(gameTime);
 
-            // Smooth transition to target
-            STATE.currentRPS += (targetRPS - STATE.currentRPS) * 0.01;
+            // Smooth transition to target. The per-FRAME 0.01 this replaces
+            // made the whole ramp frame-rate dependent: a 144 Hz machine
+            // approached the target 2.4x faster in game time than a 60 Hz
+            // one, so two players at the same elapsed time faced different
+            // traffic. Exponential smoothing over dt is identical at 60 fps
+            // (0.99^1 = 0.01 of the gap) and now frame-rate independent —
+            // and because dt carries timeScale, fast-forward advances the
+            // ramp by game time rather than by frames drawn.
+            STATE.currentRPS = smoothTowardsRPS(STATE.currentRPS, targetRPS, dt);
             STATE.currentRPS = Math.min(STATE.currentRPS, CONFIG.survival.maxRPS);
         }
     }
@@ -1557,6 +1601,7 @@ window.STATE = STATE;
 export {
     animate,
     badgeGroup,
+    calculateTargetRPS,
     camera,
     cameraTarget,
     connectionGroup,
@@ -1571,5 +1616,6 @@ export {
     resetGame,
     scene,
     serviceGroup,
+    smoothTowardsRPS,
     syncInput,
 };

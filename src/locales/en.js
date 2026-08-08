@@ -334,7 +334,7 @@ export const EN_TRANSLATIONS = {
     "mq_desc": "Massive buffer holding 200 requests. Place after Firewall to smooth DDoS spikes, or before Compute to prevent overload. Cheap insurance against traffic bursts.",
     "mq_flow": "Flow: Firewall → Queue → Load Balancer or Load Balancer → Queue → Compute",
     "cache_full": "Memory Cache",
-    "cache_desc_long": "Caching layer with 35-65% hit rate. Cache hits complete instantly without hitting DB/Storage. Upgrade tiers for higher hit rates. Great for reducing DB costs.",
+    "cache_desc_long": "Caching layer. Cache hits complete instantly without hitting DB/Storage. How much is cacheable depends on the traffic type, and each tier raises the odds \u2014 a Tier 3 cache serves ~74% of READs against 40% at Tier 1. Great for reducing DB costs.",
     "cache_flow": "Flow: Compute → Cache → DB/Storage",
     "close_manual": "Close Manual",
     "source": "Source",
