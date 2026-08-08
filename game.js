@@ -160,20 +160,25 @@ function calculateTargetRPS(gameTimeSeconds) {
 
     if (CONFIG.survival.rpsAcceleration && STATE.intervention) {
         const milestones = CONFIG.survival.rpsAcceleration.milestones;
-        let multiplier = 1.0;
+        const multiplier = rpsMilestoneMultiplier(gameTimeSeconds, milestones);
 
+        // The WARNINGS still fire at the original milestone times — the player's
+        // sense of "a surge just landed" is unchanged; only the arrival is
+        // spread out. Announcing a threshold the traffic reached gradually is
+        // the point: it tells them the next tier of pressure is now in effect.
         for (let i = 0; i < milestones.length; i++) {
-            if (gameTimeSeconds >= milestones[i].time) {
-                multiplier = milestones[i].multiplier;
-                if (STATE.intervention.currentMilestoneIndex < i + 1) {
-                    STATE.intervention.currentMilestoneIndex = i + 1;
-
-                    addInterventionWarning(
-                        i18n.t('rps_surge_warning', { multiplier: multiplier.toFixed(1) }),
-                        "danger",
-                        5000
-                    );
-                }
+            if (
+                gameTimeSeconds >= milestones[i].time &&
+                STATE.intervention.currentMilestoneIndex < i + 1
+            ) {
+                STATE.intervention.currentMilestoneIndex = i + 1;
+                addInterventionWarning(
+                    i18n.t('rps_surge_warning', {
+                        multiplier: milestones[i].multiplier.toFixed(1),
+                    }),
+                    "danger",
+                    5000
+                );
             }
         }
 
@@ -182,6 +187,43 @@ function calculateTargetRPS(gameTimeSeconds) {
     }
 
     return targetRPS;
+}
+
+// The acceleration multiplier, interpolated in time instead of stepped (#74).
+//
+// The milestones used to be a step function: at t=180 the multiplier jumped
+// 1.6 -> 2.0 and target RPS went from 12.0 to 15.0 in ONE frame, which the
+// smoother then chased down in under two seconds. The measured readable band
+// on the reference board is about 20% wide in arrival rate, so a 25% step
+// vaults clean over it — at exactly the three-minute mark #74 complains about.
+//
+// Interpolating from 1.0 at t=0 (rather than holding 1.0 until the first
+// milestone) is deliberate: leaving that first 1.0 -> 1.3 edge in place would
+// keep one 30% discontinuity, and the whole point is that the ramp is
+// continuous everywhere. The endpoints are unchanged — every milestone time
+// still has exactly its milestone multiplier — so the difficulty envelope is
+// the same curve, just without the cliffs between its sample points.
+function rpsMilestoneMultiplier(t, milestones) {
+    if (!milestones || !milestones.length) return 1.0;
+    if (t <= 0) return 1.0;
+
+    const first = milestones[0];
+    if (t < first.time) {
+        return 1.0 + (first.multiplier - 1.0) * (t / first.time);
+    }
+    for (let i = 0; i < milestones.length - 1; i++) {
+        const a = milestones[i];
+        const b = milestones[i + 1];
+        if (t < b.time) {
+            const span = b.time - a.time;
+            // A zero-width span would be a config typo; treat it as a step
+            // rather than dividing by zero.
+            if (span <= 0) return b.multiplier;
+            return a.multiplier + (b.multiplier - a.multiplier) * ((t - a.time) / span);
+        }
+    }
+    // Past the last milestone the multiplier holds, as before.
+    return milestones[milestones.length - 1].multiplier;
 }
 
 window.handleGameState = (timeScale) => {
@@ -1614,6 +1656,7 @@ export {
     renderer,
     requestGroup,
     resetGame,
+    rpsMilestoneMultiplier,
     scene,
     serviceGroup,
     smoothTowardsRPS,
