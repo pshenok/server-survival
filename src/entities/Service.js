@@ -78,6 +78,11 @@ export class Service {
     // outside that path (or opt out), so architecture-variety polls never
     // grant for a board the player did not build this session.
     this.playerPlaced = false;
+    // Trailing mean of totalLoad (#74). Starts cold at 0 on every path that
+    // builds a Service — placement, campaign pre-build, and Service.restore,
+    // which constructs through here — because a restored save is a cold boot
+    // and inheriting a previous session's average would be invisible state.
+    this.smoothedLoad = 0;
 
     let geo, mat;
     const materialProps = { roughness: 0.2 };
@@ -535,6 +540,22 @@ export class Service {
   }
 
   update(dt) {
+    // The smoothed load signal (#74), updated FIRST so every consumer in this
+    // frame reads a value that already includes this frame's state.
+    //
+    // alpha is 1 - e^(-dt/tau), not dt/tau. The exponential form is EXACTLY
+    // step-size invariant — two half-steps compose to one whole step, because
+    // (T-x)·e^(-a/tau)·e^(-b/tau) = (T-x)·e^(-(a+b)/tau) — so the signal is
+    // identical at 60 Hz, 144 Hz, and at timeScale 3 where dt is three times
+    // larger per frame. The naive linear alpha is not: it measured a 0.0005
+    // divergence over five seconds between 60 fps and fast-forward, small but
+    // real, and this game already shipped one frame-rate-dependent ramp (#242).
+    // It also cannot overshoot: e^(-dt/tau) > 0 for every finite dt, so no
+    // clamp is needed for a pathological frame.
+    const tau = CONFIG.load?.smoothingTau || 2.5;
+    this.smoothedLoad +=
+      (this.totalLoad - this.smoothedLoad) * (1 - Math.exp(-dt / tau));
+
     // Service degradation mechanic
     if (CONFIG.survival.degradation?.enabled && STATE.gameMode === "survival") {
       const degradeConfig = CONFIG.survival.degradation;

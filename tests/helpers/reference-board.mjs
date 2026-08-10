@@ -136,9 +136,15 @@ export function sweepAt({
 
   const b = nodes.bottleneck;
   let minReputation = STATE.reputation;
+  // Both axes are tracked, always: the raw instantaneous signal and the
+  // smoothed one (#74 step 2). Reporting only one of them would make the
+  // knee work look like it moved the world when it moved the ruler.
   let bandFrames = 0;
   let episodes = 0;
   let inBand = false;
+  let rawBandFrames = 0;
+  let rawEpisodes = 0;
+  let rawInBand = false;
   let firstFailAt = null;
   let repCrossAt = null;
   let peakUtil = 0;
@@ -155,6 +161,14 @@ export function sweepAt({
       if (!inBand) episodes++;
     }
     inBand = isIn;
+
+    const rawUtil = b.totalLoad * 2;
+    const rawIsIn = rawUtil > band[0] && rawUtil < band[1];
+    if (rawIsIn) {
+      rawBandFrames++;
+      if (!rawInBand) rawEpisodes++;
+    }
+    rawInBand = rawIsIn;
 
     if (STATE.reputation < minReputation) minReputation = STATE.reputation;
     const failures = totalFailures();
@@ -180,6 +194,9 @@ export function sweepAt({
     bandResidencySec: +(bandFrames * dt).toFixed(2),
     episodes,
     meanDwellSec: episodes ? +((bandFrames * dt) / episodes).toFixed(3) : 0,
+    rawBandResidencySec: +(rawBandFrames * dt).toFixed(2),
+    rawEpisodes,
+    rawMeanDwellSec: rawEpisodes ? +((rawBandFrames * dt) / rawEpisodes).toFixed(3) : 0,
     timeToRepSec:
       repCrossAt !== null && firstFailAt !== null
         ? +(repCrossAt - firstFailAt).toFixed(1)

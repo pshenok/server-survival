@@ -77,20 +77,35 @@ describe("reference board baseline (#74 step 0)", () => {
     expect(widthRps / collapseRps).toBeLessThan(0.2);
   });
 
-  it("BASELINE PROPERTY 2 — the band is a strobe, not a state", () => {
-    // Mean dwell inside (0.90, 1.20) utilization, across every point that
-    // enters the band at all. The design's claim is that this is far too
-    // short to perceive; smoothing is what fixes it.
-    const entered = table.filter((r) => r.episodes > 0);
-    expect(entered.length).toBeGreaterThan(0);
-    const worstDwell = Math.max(...entered.map((r) => r.meanDwellSec));
+  it("BASELINE PROPERTY 2 — the RAW band is a strobe; the SMOOTHED one is a state", () => {
+    // Mean dwell inside (0.90, 1.20) utilization. This assertion was written
+    // in step 0 with one axis and a single bound; step 2 (smoothedLoad) is
+    // what flipped it, which is exactly what this file exists to record.
+    //
+    // The raw instantaneous signal is unchanged and still a strobe — its
+    // numerator is an integer job count, so it can only step between a few
+    // representable values and never rests inside the band. The smoothed
+    // signal, over the SAME runs, persists an order of magnitude longer:
+    // that is the difference between a state a player can read and a flicker
+    // they cannot.
+    const rawEntered = table.filter((r) => r.rawEpisodes > 0);
+    const smoothEntered = table.filter((r) => r.episodes > 0);
+    expect(rawEntered.length).toBeGreaterThan(0);
+    expect(smoothEntered.length).toBeGreaterThan(0);
+
+    const worstRaw = Math.max(...rawEntered.map((r) => r.rawMeanDwellSec));
+    const bestSmooth = Math.max(...smoothEntered.map((r) => r.meanDwellSec));
     console.log(
-      "max mean dwell across all sweep points:",
-      worstDwell,
-      "s over",
-      entered.map((r) => `${r.rps}rps:${r.meanDwellSec}s`).join(" ")
+      `mean dwell in band — RAW max ${worstRaw}s (` +
+        rawEntered.map((r) => `${r.rps}:${r.rawMeanDwellSec}`).join(" ") +
+        `)\n                     SMOOTHED max ${bestSmooth}s (` +
+        smoothEntered.map((r) => `${r.rps}:${r.meanDwellSec}`).join(" ") +
+        ")"
     );
-    expect(worstDwell).toBeLessThan(0.6);
+
+    expect(worstRaw).toBeLessThan(0.6); // still a strobe, unchanged by step 2
+    expect(bestSmooth).toBeGreaterThan(1.5); // now long enough to perceive
+    expect(bestSmooth).toBeGreaterThan(worstRaw * 5);
   });
 
   it("multi-seed reduction works and agrees with the single-seed run", () => {
