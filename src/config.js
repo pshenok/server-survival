@@ -648,6 +648,21 @@ export const CONFIG = {
   // instead of over-provisioning. Serverless still wins idle and spiky
   // traffic, a fixed Compute wins steady mid-range traffic, and the ASG is
   // the only option that survives past Serverless's capacity ceiling.
+  // Load signal (#74). `totalLoad` is an instantaneous ratio whose numerator is
+  // an integer job count, so on a tier-1 Compute (capacity 4) it can only take
+  // the values 0.75, 1.00, 1.25 — and a sweep of the reference board measured
+  // its mean dwell inside the interesting band at 0.10-0.25 s at EVERY load.
+  // That is a strobe, not a state: no threshold placed on the instantaneous
+  // signal can describe something a player is able to see and act on.
+  //
+  // `smoothedLoad` is the same quantity through a trailing exponential mean, so
+  // it is continuous (resolution ~0.001 instead of 1/capacity) and persists
+  // long enough to be read. tau is in GAME seconds — the update is driven by
+  // the game-scaled dt, so fast-forward advances it by game time, not frames.
+  load: {
+    smoothingTau: 2.5,
+  },
+
   autoscaling: {
     targetUtil: 0.7, // scale out above this sustained utilization
     scaleInUtil: 0.3, // scale in below this (hysteresis gap prevents flapping)
