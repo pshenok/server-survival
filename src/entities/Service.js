@@ -767,21 +767,34 @@ export class Service {
       }
     }
 
-    if (this.totalLoad > 0.8) {
+    // Load ring (#74): reads smoothedLoad, not the instantaneous signal, and
+    // on thresholds recalibrated to the half of the scale the player lives in.
+    // Before this, orange lit up exactly when a node began dropping requests
+    // and red only at 160% of capacity — so the board showed green and yellow
+    // right up to the moment it was already failing. It also flickered: the
+    // raw signal's mean dwell in any band was under a quarter-second.
+    //
+    // Both modes deliberately. "Campaign levels are identical" means their
+    // SIMULATION is identical; loadRing is written here and read nowhere in
+    // src/, game.js or tests/, so this cannot move a level's outcome — and
+    // teaching one colour language in the campaign and another in survival
+    // would be worse than the bug.
+    const ringLoad = this.smoothedLoad;
+    if (ringLoad > CONFIG.load.ringRed) {
       this.loadRing.material.color.setHex(0xff0000);
       if (STATE.selectedNodeId === this.id) {
         this.loadRing.material.opacity = 1.0;
       } else {
         this.loadRing.material.opacity = 0.8;
       }
-    } else if (this.totalLoad > 0.5) {
+    } else if (ringLoad > CONFIG.load.ringOrange) {
       this.loadRing.material.color.setHex(0xffaa00);
       if (STATE.selectedNodeId === this.id) {
         this.loadRing.material.opacity = 1.0;
       } else {
         this.loadRing.material.opacity = 0.6;
       }
-    } else if (this.totalLoad > 0.2) {
+    } else if (ringLoad > CONFIG.load.ringYellow) {
       this.loadRing.material.color.setHex(0xffff00);
       if (STATE.selectedNodeId === this.id) {
         this.loadRing.material.opacity = 1.0;

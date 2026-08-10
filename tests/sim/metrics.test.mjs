@@ -61,9 +61,17 @@ describe("ring buffer sampling", () => {
     expect(getSampleCount()).toBe(countBefore);
   });
 
-  it("util samples reflect the service's current totalLoad", () => {
+  it("util samples reflect the service's smoothedLoad (#74)", () => {
+    // The sampled series moved from the instantaneous totalLoad to the
+    // trailing mean: sampling the raw signal produced a sparkline of a
+    // quantity that can only take a few representable values, and an alert
+    // calibrated to 170% of rated capacity. Real observability windows its
+    // averages for the same reason.
     const db = place("db"); // capacity 8 → totalLoad = queue/(8*2)
     db.queue = new Array(8).fill({});
+    // The sim, not the metrics clock, advances the trailing mean; this test
+    // isolates the metrics layer, so drive the signal directly.
+    db.smoothedLoad = 0.5;
     tick(0.5);
     const m = getServiceMetrics(db.id);
     expect(m.util[m.util.length - 1]).toBeCloseTo(0.5, 5);
@@ -204,10 +212,19 @@ describe("hasMonitoring gating", () => {
 });
 
 describe("threshold alerts", () => {
+  // A node held in steady overload. The alert reads smoothedLoad (#74), which
+  // the SIM advances inside Service.update; these tests isolate the metrics
+  // layer from the sim on purpose, so the settled value is set directly — that
+  // is what a node sitting above the threshold for a few seconds looks like.
   function overload(service) {
-    // totalLoad = (processing + queue) / (capacity * 2); push it past 0.85.
     const need = Math.ceil(service.config.capacity * 2 * 0.9);
     service.queue = new Array(need).fill({});
+    service.smoothedLoad = CONFIG.load.alertUtil + 0.05;
+  }
+
+  function relieve(service) {
+    service.queue = [];
+    service.smoothedLoad = 0;
   }
 
   it("does NOT fire without a monitoring service", () => {
@@ -217,25 +234,30 @@ describe("threshold alerts", () => {
     expect(warningsMatching("High load")).toHaveLength(0);
   });
 
-  it("high-load fires only after 6 consecutive samples above 0.85", () => {
+  it("high-load fires after the configured sustained samples (#74)", () => {
+    // 2 samples at 2 Hz = 1 s, down from 6 (3 s). The old count existed to
+    // filter a noisy instantaneous signal; stacking it on top of a 2.5 s
+    // trailing mean would land the alert AFTER the failures it must precede.
     place("monitor");
     const db = place("db");
     overload(db);
-    tick(2.5); // 5 samples — not yet
+    const samples = CONFIG.load.alertSustainSamples;
+    tick(0.5 * (samples - 1)); // one short
     expect(warningsMatching("High load")).toHaveLength(0);
-    tick(0.5); // 6th sample
+    tick(0.5); // the sample that trips it
     expect(warningsMatching("High load")).toHaveLength(1);
   });
 
   it("a dip below the threshold resets the sustained-load streak", () => {
     place("monitor");
     const db = place("db");
+    const samples = CONFIG.load.alertSustainSamples;
     overload(db);
-    tick(2.5); // 5 samples over
-    db.queue = []; // dip
+    tick(0.5 * (samples - 1)); // one short of firing
+    relieve(db); // dip
     tick(0.5);
     overload(db);
-    tick(2.5); // 5 more — streak restarted, still no alert
+    tick(0.5 * (samples - 1)); // one short again — streak restarted
     expect(warningsMatching("High load")).toHaveLength(0);
   });
 

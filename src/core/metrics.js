@@ -12,6 +12,7 @@
 // window) and resetMetrics() from resetGame().
 
 import { STATE } from "../state.js";
+import { CONFIG } from "../config.js";
 import { i18n } from "../i18n.js";
 // Cyclic import chain (metrics.js -> events.js -> game.js -> actions.js ->
 // metrics.js) is safe — established pattern: addInterventionWarning is a
@@ -22,8 +23,10 @@ const SAMPLE_INTERVAL = 0.5; // seconds of game time between samples (2 Hz)
 export const METRICS_BUFFER_SIZE = 120; // 120 samples × 0.5 s = 60 s window
 
 const ALERT_COOLDOWN = 15; // seconds of game time, per service+rule
-const UTIL_THRESHOLD = 0.85;
-const UTIL_SUSTAINED_SAMPLES = 6; // 3 s at 2 Hz
+// Utilization thresholds live in CONFIG.load (#74) so the ring colours, the
+// alert and the failure onset are calibrated against one another instead of
+// drifting apart in three files. Both are read at call time, not captured
+// here, so a config change cannot be shadowed by module-eval order.
 const QUEUE_THRESHOLD = 0.9; // fraction of maxQueueSize
 const ERROR_RATE_THRESHOLD = 0.2;
 const ERROR_MIN_EVENTS = 5; // rate alone is noise on 1-2 requests
@@ -34,7 +37,7 @@ let sampleCount = 0;
 // serviceId -> {
 //   util, queueDepth, errorRate, latency: ring buffers (newest last),
 //   errors, successes, latencySum, latencyCount: counters reset per sample,
-//   utilStreak: consecutive samples above UTIL_THRESHOLD (alert rule 1)
+//   utilStreak: consecutive samples above CONFIG.load.alertUtil (alert rule 1)
 // }
 const serviceMetrics = new Map();
 
@@ -113,7 +116,13 @@ function takeSample() {
 
     for (const service of STATE.services) {
         const m = bufferFor(service.id);
-        const util = service.totalLoad || 0;
+        // The SMOOTHED load (#74): the sampled series, the alert and the
+        // panel's red tint all read the same axis the load rings do. Sampling
+        // the instantaneous signal produced a sparkline of a quantity that on
+        // a tier-1 Compute can only be 0.75, 1.00 or 1.25 — and an alert that
+        // fired at 170% of rated capacity. Real observability shows a windowed
+        // average for exactly this reason.
+        const util = service.smoothedLoad || 0;
         const queueDepth = service.queue.length;
         const events = m.errors + m.successes;
         const errorRate = events > 0 ? m.errors / events : 0;
@@ -146,9 +155,9 @@ function takeSample() {
 }
 
 function checkAlerts(service, m, util, queueDepth, errorRate, events) {
-    if (util > UTIL_THRESHOLD) m.utilStreak++;
+    if (util > CONFIG.load.alertUtil) m.utilStreak++;
     else m.utilStreak = 0;
-    if (m.utilStreak >= UTIL_SUSTAINED_SAMPLES) {
+    if (m.utilStreak >= CONFIG.load.alertSustainSamples) {
         fireAlert(service, "util", "alert_high_load", "warning");
     }
 
