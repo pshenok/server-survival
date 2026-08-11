@@ -659,8 +659,28 @@ export const CONFIG = {
   // it is continuous (resolution ~0.001 instead of 1/capacity) and persists
   // long enough to be read. tau is in GAME seconds — the update is driven by
   // the game-scaled dt, so fast-forward advances it by game time, not frames.
+  // Every threshold below is expressed in smoothedLoad, where 0.5 is 100% of
+  // rated capacity (the denominator carries a x2 — see Service.totalLoad). The
+  // shipped numbers were all calibrated against the WRONG half of that scale:
+  // the ring turned orange at 0.5 — exactly when a node begins dropping
+  // requests — and red only at 0.8, which is 160% of capacity, deep inside
+  // collapse. The $75 Monitoring node alerted at 0.85, i.e. 170%, long past
+  // the point where the information could still be used.
+  //
+  // Recalibrated so the colours mean what a player would assume: red is "at
+  // capacity, dropping next", and the alert arrives BEFORE the first drop.
+  // The ordering alertUtil < ringRed = failureOnset is asserted in
+  // tests/sim/rings-and-alert.test.mjs rather than left as a comment.
   load: {
     smoothingTau: 2.5,
+    ringYellow: 0.25, // 50% of capacity — working, worth noticing
+    ringOrange: 0.35, // 70% — busy
+    ringRed: 0.45, // 90% — at capacity, drops start next
+    alertUtil: 0.375, // 85% — fires ahead of the first failure
+    // 2 samples at 2 Hz = 1 s. The shipped 6 (3 s) existed to filter a noisy
+    // instantaneous signal; stacking it on a 2.5 s trailing mean would land
+    // the alert after the failures it is meant to precede.
+    alertSustainSamples: 2,
   },
 
   autoscaling: {

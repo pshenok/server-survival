@@ -12,6 +12,7 @@
 // nothing samples, so the panel keeps showing the frozen failure moment.
 
 import { STATE } from "../state.js";
+import { CONFIG } from "../config.js";
 import { i18n } from "../i18n.js";
 import {
     METRICS_BUFFER_SIZE,
@@ -36,7 +37,9 @@ const COLUMNS = [
         key: "util",
         label: "metrics_col_util",
         max: () => 1,
-        alert: (v) => v > 0.85,
+        // Same constant the alert rule uses (#74) — the red tint in the panel
+        // and the warning banner must never disagree about what "hot" means.
+        alert: (v) => v > CONFIG.load.alertUtil,
     },
     {
         key: "queueDepth",
