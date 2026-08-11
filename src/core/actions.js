@@ -374,8 +374,60 @@ function calculateFailChanceBasedOnLoad(load) {
     return 2 * (load - 0.5);
 }
 
+// Queue-fed types are EXEMPT from the knee (#74), and the exemption is what
+// protects them. Their totalLoad numerator is BACKLOG — queue, partitions,
+// batch, pending (Service.js) — not concurrency, so a full buffer is their
+// designed-good state, not an overload. Each already owns its own overload
+// mechanic: maxQueueSize overflow, the GPU batch window, the gateway deadline
+// array. It also keeps CONFIG.autoscaling's queuePressureThreshold derivation
+// (which is about a saturated SQS) valid without re-deriving it.
+const KNEE_EXEMPT_TYPES = new Set(["sqs", "dlq", "stream", "gpu", "infgw"]);
+
+/**
+ * The survival failure knee (#74): the same curve family as the shipped one,
+ * but with a quadratic toe over 90-120% of rated capacity so there is a band
+ * where a few requests fail and the run is still winnable.
+ *
+ * @param {number} util utilization where 1.0 = 100% of rated capacity
+ *                      (i.e. smoothedLoad * 2)
+ * @returns {number} chance of failure (0 to 1)
+ */
+function kneeFailChance(util) {
+    const { failureOnsetUtil: onset, toeTopUtil: top, toeHeight: toe } = CONFIG.load;
+    if (util <= onset) return 0;
+    if (util < top) {
+        const t = (util - onset) / (top - onset);
+        return toe * t * t;
+    }
+    // Above the toe: slope 1 in utilization, which IS the shipped curve.
+    // 2*(load - 0.5) with load = util/2 is exactly (util - 1.0), and with the
+    // calibrated toe (0.20 at util 1.20) this branch reduces to util - 1.0
+    // term for term. Keeping the slope rather than re-deriving an endpoint
+    // means the identity survives a change to toeHeight instead of silently
+    // breaking the constants that were tuned against the old curve.
+    return Math.min(1, toe + (util - top));
+}
+
+/**
+ * Which failure curve a node rolls against. A SWITCH, never a gate: skipping
+ * the roll in campaign would make 16 of the 25 shipped levels unlosable —
+ * level 15's design comment says outright that its pre-built Tier-1 Compute
+ * "sits ~10% over its own throughput… enough to bury it inside ~30s".
+ * Campaign and sandbox keep the shipped curve on the shipped axis, byte for
+ * byte; only survival gets the knee, and only for non-queue types.
+ */
+function failChanceFor(service) {
+    if (STATE.gameMode === "survival" && !KNEE_EXEMPT_TYPES.has(service.type)) {
+        return kneeFailChance(service.smoothedLoad * 2);
+    }
+    return calculateFailChanceBasedOnLoad(service.totalLoad);
+}
+
 export {
+    KNEE_EXEMPT_TYPES,
     calculateFailChanceBasedOnLoad,
+    failChanceFor,
+    kneeFailChance,
     failOrPark,
     failRequest,
     finishRequest,

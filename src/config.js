@@ -673,6 +673,25 @@ export const CONFIG = {
   // tests/sim/rings-and-alert.test.mjs rather than left as a comment.
   load: {
     smoothingTau: 2.5,
+    // The knee (#74). Utilization here is smoothedLoad x 2, so 1.0 is 100% of
+    // rated capacity. Failures begin at 90% and rise as a quadratic TOE to
+    // 20% at 120%, then linearly to certainty.
+    //
+    // toeHeight is 0.20 for two independent reasons that agree:
+    //   (a) Reputation. SUCCESS_REPUTATION 0.1 against FAIL_REPUTATION -1 puts
+    //       break-even at 0.1/1.1 = 0.0909. Mid-band (util 1.10) should be
+    //       exactly treading water: 0.20 x (2/3)^2 = 0.0889.
+    //   (b) Continuity. With 0.20 the linear branch reduces to (u - 1.00),
+    //       which is ALGEBRAICALLY IDENTICAL to the shipped curve
+    //       2 x (load - 0.5). Above util 1.20 nothing changes at all, so
+    //       every constant derived against the old curve — tripErrorRate,
+    //       queuePressureThreshold — stays valid by inspection.
+    // The design's first draft used 0.35, which was +15pp at util 1.20 and
+    // harsher everywhere to util 2.0: a difficulty increase sold as a
+    // softening. At 0.20 the curve barely moves and the AXIS does the work.
+    failureOnsetUtil: 1.0,
+    toeTopUtil: 1.2,
+    toeHeight: 0.2,
     ringYellow: 0.25, // 50% of capacity — working, worth noticing
     ringOrange: 0.35, // 70% — busy
     ringRed: 0.45, // 90% — at capacity, drops start next

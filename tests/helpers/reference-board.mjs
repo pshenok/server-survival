@@ -212,6 +212,83 @@ function totalFailures() {
   );
 }
 
+/**
+ * Play the reference board through the REAL survival ramp until the run ends,
+ * and report when. This is the anti-softening gate for the knee work (#74):
+ * every mechanism in the design moves difficulty the same way, so "the game
+ * got easier" has to be measured rather than hoped about. A run that survives
+ * materially longer than main's is issue #74 from the other side.
+ *
+ * The ramp is driven exactly as animate() drives it — calculateTargetRPS on
+ * game time, then smoothTowardsRPS on the game-scaled dt.
+ */
+export async function rampToDeath({
+  seed = 0x5eed,
+  dt = 1 / 60,
+  capSec = 900,
+  repFloor = 0,
+  moneyFloor = -1000,
+} = {}) {
+  const { calculateTargetRPS, smoothTowardsRPS } = await import("../../game.js");
+
+  // Build with headroom, then hand the player survival's real starting budget:
+  // the scenario is "a competent board is already standing", not "afford it
+  // from scratch", and place() would otherwise fail on the eighth node.
+  resetWorld({ money: 1e9, gameMode: "survival" });
+  vi.spyOn(Math, "random").mockImplementation(mulberry32(seed));
+  const nodes = buildReferenceBoard();
+  STATE.money = CONFIG.survival.startBudget;
+  STATE.upkeepEnabled = true;
+  STATE.currentRPS = CONFIG.survival.baseRPS;
+  STATE.trafficDistribution = { ...REFERENCE_MIX };
+  STATE.intervention = {
+    currentMilestoneIndex: 0,
+    rpsMultiplier: 1.0,
+    recentEvents: [],
+    warnings: [],
+    trafficBurstMultiplier: 1.0,
+    randomEventTimer: 0,
+    activeEvent: null,
+    eventEndTime: 0,
+    costMultiplier: 1.0,
+  };
+  if (!STATE.services.length) throw new Error("reference board did not build");
+
+  let diedAt = null;
+  let firstFailAt = null;
+  const totalFrames = Math.round(capSec / dt);
+  for (let i = 0; i < totalFrames; i++) {
+    STATE.currentRPS = smoothTowardsRPS(
+      STATE.currentRPS,
+      calculateTargetRPS(STATE.elapsedGameTime),
+      dt
+    );
+    frame(dt);
+    if (firstFailAt === null && totalFailures() > 0) {
+      firstFailAt = STATE.elapsedGameTime;
+    }
+    if (STATE.reputation <= repFloor || STATE.money <= moneyFloor) {
+      diedAt = STATE.elapsedGameTime;
+      break;
+    }
+  }
+
+  vi.restoreAllMocks();
+  return {
+    seed,
+    diedAtSec: diedAt === null ? null : +diedAt.toFixed(1),
+    survivedCap: diedAt === null,
+    firstFailAtSec: firstFailAt === null ? null : +firstFailAt.toFixed(1),
+    // Runway: game seconds between the first dropped request and death. On
+    // main this is the number that is far too small — the board goes from
+    // clean to dead with nothing readable in between.
+    runwaySec:
+      diedAt !== null && firstFailAt !== null ? +(diedAt - firstFailAt).toFixed(1) : null,
+    finalRPS: +STATE.currentRPS.toFixed(2),
+    peakSmoothedUtil: +(nodes.bottleneck.smoothedLoad * 2).toFixed(3),
+  };
+}
+
 /** Median across seeds — robust to one unlucky run, unlike a mean. */
 export function medianOf(values) {
   const v = [...values].sort((a, b) => a - b);

@@ -249,6 +249,61 @@ Each step lands as its own PR with its own verification.
 - **Step 5 — ASG onto `smoothedLoad`.** Scale-out begins before util 0.90;
   ≤1 scaling action per 20 s at steady 5 rps.
 
+## Step 4 was BUILT, MEASURED, and NOT SHIPPED — and why that matters
+
+The knee itself was implemented exactly as designed above (switch not gate,
+queue-fed exemptions, toe 0.20 with the shipped-curve identity above util
+1.20, all of it) and then measured against the step-0 baseline. It does not
+achieve its goal, and the reason turned out to be more valuable than the
+feature.
+
+**Measured, reference board, 60 s per point:**
+
+| | main | knee (onset 0.90) | knee (onset 1.00) | knee (onset 1.25) |
+|---|---|---|---|---|
+| readable points | 5, 6 | 5 | 5 | 6 |
+| **band width / collapse** | **12.5 %** | **0 %** | **0 %** | **0 %** |
+| 6 rps | 7 fail, rep 95 | 36 fail, rep 74 | 29 fail, rep 75 | 3 fail, rep 98 |
+| time-to-death, 8-seed median | 110.9 s | — | 113.9 s | — |
+
+The anti-softening gate passes comfortably (+1.3 %, well inside ±20 %). The
+band target does not move at any calibration. Two things were learned:
+
+**1. A hidden capacity-dependent bias in the shipped curve.** `failChance` is
+computed AFTER `this.processing.splice(i, 1)` (`Service.js`), so the
+instantaneous load the old curve reads is short by exactly one job at the
+moment of the roll. On a capacity-4 Compute that is **0.25 of utilization**;
+on a capacity-10 node it is 0.10. The shipped threshold is therefore not
+"100 % of capacity" at all — it is 100 % plus a bias that shrinks as nodes get
+bigger. Any curve reading a smoothed axis has no such bias, which is why the
+knee looked harsher than a curve it is mathematically never above. This is a
+real latent inconsistency, worth its own issue.
+
+**2. The band target is unreachable by construction, and no failure curve can
+change that.** Compute, DB, ALB and WAF have **no `maxQueueSize`** — their
+queues are unbounded (only sqs/stream/gpu/infgw are capped). An unbounded
+queue has no stationary overload state: while arrivals ≤ service rate the
+queue stays finite and failures are ~0; the instant arrivals exceed it the
+queue grows without limit, utilization runs away, and failures go to 100 %.
+The system is bistable in arrival rate. "A band of arrival rates where the
+board fails a little and survives" describes a steady state the simulation
+cannot have — which is why the same 0 % width appears at every onset from
+0.90 to 1.25, and at capacity 4 and capacity 10 alike.
+
+**What this points at instead.** Real systems get a readable middle from
+**bounded queues and load shedding**: past the backlog limit the excess is
+dropped, utilization pins near 1.0, and the system runs indefinitely at a
+loss rate proportional to the overshoot. That is a genuine stationary state,
+it is the mechanic the game already models correctly in SQS
+(`maxQueueSize: 200`), and it teaches a real lesson — backpressure and shed
+load — instead of a tuned probability. A `maxQueueSize` on the compute-family
+nodes is the change that would make the band exist; the failure curve was
+never the lever.
+
+Step 4 is therefore parked, not merged. Steps 0-3 stand on their own: they
+are the measurement rig, a continuous ramp, a readable signal, and warnings
+that fire before the failures rather than 70 % after them.
+
 ## The biggest surviving risk
 
 **The amendment may make the game too easy — #74 from the other side.** Every

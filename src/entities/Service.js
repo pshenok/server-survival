@@ -5,7 +5,7 @@ import { i18n } from "../i18n.js";
 // hoisted function declarations / top-level consts, only dereferenced at
 // runtime — long after all modules have finished evaluating.
 import {
-  calculateFailChanceBasedOnLoad,
+  failChanceFor,
   failOrPark,
   flashMoney,
   getUpkeepMultiplier,
@@ -696,7 +696,11 @@ export class Service {
       if (job.timer >= processingTime) {
         this.processing.splice(i, 1);
 
-        const failChance = calculateFailChanceBasedOnLoad(this.totalLoad);
+        // Which curve this node rolls against (#74). A per-mode SWITCH, not a
+        // gate: survival gets the knee on the smoothed axis, campaign and
+        // sandbox keep the shipped curve on the shipped axis, and queue-fed
+        // types are exempt in every mode. See failChanceFor in core/actions.js.
+        const failChance = failChanceFor(this);
         // Increase fail chance when health is low
         const healthPenalty =
           this.health < (CONFIG.survival.degradation?.criticalHealth || 30)
