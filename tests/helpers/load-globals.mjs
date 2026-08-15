@@ -11,6 +11,12 @@ export const LOCALES = [
   { code: "ne", load: async () => (await import("../../src/locales/nep.js")).NE_TRANSLATIONS },
   { code: "it", load: async () => (await import("../../src/locales/it.js")).IT_TRANSLATIONS },
   { code: "hi", load: async () => (await import("../../src/locales/hi.js")).HI_TRANSLATIONS },
+  // uk was added in #230 with a bespoke suite and never registered here, so
+  // for two months the shared parity/placeholder tests silently skipped it —
+  // found while adding the soft_slow badge (#248). One locale tested by a
+  // different file than the other ten is a gap that widens every time the
+  // shared suite gains a check.
+  { code: "uk", load: async () => (await import("../../src/locales/uk.js")).UK_TRANSLATIONS },
 ];
 
 export function loadLocale(locale) {

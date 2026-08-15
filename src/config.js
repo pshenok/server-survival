@@ -46,6 +46,8 @@ export const CONFIG = {
   trafficTypes: {
     STATIC: {
       name: "STATIC",
+      sloSec: 3, // #248
+
       method: "GET",
       color: 0x4ade80,
       reward: 0.5,
@@ -57,6 +59,8 @@ export const CONFIG = {
     },
     READ: {
       name: "READ",
+      sloSec: 7, // #248: a completion later than this still counts, but pays less
+
       method: "GET",
       color: 0x3b82f6,
       reward: 0.8,
@@ -68,6 +72,8 @@ export const CONFIG = {
     },
     WRITE: {
       name: "WRITE",
+      sloSec: 7, // #248: a completion later than this still counts, but pays less
+
       method: "POST/PUT",
       color: 0xf97316,
       reward: 1.2,
@@ -79,6 +85,8 @@ export const CONFIG = {
     },
     UPLOAD: {
       name: "UPLOAD",
+      sloSec: 9, // #248: a completion later than this still counts, but pays less
+
       method: "POST+file",
       color: 0xfbbf24,
       reward: 1.5,
@@ -90,6 +98,8 @@ export const CONFIG = {
     },
     SEARCH: {
       name: "SEARCH",
+      sloSec: 8, // #248: a completion later than this still counts, but pays less
+
       method: "GET+query",
       color: 0x06b6d4,
       reward: 1.2,
@@ -780,6 +790,16 @@ export const CONFIG = {
       MALICIOUS_MITIGATION_COST: 1.0, // Cost per blocked attack
       MALICIOUS_BREACH_PENALTY: 50.0, // Cost per successful attack
       THROTTLED_REPUTATION: -0.2, // Soft fail from API Gateway rate limiting
+      // A LATE completion (#248). Shaped exactly like the GPU quality tax
+      // below: the request completed and paid, it just paid less. At -0.3
+      // against +0.1 SUCCESS a board serving everything late nets -0.2 rep
+      // per request — it bleeds, slowly, while the failure counter reads
+      // zero. That is the production experience of a saturated queue, and it
+      // is the signal the game has never had. The reward keeps its
+      // LATE_REWARD_FLOOR share so a late answer is still worth serving:
+      // shedding it would be worse for the player AND for the lesson.
+      LATE_REPUTATION: -0.3,
+      LATE_REWARD_FLOOR: 0.25, // a maximally late completion still earns 25%
       // A GPU bad answer (#87): the request COMPLETED and paid — this is the
       // quiet quality tax rolled per request in tickGpu, not a failure. At
       // −0.5 against +0.1 SUCCESS a tier-1 GPU still nets +0.05 rep per

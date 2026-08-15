@@ -74,9 +74,17 @@ export const FAIL_REASONS = {
 // them without a new import cycle.
 export const SOFT_BADGES = {
     BAD_ANSWER: "soft_bad_answer",
+    // The request completed, but after its traffic class's SLO (#248). A late
+    // answer is not a dropped one — it is worth less. Completion-side like
+    // BAD_ANSWER, so it never touches failRequest.
+    SLOW: "soft_slow",
 };
 
 // Reasons the badge paints amber instead of red: the request was shed on
 // purpose (rate limiting working as designed) or completed with a quality
 // blemish (#87) — not dropped by a broken board.
-export const SOFT_REASONS = new Set([FAIL_REASONS.THROTTLED, SOFT_BADGES.BAD_ANSWER]);
+export const SOFT_REASONS = new Set([
+    FAIL_REASONS.THROTTLED,
+    SOFT_BADGES.BAD_ANSWER,
+    SOFT_BADGES.SLOW,
+]);

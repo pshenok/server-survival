@@ -108,11 +108,15 @@ describe("error and latency attribution", () => {
     expect(m.errorRate[m.errorRate.length - 1]).toBe(0);
   });
 
-  it("finishRequest attributes success (errorRate 0) and latency from spawnedAt", () => {
+  it("finishRequest attributes success (errorRate 0) and latency from GAME time (#248)", () => {
+    // Latency used to be stamped off performance.now(), which made every
+    // sample wrong at any timeScale but 1 and unmeasurable in a headless run —
+    // for the metric the $75 Monitoring node exists to sell. It now reads the
+    // request's game-time age, ticked in Request.update like everything else.
     const db = place("db");
     const req = new Request("READ");
     STATE.requests.push(req);
-    req.spawnedAt = performance.now() - 250;
+    req.age = 0.25; // 250 ms of GAME time waiting
     finishRequest(req, db.type, db);
     tick(0.5);
     const m = getServiceMetrics(db.id);
@@ -155,7 +159,7 @@ describe("error and latency attribution", () => {
     const db = place("db");
     const req = new Request("READ");
     STATE.requests.push(req);
-    req.spawnedAt = performance.now() - 300;
+    req.age = 0.3; // game-time age (#248)
     finishRequest(req, db.type, db);
     tick(0.5);
     tick(0.5); // no traffic this window
