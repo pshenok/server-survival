@@ -415,6 +415,7 @@ function resetGame(mode = "survival") {
 
     STATE.reputation = 100;
     STATE.requestsProcessed = 0;
+    STATE.lateCompletions = 0;
     STATE.services = [];
     STATE.requests = [];
     STATE.connections = [];

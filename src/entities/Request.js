@@ -19,6 +19,12 @@ export class Request {
         // spawnRequest so sandbox bursts and test-injected requests get
         // latency attribution too.
         this.spawnedAt = performance.now();
+        // GAME-time age (#248). The wall clock cannot express what a player
+        // experiences: at timeScale 3 a request that waited three game-seconds
+        // would stamp one. Every live request — including the ones sitting in
+        // a queue — gets update(dt) every frame, so this is the one clock that
+        // measures the wait the board actually imposed.
+        this.age = 0;
         this.type = type;
         this.typeConfig = CONFIG.trafficTypes[type];
         this.value = this.typeConfig.reward;
@@ -77,6 +83,13 @@ export class Request {
         return this.typeConfig.processingWeight;
     }
 
+    // The traffic class's service-level objective in game seconds (#248).
+    // MALICIOUS has none (it is never served) and INFERENCE has none here —
+    // the Inference Gateway owns its own deadline array.
+    get sloSec() {
+        return this.typeConfig.sloSec ?? null;
+    }
+
     flyTo(service) {
         this.origin.copy(this.mesh.position);
         this.target = service;
@@ -89,6 +102,10 @@ export class Request {
     }
 
     update(dt) {
+        // Age ticks BEFORE the retry early-return: a request waiting out a
+        // backoff is still a request the caller is waiting for (#248).
+        this.age += dt;
+
         // Backoff before a retry (#196): the request hovers at the node that
         // dropped it until the delay expires, then flies to the peer (or is
         // failed if that peer is gone). Always terminates — see retry.js.

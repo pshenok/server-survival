@@ -4,6 +4,7 @@ export const STATE = {
     money: 0,
     reputation: 0,
     requestsProcessed: 0,
+    lateCompletions: 0, // #248
 
     score: {
         total: 0,

@@ -20,8 +20,8 @@ import { hasTrippedDownstream, isRoutable } from "../sim/circuit-breaker.js";
 // failRequest / failOrPark / throttleRequest is pure attribution: it is read
 // only here, only to draw a label, and never influences control flow. See the
 // contract note in core/failure-reasons.js.
-import { FAIL_REASONS } from "./failure-reasons.js";
-import { spawnFailureBadge } from "../ui/failure-badges.js";
+import { FAIL_REASONS, SOFT_BADGES } from "./failure-reasons.js";
+import { spawnFailureBadge, spawnServiceBadge } from "../ui/failure-badges.js";
 // Dead-Letter Queue (#197): a final failure at a node wired to a DLQ is parked
 // there instead of dropped. Runtime-only cycle (actions.js ⇄ dlq.js) — hoisted
 // declarations, dereferenced long after both modules evaluate.
@@ -198,6 +198,26 @@ function updateScore(req, outcome) {
             reward *= 1 + points.CACHE_HIT_BONUS;
         }
 
+        // LATENESS HAS A PRICE (#248). A completion past its traffic class's
+        // SLO still completes — it is not a failure and never touches
+        // failRequest — but it is worth less, exactly like the GPU's bad
+        // answer. Without this a queue is a FREE win: the reference board
+        // with an SQS in front of a saturated Compute scores 0 failures and
+        // reputation 100 while requests stand 12 seconds in the pipe, and
+        // hints.js actively recommends that move. Survival only: campaign
+        // levels are balanced against the old arithmetic and their objectives
+        // count completions, so their play stays byte-identical.
+        if (STATE.gameMode === "survival" && req.sloSec && req.age > req.sloSec) {
+            // Decay toward a floor over one further SLO of lateness, so the
+            // penalty is a gradient rather than a cliff: 1 SLO late ~ the
+            // floor, and everything between scales smoothly.
+            const floor = points.LATE_REWARD_FLOOR ?? 0.25;
+            const overdue = Math.min(1, (req.age - req.sloSec) / req.sloSec);
+            reward *= 1 - (1 - floor) * overdue;
+            STATE.lateCompletions = (STATE.lateCompletions || 0) + 1;
+            req.wasLate = true;
+        }
+
         if (typeConfig.destination === "s3" || typeConfig.destination === "cdn") {
             STATE.score.storage += score;
         } else if (typeConfig.destination === "db") {
@@ -216,7 +236,12 @@ function updateScore(req, outcome) {
             STATE.finances.income.countByType[reqType] =
                 (STATE.finances.income.countByType[reqType] || 0) + 1;
         }
-        STATE.reputation += points.SUCCESS_REPUTATION || 0.5; // Gain reputation on success
+        // A late completion earns the late tax INSTEAD of the success bonus,
+        // so a board serving everything late bleeds slowly while its failure
+        // counter reads zero — the production experience of a full queue.
+        STATE.reputation += req.wasLate
+            ? (points.LATE_REPUTATION ?? -0.3)
+            : (points.SUCCESS_REPUTATION || 0.5);
     } else if (outcome === "THROTTLED") {
         // Soft fail from API Gateway rate limiting — much less reputation loss
         STATE.reputation += points.THROTTLED_REPUTATION || -0.2;
@@ -238,13 +263,19 @@ function updateScore(req, outcome) {
 function finishRequest(req, viaServiceType, service) {
     STATE.requestsProcessed++;
     if (service) {
-        const latency =
-            typeof req.spawnedAt === "number"
-                ? performance.now() - req.spawnedAt
-                : null;
+        // GAME-time latency (#248). This used to read the wall clock, which
+        // made every latency sample wrong at any timeScale but 1 and unusable
+        // in a headless run — the metric the Monitoring node sells.
+        const latency = typeof req.age === "number" ? req.age * 1000 : null;
         recordServiceSuccess(service, latency);
     }
     updateScore(req, "COMPLETED");
+    // The badge is spawned AFTER scoring and reads the flag updateScore set,
+    // so it can never change which requests are late — it only tells the
+    // player which node made them wait (#156 inertness contract).
+    if (req.wasLate && service) {
+        spawnServiceBadge(service, SOFT_BADGES.SLOW);
+    }
     if (window.campaign?.active) {
         window.campaign.onRequestCompleted(req, viaServiceType);
     }
