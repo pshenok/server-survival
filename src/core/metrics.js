@@ -44,6 +44,15 @@ const serviceMetrics = new Map();
 // "serviceId:rule" -> game time (STATE.elapsedGameTime) of the last fire.
 const alertCooldowns = new Map();
 
+// Per-RUN peak watermark: serviceId -> { type, util, atSec } (#252).
+//
+// Deliberately a running watermark rather than a scan of the ring buffers: the
+// buffers hold METRICS_BUFFER_SIZE x SAMPLE_INTERVAL = 60 seconds, and levels
+// 21-25 run 90-300s, so a scan would silently forget an early spike and the
+// report would confidently state the wrong peak. It is also O(1) per sample
+// instead of O(services x 120).
+const runPeaks = new Map();
+
 function bufferFor(id) {
     let m = serviceMetrics.get(id);
     if (!m) {
@@ -116,6 +125,20 @@ function takeSample() {
 
     for (const service of STATE.services) {
         const m = bufferFor(service.id);
+        // Watermark first, so a node deleted later in the run still keeps the
+        // peak it reached while it existed — the report is a post-mortem of
+        // the RUN, not a snapshot of the surviving board.
+        {
+            const u = service.smoothedLoad || 0;
+            const prev = runPeaks.get(service.id);
+            if (!prev || u > prev.util) {
+                runPeaks.set(service.id, {
+                    type: service.type,
+                    util: u,
+                    atSec: STATE.elapsedGameTime,
+                });
+            }
+        }
         // The SMOOTHED load (#74): the sampled series, the alert and the
         // panel's red tint all read the same axis the load rings do. Sampling
         // the instantaneous signal produced a sparkline of a quantity that on
@@ -202,12 +225,55 @@ function getSampleCount() {
 function resetMetrics() {
     serviceMetrics.clear();
     alertCooldowns.clear();
+    runPeaks.clear();
     sampleAcc = 0;
     sampleCount = 0;
 }
 
+/**
+ * The post-run report (#252). Everything here is data the simulation already
+ * collected and then threw away at the level boundary.
+ *
+ * Deliberately NOT gated on owning a Monitoring node: a post-mortem is not
+ * live observability, and level 15's buy-the-eyes lesson depends on the LIVE
+ * dashboard being purchasable, not on the player never learning what happened
+ * afterwards. It is called from the debrief render path and nowhere else — a
+ * mid-run caller would silently refund a purchase the game charges for, so
+ * tests/sim/run-report.test.mjs asserts the live metrics panel never imports it.
+ *
+ * @returns {{peaks: Array, topReasons: Array, onTime: number, late: number,
+ *            processed: number, failures: number}}
+ */
+function getRunReport({ topN = 3 } = {}) {
+    const peaks = [...runPeaks.entries()]
+        .map(([id, p]) => ({ id, type: p.type, util: p.util, atSec: p.atSec }))
+        .sort((a, b) => b.util - a.util);
+
+    const topReasons = Object.entries(STATE.failuresByReason || {})
+        .map(([key, count]) => ({ key, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, topN);
+
+    const processed = STATE.requestsProcessed || 0;
+    const late = STATE.lateCompletions || 0;
+    const failures = Object.values(STATE.failures || {}).reduce(
+        (a, n) => a + (typeof n === "number" ? n : 0),
+        0
+    );
+
+    return {
+        peaks,
+        topReasons,
+        processed,
+        late,
+        onTime: Math.max(0, processed - late),
+        failures,
+    };
+}
+
 export {
     fireAlert,
+    getRunReport,
     getSampleCount,
     getServiceMetrics,
     hasMonitoring,

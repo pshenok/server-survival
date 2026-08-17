@@ -97,6 +97,15 @@ export class CampaignController {
         // later retry/next that reuses the controller. Stale burst callbacks
         // scheduled by a previous attempt compare against this and bail.
         this._session = (this._session || 0) + 1;
+        // Attempt number on THIS level (#252). The run report is withheld on a
+        // first loss — level 15's busiestLoad objective is type-blind so the
+        // player cannot name the hottest node without buying the Monitoring
+        // dashboard, and naming it immediately would hand over that lesson.
+        // Retrying the same level increments; moving to another resets.
+        STATE.campaign.attempt =
+            STATE.campaign.currentLevelId === levelId
+                ? (STATE.campaign.attempt || 0) + 1
+                : 1;
         STATE.campaign.active = true;
         STATE.campaign.currentLevelId = levelId;
         STATE.campaign.level = level;
