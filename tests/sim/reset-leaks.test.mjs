@@ -12,6 +12,8 @@ import { describe, it, expect } from "vitest";
 import { STATE } from "../../src/state.js";
 import { resetGame } from "../../game.js";
 import { updateMaliciousSpike, updateTrafficShift } from "../../src/core/events.js";
+import { PLACEMENT_TYPE_MAP } from "../../src/input/handlers.js";
+import { CAMPAIGN_LEVELS } from "../../src/campaign/levels.js";
 
 // Exactly what a run quit in the middle of a shift leaves behind.
 const GHOST = {
@@ -72,5 +74,46 @@ describe("a traffic shift does not outlive its run", () => {
             updateMaliciousSpike(1);
         }
         expect(STATE.maliciousSpikeActive).toBe(true);
+    });
+});
+
+describe("the pointer does not outlive its run either", () => {
+    it("THE BYPASS: an armed tool used to survive into a level that forbids it", () => {
+        // The toolbar gate decides which BUTTONS render. The click handler
+        // does not consult it — it places with
+        // createService(PLACEMENT_TYPE_MAP[STATE.activeTool]). So a tool
+        // armed in one run stayed armed into the next, and the first click
+        // on empty ground placed a service the level never offered.
+        const gated = CAMPAIGN_LEVELS.find(
+            (l) => (l.allowedServices || []).length > 0
+                && !(l.allowedServices || []).includes("gpu")
+        );
+        expect(gated, "a level that allows some services but not the GPU").toBeTruthy();
+
+        resetGame("survival");
+        STATE.activeTool = "gpu";           // armed in the run that just ended
+        resetGame("campaign");
+
+        // Nothing placeable is armed, so a click on the ground places nothing.
+        expect(PLACEMENT_TYPE_MAP[STATE.activeTool]).toBeUndefined();
+        expect(STATE.activeTool).toBe("select");
+    });
+
+    it("a stale node id does not come back selected in the next run", () => {
+        // Ids restart with the board, so a surviving id either points at
+        // nothing or at a DIFFERENT node — which then draws as selected with
+        // nobody having clicked it, and in connect mode is one click away
+        // from a wire the player never drew.
+        resetGame("survival");
+        STATE.selectedNodeId = "service-7";
+        resetGame("survival");
+        expect(STATE.selectedNodeId).toBeNull();
+    });
+
+    it("and a new run does not resume at the previous run's speed", () => {
+        resetGame("survival");
+        STATE.previousTimeScale = 4;        // menu opened during a 4x run
+        resetGame("campaign");
+        expect(STATE.previousTimeScale).toBe(1);
     });
 });

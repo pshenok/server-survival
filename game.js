@@ -482,6 +482,24 @@ function resetGame(mode = "survival") {
     STATE.gameStartTime = performance.now();
     STATE.maliciousSpikeTimer = 0;
     STATE.maliciousSpikeActive = false;
+    // The pointer belongs to the run too. activeTool is the sharper of the
+    // two: the click handler places with
+    // createService(PLACEMENT_TYPE_MAP[STATE.activeTool]) and never consults
+    // the toolbar gate, which only decides which BUTTONS render. So a tool
+    // armed in one run stayed armed into the next, and a campaign level that
+    // allows only s3 could be handed a GPU by a player who never saw a GPU
+    // button — the ban is on the toolbar, and the toolbar was bypassed.
+    //
+    // selectedNodeId is the quieter one: ids restart with the board, so a
+    // stale id either points at nothing or, worse, at a DIFFERENT node in
+    // the new run, which then renders as selected with nobody having
+    // clicked it — and in "connect" mode is one click from a wire the
+    // player did not draw.
+    STATE.activeTool = "select";
+    STATE.selectedNodeId = null;
+    // A run that ended while the main menu was open left its own speed here,
+    // and Resume restores it: a new run could start at the old run's 2x.
+    STATE.previousTimeScale = 1;
     STATE.normalTrafficDist = null;
     STATE.autoRepairEnabled = false;
     resetMetrics();
