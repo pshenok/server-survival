@@ -351,6 +351,11 @@ function processAutoRepair(dt) {
 
 function getAutoRepairUpkeep() {
     if (!STATE.autoRepairEnabled) return 0;
+    // Gated exactly like processAutoRepair() below, and for the same reason:
+    // outside survival the healing does not happen, so charging for it bills
+    // the player for a service the mode has switched off. The toggle stays
+    // pressable everywhere — it just costs nothing where it does nothing.
+    if (STATE.gameMode !== "survival") return 0;
 
     const percent = CONFIG.survival.degradation?.autoRepairCostPercent || 0.1;
     // 10% of total service cost per second

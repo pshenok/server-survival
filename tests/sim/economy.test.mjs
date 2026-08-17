@@ -22,6 +22,7 @@ describe("getAutoRepairUpkeep", () => {
   });
 
   it("charges autoRepairCostPercent of total service cost per minute", () => {
+    resetWorld({ gameMode: "survival" });   // the mode that actually repairs
     place("db"); // 150
     place("waf"); // 40
     STATE.autoRepairEnabled = true;
@@ -30,11 +31,42 @@ describe("getAutoRepairUpkeep", () => {
   });
 
   it("scales with the number of services", () => {
+    resetWorld({ gameMode: "survival" });
     STATE.autoRepairEnabled = true;
     place("s3"); // 25
     const one = getAutoRepairUpkeep();
+    expect(one).toBeGreaterThan(0);         // or the doubling below is 0 === 0
     place("s3");
     expect(getAutoRepairUpkeep()).toBeCloseTo(one * 2, 10);
+  });
+
+  // processAutoRepair has had a test on BOTH sides of the mode gate since it
+  // was written. The cost never did — it was only ever exercised through
+  // whichever mode the default fixture happened to use, so the day the
+  // healing became survival-only the bill silently stayed universal.
+  it("COSTS NOTHING WHERE IT DOES NOTHING: no charge outside survival", () => {
+    for (const mode of ["campaign", "sandbox"]) {
+      resetWorld({ gameMode: mode });
+      place("db");
+      place("waf");
+      STATE.autoRepairEnabled = true;
+      expect(getAutoRepairUpkeep(), `${mode} must not be billed`).toBe(0);
+    }
+  });
+
+  it("...and the campaign is where that bill actually landed", () => {
+    // resetGame("campaign") sets upkeepEnabled = true, and game.js charges
+    // `autoRepairCost > 0 && STATE.upkeepEnabled`. So a campaign level with
+    // the toggle on drained money every frame while processAutoRepair()
+    // healed nothing — paying upkeep for a switched-off service.
+    resetWorld({ gameMode: "campaign" });
+    const db = place("db");
+    db.health = 50;
+    STATE.autoRepairEnabled = true;
+    STATE.upkeepEnabled = true;
+    expect(getAutoRepairUpkeep()).toBe(0);
+    processAutoRepair(2);
+    expect(db.health).toBe(50);   // still no healing — the gate is symmetric
   });
 });
 
