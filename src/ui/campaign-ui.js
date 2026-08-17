@@ -7,7 +7,7 @@
 import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
 import { getRunReport } from "../core/metrics.js";
-import { CAMPAIGN_LEVELS } from "../campaign/levels.js";
+import { CAMPAIGN_LEVELS, unaidedPalette } from "../campaign/levels.js";
 import { renderArchitectureSVG } from "../campaign/diagram.js";
 import { Service } from "../entities/Service.js";
 import { updateRepairCostTable } from "../core/economy.js";
@@ -37,6 +37,44 @@ function objLabel(levelId, o) {
 function scenarioPreview(scenario) {
     const chars = [...scenario];
     return chars.length > 80 ? chars.slice(0, 80).join("") + "…" : scenario;
+}
+
+// Unaided mode (#253): a per-player preference, not per-level state, so it
+// survives a retry and a page reload. Kept in localStorage beside the campaign
+// progress rather than in a save file — it describes how the player wants to
+// be taught, not what they achieved.
+const UNAIDED_KEY = "serverSurvivalUnaided";
+
+function isUnaided() {
+    try {
+        return localStorage.getItem(UNAIDED_KEY) === "1";
+    } catch (e) {
+        return false; // private mode / storage disabled: default to Guided
+    }
+}
+
+function setUnaided(on) {
+    try {
+        localStorage.setItem(UNAIDED_KEY, on ? "1" : "0");
+    } catch (e) { /* storage disabled — the toggle just does not persist */ }
+    const btn = document.getElementById("campaign-mode-toggle");
+    if (btn) renderUnaidedToggle(btn);
+}
+
+function toggleUnaided() {
+    setUnaided(!isUnaided());
+    renderCampaignLevels();
+}
+
+function renderUnaidedToggle(btn) {
+    const on = isUnaided();
+    btn.textContent = on ? i18n.t("mode_unaided") : i18n.t("mode_guided");
+    btn.title = on ? i18n.t("mode_unaided_hint") : i18n.t("mode_guided_hint");
+    btn.className =
+        "px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wide border transition " +
+        (on
+            ? "bg-purple-900/60 border-purple-500 text-purple-200"
+            : "bg-gray-800 border-gray-600 text-gray-300");
 }
 
 function openCampaignSelect() {
@@ -98,6 +136,8 @@ function renderCampaignLevels() {
     }
     html += "</div>";
     list.innerHTML = html;
+    const toggle = document.getElementById("campaign-mode-toggle");
+    if (toggle) renderUnaidedToggle(toggle);
     updateCampaignProgressLabel();
 }
 
@@ -234,8 +274,14 @@ function startCampaignLevel(levelId) {
     STATE.currentRPS = level.rps;
     STATE.money = level.budget;
 
-    // Toolbar gating
-    applyCampaignToolbarGating(level.allowedServices, level.forbiddenServices);
+    // Toolbar gating. In UNAIDED mode (#253) the palette widens to the
+    // category the intended answer lives in, so the level asks "what is wrong
+    // here" instead of "place this". Guided is the default and passes the
+    // shipped list untouched, so every level replays byte-identically.
+    applyCampaignToolbarGating(
+        isUnaided() ? unaidedPalette(level) : level.allowedServices,
+        level.forbiddenServices
+    );
 
     // Start PAUSED — like Survival mode. Player surveys the situation
     // (pre-built architecture, allowed services, objectives panel) and
@@ -410,7 +456,10 @@ function campaignNextLevel() {
 
 export {
     applyCampaignToolbarGating,
+    isUnaided,
     renderRunReport,
+    setUnaided,
+    toggleUnaided,
     campaignNextLevel,
     campaignRetryLevel,
     campaignStartCurrentLevel,
