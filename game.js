@@ -461,6 +461,20 @@ function resetGame(mode = "survival") {
         STATE.intervention.trafficBurstMultiplier = 1.0;
         STATE.intervention.currentMilestoneIndex = 0;
         STATE.intervention.rpsMultiplier = 1.0;
+        // A traffic shift belongs to its run just as much as a random event
+        // does, and four of its fields used to outlive one. The worst is
+        // originalTrafficDist: endTrafficShift() restores it, so a stranded
+        // one does not merely misfire once — it becomes the NEXT run's
+        // baseline, and every later shift in that run returns to the old
+        // run's mix instead of this one's.
+        //
+        // Cleared directly rather than through endTrafficShift(), which would
+        // restore that stale mix over the distribution this function has
+        // already chosen for the new mode a few lines above.
+        STATE.intervention.trafficShiftActive = false;
+        STATE.intervention.trafficShiftTimer = 0;
+        STATE.intervention.originalTrafficDist = null;
+        STATE.intervention.currentShift = null;
     }
 
     // Initialize balance overhaul state
