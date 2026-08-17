@@ -288,6 +288,13 @@ function finishRequest(req, viaServiceType, service) {
 // score and no branch, so passing one can never change which requests fail.
 // Defaults to null (no badge) for callers with nothing to say.
 function failRequest(req, reason = null) {
+    // Tally the cause for the debrief's run report (#252). This is the ONE
+    // place a reason is counted; it still touches no branch, no score and no
+    // other counter, so the #156 contract ("passing a reason can never change
+    // which requests fail") holds — a tally is an observation, not a verdict.
+    if (reason) {
+        STATE.failuresByReason[reason] = (STATE.failuresByReason[reason] || 0) + 1;
+    }
     // Observability (#194): attribute the failure to the service the request
     // was headed to / sitting on. Entry-routing failures with no target (no
     // Internet connections at all) stay unattributed by design. `failed` marks

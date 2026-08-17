@@ -5,6 +5,11 @@ export const STATE = {
     reputation: 0,
     requestsProcessed: 0,
     lateCompletions: 0, // #248
+    // Per-REASON failure tally for the debrief's run report. STATE.failures
+    // counts by traffic TYPE, which answers "what died" but never "why" — and
+    // "why" is the half a learner needs. Observation only; nothing branches
+    // on it, so the #156 badge-inertness contract is untouched.
+    failuresByReason: {},
 
     score: {
         total: 0,

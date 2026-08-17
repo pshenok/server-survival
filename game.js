@@ -429,6 +429,7 @@ function resetGame(mode = "survival") {
         MALICIOUS: 0,
         INFERENCE: 0,
     };
+    STATE.failuresByReason = {};
     // AI Wave session counter (#87) + the power grid derivation over the
     // (now empty) service list.
     STATE.inference = { expired: 0 };

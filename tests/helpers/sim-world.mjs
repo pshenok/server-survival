@@ -32,6 +32,7 @@ export function resetWorld({ money = 100000, gameMode = "sandbox" } = {}) {
   STATE.lateCompletions = 0;
   STATE.score = { total: 0, storage: 0, database: 0, maliciousBlocked: 0 };
   STATE.failures = { STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0, INFERENCE: 0 };
+  STATE.failuresByReason = {};
   STATE.inference = { expired: 0 }; // AI Wave session counter (#87)
   recomputePower(); // services just emptied — the grid derivation must follow
 

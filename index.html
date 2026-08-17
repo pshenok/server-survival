@@ -1688,6 +1688,10 @@
           <div class="text-blue-400 text-xs font-bold uppercase mb-1">💡 Tip</div>
           <p id="campaign-debrief-tip" class="text-gray-200 text-sm"></p>
         </div>
+        <!-- The run report (#252): what actually happened on THIS attempt.
+             Populated by renderRunReport() in src/ui/campaign-ui.js; hidden
+             when there is nothing to say. -->
+        <div id="campaign-debrief-report" class="hidden text-left bg-gray-900/60 border border-gray-700 rounded-lg p-3 mb-4"></div>
         <div class="flex justify-center gap-3">
           <button onclick="campaignRetryLevel()"
             class="bg-yellow-600 hover:bg-yellow-500 text-white py-3 px-6 rounded-lg font-mono uppercase text-sm">

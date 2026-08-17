@@ -6,6 +6,7 @@
 
 import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
+import { getRunReport } from "../core/metrics.js";
 import { CAMPAIGN_LEVELS } from "../campaign/levels.js";
 import { renderArchitectureSVG } from "../campaign/diagram.js";
 import { Service } from "../entities/Service.js";
@@ -284,6 +285,72 @@ function renderCampaignObjectives(level, primaryResults, bonusResults) {
         <ul class="text-[11px] space-y-1 font-mono">${bonusHtml}</ul>`;
 }
 
+// The run report (#252): the debrief used to print the same static paragraph
+// whether the player won by understanding or lost by flailing — the one moment
+// a learner is guaranteed to be reading carried nothing about their own board.
+//
+// GATING, decided explicitly rather than by habit: shown on every win, but on
+// a loss only from the SECOND attempt onward. Level 15's busiestLoad objective
+// is type-blind on purpose (campaign/objectives.js) so the player cannot name
+// the hottest node without buying the Monitoring dashboard; naming it in the
+// first loss would hand over the answer to the buy-the-eyes lesson. After one
+// honest failed attempt, telling them what happened is teaching, not spoiling.
+function renderRunReport(outcome, attempt) {
+    const el = document.getElementById("campaign-debrief-report");
+    if (!el) return;
+
+    const show = outcome === "win" || attempt > 1;
+    if (!show) {
+        el.classList.add("hidden");
+        el.innerHTML = "";
+        return;
+    }
+
+    const r = getRunReport();
+    // Nothing happened worth reporting (an instant restart, a board that never
+    // served traffic) — say nothing rather than print a table of zeroes.
+    if (!r.processed && !r.failures && !r.peaks.length) {
+        el.classList.add("hidden");
+        el.innerHTML = "";
+        return;
+    }
+
+    const pct = (u) => Math.round(u * 200); // smoothedLoad 0.5 = 100% of capacity
+    const peaks = r.peaks
+        .filter((p) => p.util > 0)
+        .slice(0, 3)
+        .map(
+            (p) =>
+                `<li class="flex justify-between gap-3"><span>${i18n.t(p.type)}</span>` +
+                `<span class="font-mono text-gray-400">${pct(p.util)}% @ ${Math.round(p.atSec)}s</span></li>`
+        )
+        .join("");
+
+    const reasons = r.topReasons
+        .map(
+            (x) =>
+                `<li class="flex justify-between gap-3"><span>${i18n.t(x.key)}</span>` +
+                `<span class="font-mono text-gray-400">${x.count}</span></li>`
+        )
+        .join("");
+
+    const onTimePct = r.processed ? Math.round((r.onTime / r.processed) * 100) : 0;
+
+    el.innerHTML =
+        `<div class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2">${i18n.t("report_title")}</div>` +
+        `<div class="grid grid-cols-2 gap-4 text-xs text-gray-200">` +
+        `<div><div class="text-gray-500 uppercase mb-1">${i18n.t("report_peak_load")}</div>` +
+        `<ul class="space-y-0.5">${peaks || `<li class="text-gray-500">${i18n.t("report_none")}</li>`}</ul></div>` +
+        `<div><div class="text-gray-500 uppercase mb-1">${i18n.t("report_top_failures")}</div>` +
+        `<ul class="space-y-0.5">${reasons || `<li class="text-gray-500">${i18n.t("report_none")}</li>`}</ul></div>` +
+        `</div>` +
+        `<div class="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300">` +
+        `${i18n.t("report_served", { onTime: r.onTime, total: r.processed, pct: onTimePct })}` +
+        (r.late ? ` · <span class="text-yellow-400">${i18n.t("report_late", { n: r.late })}</span>` : "") +
+        `</div>`;
+    el.classList.remove("hidden");
+}
+
 function showCampaignDebrief(outcome, reason, level) {
     document.getElementById("campaign-debrief-modal").classList.remove("hidden");
 
@@ -321,6 +388,7 @@ function showCampaignDebrief(outcome, reason, level) {
         nextBtn.classList.add("hidden");
         if (typeof STATE.sound?.playGameOver === "function") STATE.sound.playGameOver();
     }
+    renderRunReport(outcome, STATE.campaign?.attempt || 1);
     updateCampaignProgressLabel();
 }
 
@@ -342,6 +410,7 @@ function campaignNextLevel() {
 
 export {
     applyCampaignToolbarGating,
+    renderRunReport,
     campaignNextLevel,
     campaignRetryLevel,
     campaignStartCurrentLevel,
