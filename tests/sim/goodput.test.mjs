@@ -162,6 +162,47 @@ describe("a late completion is worth less (#248)", () => {
     );
     expect(req.wasLate).toBeUndefined();
   });
+
+  it("survival counts each late completion ONCE — the price and the count are separate", () => {
+    // The count moved out of the survival-only branch so the campaign could
+    // have it too. Leaving a copy behind in that branch double-counts, and
+    // the debrief would then report more late requests than were served.
+    resetWorld({ gameMode: "survival" });
+    const db = place("db");
+    for (let i = 0; i < 4; i++) {
+      const req = new Request("READ");
+      STATE.requests.push(req);
+      req.age = SLO * 2;
+      finishRequest(req, db.type, db);
+    }
+    expect(STATE.lateCompletions).toBe(4);
+    expect(STATE.lateCompletions).toBeLessThanOrEqual(STATE.requestsProcessed);
+  });
+
+  it("...but the campaign DEBRIEF still counts it, or it reports a lie", () => {
+    // The price is survival-only on purpose. The COUNT must not be: the
+    // debrief divides onTime by processed, so a campaign board where every
+    // request stood past its SLO used to report "served N/N on time, 100%"
+    // — a true statement about the counter and a false one about the room.
+    resetWorld({ gameMode: "campaign" });
+    const db = place("db");
+    for (let i = 0; i < 3; i++) {
+      const req = new Request("READ");
+      STATE.requests.push(req);
+      req.age = SLO * 5;
+      finishRequest(req, db.type, db);
+    }
+    const punctual = new Request("READ");
+    STATE.requests.push(punctual);
+    punctual.age = SLO - 0.5;
+    finishRequest(punctual, db.type, db);
+
+    expect(STATE.lateCompletions).toBe(3);
+    expect(STATE.requestsProcessed).toBe(4);
+    // ...and the counter is inert: nothing in the simulation reads it back,
+    // which is what makes counting it in a campaign level safe. The test
+    // above this one pins the money and the reputation that prove it.
+  });
 });
 
 describe("THE LESSON: buffering relocates failure, it does not remove it", () => {

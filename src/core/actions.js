@@ -207,6 +207,16 @@ function updateScore(req, outcome) {
         // hints.js actively recommends that move. Survival only: campaign
         // levels are balanced against the old arithmetic and their objectives
         // count completions, so their play stays byte-identical.
+        // The COUNT is taken in every mode. It is read by exactly one thing,
+        // getRunReport() for the debrief, and by nothing the simulation feeds
+        // back — so counting it in a campaign level cannot move that level's
+        // balance, while NOT counting it made the debrief claim 100% on time
+        // for a board where every request stood in a queue past its SLO.
+        // The PRICE below stays survival-only, because req.wasLate is read
+        // back by reputation and by the SLOW badge.
+        if (req.sloSec && req.age > req.sloSec) {
+            STATE.lateCompletions = (STATE.lateCompletions || 0) + 1;
+        }
         if (STATE.gameMode === "survival" && req.sloSec && req.age > req.sloSec) {
             // Decay toward a floor over one further SLO of lateness, so the
             // penalty is a gradient rather than a cliff: 1 SLO late ~ the
@@ -214,7 +224,6 @@ function updateScore(req, outcome) {
             const floor = points.LATE_REWARD_FLOOR ?? 0.25;
             const overdue = Math.min(1, (req.age - req.sloSec) / req.sloSec);
             reward *= 1 - (1 - floor) * overdue;
-            STATE.lateCompletions = (STATE.lateCompletions || 0) + 1;
             req.wasLate = true;
         }
 
