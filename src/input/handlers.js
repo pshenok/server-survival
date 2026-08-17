@@ -533,7 +533,14 @@ container.addEventListener("mousemove", (e) => {
         // panX slides along the screen's X, panY along its Y —
         // panCameraScreen rotates that into world XZ by the current azimuth
         // (#231), so dragging behaves the same from any angle.
-        panCameraScreen(panX, -panY);
+        //
+        // The two axes used to disagree (#242): horizontal was grab-the-world
+        // (drag right, the board follows right) while vertical was inverted
+        // (drag down, the board went UP). Both signs are negative-of-delta
+        // now, so the board follows the cursor on both axes — screen Y grows
+        // downward, which is why the vertical term needs +dy here rather than
+        // the -dy it had.
+        panCameraScreen(panX, panY);
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
         document.getElementById("tooltip").style.display = "none";
