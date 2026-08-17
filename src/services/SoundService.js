@@ -11,11 +11,21 @@ export class SoundService {
             if (saved && typeof saved.sfxMuted === "boolean") this.sfxMuted = saved.sfxMuted;
         } catch (e) { /* corrupt prefs — keep defaults */ }
         this.masterGain = null;
+
+        // preload="none" on every clip, deliberately. The two BGM tracks are
+        // 7.4 MB and 4.1 MB — 89% of the whole repo's asset weight — and both
+        // channels default to MUTED, so without this a first-time visitor
+        // downloaded 11.5 MB of audio they had not asked for and could not
+        // hear, before the board finished appearing. The browser fetches each
+        // clip on its first play() call instead, which is exactly when the
+        // player has unmuted and a gesture exists.
         this.gameBgm = new Audio('assets/sounds/game-background.mp3');
+        this.gameBgm.preload = 'none';
         this.gameBgm.loop = true;
         this.gameBgm.volume = 0.2;
 
         this.menuBgm = new Audio('assets/sounds/menu.mp3');
+        this.menuBgm.preload = 'none';
         this.menuBgm.loop = true;
         this.menuBgm.volume = 0.3;
 
@@ -23,6 +33,8 @@ export class SoundService {
 
         this.sfxHover = new Audio('assets/sounds/click-5.mp3');
         this.sfxClick = new Audio('assets/sounds/click-9.mp3');
+        this.sfxHover.preload = 'none';
+        this.sfxClick.preload = 'none';
         this.sfxHover.volume = 0.4;
         this.sfxClick.volume = 0.5;
     }
