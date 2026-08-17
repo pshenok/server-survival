@@ -4,9 +4,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>SERVER: Survival Protocol</title>
+  <title>Server Survival — learn cloud architecture by playing</title>
+  <meta name="description"
+    content="A browser game that teaches real cloud architecture: load balancing, caching, autoscaling, circuit breakers, multi-region failover and GPU inference economics. 25 campaign levels, 11 languages, no install." />
+  <meta name="theme-color" content="#050505" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23050505'/%3E%3Crect x='6' y='7' width='20' height='5' rx='1.5' fill='%2300FF85'/%3E%3Crect x='6' y='14' width='20' height='5' rx='1.5' fill='%233b82f6'/%3E%3Crect x='6' y='21' width='20' height='5' rx='1.5' fill='%23f97316'/%3E%3C/svg%3E" />
+  <!-- Link previews: a bare URL in a chat or a tweet showed nothing at all,
+       which is the whole first impression for a project people arrive at
+       through links. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Server Survival — learn cloud architecture by playing" />
+  <meta property="og:description"
+    content="Build a cloud that survives real traffic: caching, autoscaling, circuit breakers, multi-region failover, GPU inference. Free, open source, runs in the browser." />
+  <meta property="og:url" content="https://pshenok.github.io/server-survival/" />
+  <meta property="og:image" content="https://raw.githubusercontent.com/pshenok/server-survival/main/assets/gameplay.gif" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Server Survival — learn cloud architecture by playing" />
+  <meta name="twitter:description"
+    content="Build a cloud that survives real traffic. 25 campaign levels, 11 languages, no install." />
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/pshenok/server-survival/main/assets/gameplay.gif" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Boot guard. THREE arrives as a bare global from a CDN; when that CDN is
+    // blocked — a corporate proxy, an ad blocker, a country-level block, an
+    // offline laptop — every module that touches it throws at evaluation and
+    // the player gets a silent white page with no idea why. Say what happened
+    // instead. Runs before the module graph, so it cannot be pre-empted by the
+    // very failure it reports.
+    if (typeof THREE === "undefined") {
+      document.addEventListener("DOMContentLoaded", function () {
+        document.body.innerHTML =
+          '<div style="font-family:system-ui,sans-serif;color:#e5e7eb;background:#050505;' +
+          'min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center">' +
+          '<div style="max-width:34rem">' +
+          '<h1 style="font-size:1.5rem;margin:0 0 .75rem">Server Survival could not start</h1>' +
+          '<p style="color:#9ca3af;line-height:1.6;margin:0 0 .75rem">' +
+          'The 3D library (three.js) is served from cdnjs.cloudflare.com and could not be loaded. ' +
+          'A proxy, an ad blocker, or an offline connection will do that.</p>' +
+          '<p style="color:#9ca3af;line-height:1.6;margin:0">' +
+          'Allowing cdnjs.cloudflare.com, or reloading on a different network, fixes it. ' +
+          'The game itself needs no server and stores nothing about you.</p>' +
+          '</div></div>';
+      });
+    }
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 
