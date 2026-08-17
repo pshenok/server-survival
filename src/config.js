@@ -46,6 +46,7 @@ export const CONFIG = {
   trafficTypes: {
     STATIC: {
       name: "STATIC",
+      criticality: "SHEDDABLE",
       sloSec: 3, // #248
 
       method: "GET",
@@ -59,6 +60,7 @@ export const CONFIG = {
     },
     READ: {
       name: "READ",
+      criticality: "STANDARD",
       sloSec: 7, // #248: a completion later than this still counts, but pays less
 
       method: "GET",
@@ -72,6 +74,7 @@ export const CONFIG = {
     },
     WRITE: {
       name: "WRITE",
+      criticality: "CRITICAL",
       sloSec: 7, // #248: a completion later than this still counts, but pays less
 
       method: "POST/PUT",
@@ -85,6 +88,7 @@ export const CONFIG = {
     },
     UPLOAD: {
       name: "UPLOAD",
+      criticality: "CRITICAL",
       sloSec: 9, // #248: a completion later than this still counts, but pays less
 
       method: "POST+file",
@@ -98,6 +102,7 @@ export const CONFIG = {
     },
     SEARCH: {
       name: "SEARCH",
+      criticality: "STANDARD",
       sloSec: 8, // #248: a completion later than this still counts, but pays less
 
       method: "GET+query",
@@ -126,6 +131,10 @@ export const CONFIG = {
       // mean 1.28 — see entities/Request.js) and scales the GPU batch time.
       // Never cacheable — every generation is unique output.
       name: "INFERENCE",
+      // STANDARD, not CRITICAL: inference is the growth curve, not the thing
+      // that pays the bills, and the Inference Gateway owns its own deadline
+      // mechanic — the API Gateway's policy is the outer, coarser gate.
+      criticality: "STANDARD",
       method: "POST",
       color: 0xd946ef,
       reward: 0.5,
@@ -681,6 +690,25 @@ export const CONFIG = {
   // capacity, dropping next", and the alert arrives BEFORE the first drop.
   // The ordering alertUtil < ringRed = failureOnset is asserted in
   // tests/sim/rings-and-alert.test.mjs rather than left as a comment.
+  // Prioritized load shedding (#248). Real systems classify traffic in
+  // ADVANCE and shed by class under pressure — Google's CRITICAL vs
+  // SHEDDABLE_PLUS, Envoy's priority levels — because during an incident
+  // nobody has time to decide what matters. Without it the shed order is
+  // whatever the topology happens to produce: measured on the reference board
+  // at 8 rps the game lost READ 118 / SEARCH 32 / WRITE 28 / UPLOAD 19 and
+  // STATIC 0, i.e. the $1.20 and $1.50 traffic died while the $0.50 traffic
+  // was untouched, with no player agency at all.
+  //
+  // Fractions of the API Gateway's rate limit at which each class starts
+  // being refused. SHEDDABLE goes first and CRITICAL is protected to the very
+  // limit, so a gateway under pressure degrades in a chosen order instead of
+  // an accidental one.
+  shedding: {
+    SHEDDABLE: 0.6,
+    STANDARD: 0.85,
+    CRITICAL: 1.0,
+  },
+
   load: {
     smoothingTau: 2.5,
     ringYellow: 0.25, // 50% of capacity — working, worth noticing
