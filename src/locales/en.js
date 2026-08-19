@@ -628,6 +628,7 @@ export const EN_TRANSLATIONS = {
     "soft_slow": "Slow",
     "goodput_label": "GOODPUT (30s)",
     "goodput_hint": "Share of the last 30 seconds of demand answered while someone still wanted it. Unlike reputation, it cannot sit at 100% just because nothing is happening.",
+    "replay_tutorial": "Replay tutorial",
     "report_title": "What happened",
     "report_peak_load": "Peak load",
     "report_top_failures": "Top failures",

@@ -403,6 +403,10 @@ export {
     SERVICE_BUTTONS,
     SERVICE_CATEGORIES,
     applyToolbarGating,
+    // The tutorial (#263) asks this before showing a step: a campaign level
+    // that forbids a service must not hand the player an instruction they
+    // physically cannot follow.
+    isTypeAllowed,
     renderToolbar,
     setToolbarCategory,
 };

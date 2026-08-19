@@ -637,6 +637,7 @@ export const DE_TRANSLATIONS = {
     "soft_slow": "Langsam",
     "goodput_label": "GOODPUT (30s)",
     "goodput_hint": "Anteil der Anfragen aus den letzten 30 Sekunden, die bedient wurden, solange noch jemand auf sie wartete. Anders als die Reputation kann er nicht bei 100% stehen bleiben, nur weil gerade nichts passiert.",
+    "replay_tutorial": "Tutorial wiederholen",
     "report_title": "Was passiert ist",
     "report_peak_load": "Spitzenlast",
     "report_top_failures": "Häufigste Fehler",

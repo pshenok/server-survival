@@ -912,10 +912,26 @@ window.startGame = () => {
     document.getElementById("main-menu-modal").classList.add("hidden");
     resetGame();
 
-    if (window.tutorial) {
+    // The tutorial has always written a "completed" flag and NEVER read it
+    // (#263): isCompleted() existed but had no callers, so a veteran got the
+    // whole 17-step walkthrough on every single survival start. Read it now.
+    // `startTutorial()` below is the deliberate way back in.
+    if (window.tutorial && !window.tutorial.isCompleted()) {
         setTimeout(() => {
             window.tutorial.start();
         }, 500);
+    }
+};
+
+// Replay the tutorial on demand (#263). Respecting the completed flag without
+// this would REMOVE the tutorial from anyone who has seen it once — the fix
+// has to give the door back, not just close it.
+window.startTutorial = () => {
+    document.getElementById("main-menu-modal")?.classList.add("hidden");
+    resetGame();
+    if (window.tutorial) {
+        window.tutorial.reset();
+        setTimeout(() => window.tutorial.start(), 500);
     }
 };
 
