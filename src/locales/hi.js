@@ -660,6 +660,8 @@ export const HI_TRANSLATIONS = {
     "fail_gpu_only": "GPU सिर्फ़ inference serve करते हैं",
     "soft_bad_answer": "खराब जवाब",
     "soft_slow": "धीमा",
+    "goodput_label": "GOODPUT (30s)",
+    "goodput_hint": "पिछले 30 सेकंड की demand का वह हिस्सा जो तब serve हुआ जब कोई उसका इंतज़ार कर ही रहा था। Reputation के उलट, यह सिर्फ़ इसलिए 100% पर नहीं टिका रह सकता कि कुछ हो ही नहीं रहा।",
     "report_title": "क्या हुआ",
     "report_peak_load": "Peak load",
     "report_top_failures": "मुख्य विफलताएँ",

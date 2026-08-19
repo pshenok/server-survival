@@ -192,6 +192,15 @@
           <span data-i18n="total_score" class="text-gray-300 font-bold text-lg">TOTAL SCORE</span>
           <span id="total-score-display" class="text-white font-mono text-2xl font-bold">0</span>
         </div>
+        <!-- Rolling goodput (#261): a BOUNDED ratio over the last 30 game
+             seconds, unlike reputation which is an unbounded integral pinned
+             at 100 for most of a run. Shows "--" until the window has data:
+             an idle board has no goodput, and printing 100% for "nothing
+             happened" is the exact lie reputation already tells. -->
+        <div class="flex justify-between items-center pt-2">
+          <span data-i18n="goodput_label" class="text-gray-400 text-sm" title="">GOODPUT (30s)</span>
+          <span id="goodput-display" class="text-gray-500 font-mono text-lg font-bold">--</span>
+        </div>
       </div>
     </div>
 

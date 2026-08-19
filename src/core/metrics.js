@@ -53,6 +53,46 @@ const alertCooldowns = new Map();
 // instead of O(services x 120).
 const runPeaks = new Map();
 
+// Rolling goodput (#261). The game's headline number is reputation: an
+// unbounded integral clamped at 100, so it reads 100 for a board that is
+// merely coasting and it cannot distinguish "healthy" from "recovering" —
+// every run starts pinned at the ceiling. Goodput is a bounded RATIO over a
+// short window: of everything the board was asked to do in the last 30
+// seconds, what share was answered while someone still wanted it.
+//
+// It is the number an SRE would actually put on the wall, and #248 made it
+// computable for the first time by giving late completions a distinct
+// outcome. Buckets are per metrics SAMPLE (2 Hz), so the window is
+// GOODPUT_WINDOW_SAMPLES x SAMPLE_INTERVAL of game time.
+const GOODPUT_WINDOW_SAMPLES = 60; // 60 x 0.5s = 30s of game time
+const goodputBuckets = [];
+let pendingOnTime = 0;
+let pendingLate = 0;
+let pendingFailed = 0;
+
+/** Called from the request lifecycle — one call per terminated request. */
+function recordOutcome(kind) {
+    if (kind === "onTime") pendingOnTime++;
+    else if (kind === "late") pendingLate++;
+    else pendingFailed++;
+}
+
+/**
+ * Share of recent demand that was answered in time, or null when the window
+ * holds nothing at all — an idle board has no goodput, and printing 100%
+ * for "nothing happened" is exactly the lie reputation already tells.
+ */
+function getRollingGoodput() {
+    let onTime = 0;
+    let total = 0;
+    for (const b of goodputBuckets) {
+        onTime += b.onTime;
+        total += b.onTime + b.late + b.failed;
+    }
+    if (total === 0) return null;
+    return onTime / total;
+}
+
 function bufferFor(id) {
     let m = serviceMetrics.get(id);
     if (!m) {
@@ -113,6 +153,13 @@ function metricsTick(dt) {
 
 function takeSample() {
     sampleCount++;
+
+    // Roll the goodput window one bucket forward (#261).
+    goodputBuckets.push({ onTime: pendingOnTime, late: pendingLate, failed: pendingFailed });
+    if (goodputBuckets.length > GOODPUT_WINDOW_SAMPLES) goodputBuckets.shift();
+    pendingOnTime = 0;
+    pendingLate = 0;
+    pendingFailed = 0;
 
     // Lazily prune buffers for deleted services — cheaper and simpler than
     // subscribing to deleteObject, and at most one sample (0.5 s) stale.
@@ -226,6 +273,10 @@ function resetMetrics() {
     serviceMetrics.clear();
     alertCooldowns.clear();
     runPeaks.clear();
+    goodputBuckets.length = 0;
+    pendingOnTime = 0;
+    pendingLate = 0;
+    pendingFailed = 0;
     sampleAcc = 0;
     sampleCount = 0;
 }
@@ -273,7 +324,9 @@ function getRunReport({ topN = 3 } = {}) {
 
 export {
     fireAlert,
+    getRollingGoodput,
     getRunReport,
+    recordOutcome,
     getSampleCount,
     getServiceMetrics,
     hasMonitoring,

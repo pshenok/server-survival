@@ -635,6 +635,8 @@ export const NE_TRANSLATIONS = {
     "fail_gpu_only": "GPU ले इन्फरेन्स मात्र गर्छ",
     "soft_bad_answer": "गलत उत्तर",
     "soft_slow": "ढिलो",
+    "goodput_label": "गुडपुट (30s)",
+    "goodput_hint": "पछिल्लो ३० सेकेन्डको मागमध्ये अझै कसैले पर्खिरहेकै बेला जवाफ पाएको हिस्सा। प्रतिष्ठाभन्दा फरक, केही भइरहेको छैन भन्दैमा यो १००% मा बस्न सक्दैन।",
     "report_title": "के भयो",
     "report_peak_load": "अधिकतम लोड",
     "report_top_failures": "मुख्य असफलता",

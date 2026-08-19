@@ -635,6 +635,8 @@ export const ZH_TRANSLATIONS = {
     "fail_gpu_only": "GPU 只处理推理",
     "soft_bad_answer": "答错了",
     "soft_slow": "太慢了",
+    "goodput_label": "有效吞吐 (30 秒)",
+    "goodput_hint": "最近 30 秒的需求中，赶在还有人等着答复时就处理完的比例。与声誉值不同，它不会仅仅因为什么都没发生，就一直停在 100%。",
     "report_title": "发生了什么",
     "report_peak_load": "负载峰值",
     "report_top_failures": "主要故障",
