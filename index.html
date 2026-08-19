@@ -1619,8 +1619,15 @@
       <div class="glass-panel rounded-2xl p-8 max-w-2xl w-full border border-yellow-500/30">
         <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
           <h2 class="text-3xl font-bold text-yellow-400" data-i18n="campaign_select_title">CAMPAIGN</h2>
-          <button onclick="exitCampaignToMenu()"
-            class="text-gray-400 hover:text-white text-2xl">×</button>
+          <div class="flex items-center gap-3">
+            <!-- Guided / Unaided (#253): Guided is the default and ships every
+                 level's original one-item toolbar; Unaided widens it so the
+                 level asks what is wrong instead of what to place. -->
+            <button id="campaign-mode-toggle" onclick="toggleUnaided()"
+              class="px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wide border transition bg-gray-800 border-gray-600 text-gray-300">Guided</button>
+            <button onclick="exitCampaignToMenu()"
+              class="text-gray-400 hover:text-white text-2xl">×</button>
+          </div>
         </div>
         <div id="campaign-levels-list" class="space-y-6">
           <!-- populated by renderCampaignLevels() -->

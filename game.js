@@ -52,6 +52,7 @@ import {
 } from "./src/ui/failure-badges.js";
 import {
     campaignNextLevel,
+    toggleUnaided,
     campaignRetryLevel,
     campaignStartCurrentLevel,
     exitCampaignToMap,
@@ -1666,6 +1667,8 @@ window.campaignStartCurrentLevel = campaignStartCurrentLevel;
 window.startCampaignLevel = startCampaignLevel;
 window.campaignRetryLevel = campaignRetryLevel;
 window.campaignNextLevel = campaignNextLevel;
+// Guided/Unaided toggle (#253) — the campaign-select header calls it inline.
+window.toggleUnaided = toggleUnaided;
 window.showSaveModal = showSaveModal;
 window.closeSaveModal = closeSaveModal;
 window.saveGameState = saveGameState;

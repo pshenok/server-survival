@@ -34,6 +34,58 @@
 //   failConditions     — { repBelow?, moneyBelow?, timeoutSec? }
 
 import { CampaignObjectives } from "./objectives.js";
+import { CONFIG } from "../config.js";
+
+// Guided vs Unaided (#253).
+//
+// 16 of the 25 shipped levels hand the player an `allowedServices` list with
+// exactly ONE entry, and 5 more with two or three. The toolbar is the answer
+// key: the level asks "place this", never "what is wrong here". That is
+// worked-example teaching with the fading step missing — and a level with one
+// legal move contains no decision, which is a second, cheaper explanation for
+// #74 ("bored in 10 minutes") than any simulation depth.
+//
+// Unaided widens the palette to the toolbar CATEGORY the intended answer
+// lives in, so the player has to diagnose before they place. Guided stays the
+// default, so every shipped level replays byte-identically and no campaign
+// re-baseline is needed.
+const TOOLBAR_CATEGORIES = {
+    frontdoor: ["dns", "cdn", "waf", "auth", "apigw", "alb"],
+    compute: ["compute", "serverless", "container", "gpu", "infgw"],
+    data: ["db", "nosql", "cache", "s3", "search", "replica", "warehouse"],
+    async: ["sqs", "pubsub", "stream", "dlq", "scheduler", "notify"],
+    ops: ["monitor", "power"],
+};
+
+/**
+ * The Unaided palette for a level: its category siblings, minus anything the
+ * player could not RECOVER from buying.
+ *
+ * The recoverability filter is not a nicety. Measured across chapter 2, a
+ * naive "give them the whole category" soft-locks three levels of six: level
+ * 4 (budget 200, answer cache 60) would offer db at 150 and leave 50, and
+ * levels 6 and 7 fail the same way — every case is the $150 SQL DB. A wrong
+ * buy should cost money and time, which is the lesson; it should not end the
+ * level in a way that reads as a bug.
+ */
+function unaidedPalette(level) {
+    const allowed = level.allowedServices || [];
+    if (allowed.length !== 1) return allowed; // only single-answer levels widen
+    const answer = allowed[0];
+    const answerCost = CONFIG.services[answer]?.cost ?? 0;
+    const budget = level.budget ?? 0;
+    const category = Object.values(TOOLBAR_CATEGORIES).find((types) =>
+        types.includes(answer)
+    );
+    if (!category) return allowed;
+    return category.filter(
+        (type) =>
+            type === answer ||
+            budget - (CONFIG.services[type]?.cost ?? Infinity) >= answerCost
+    );
+}
+
+export { unaidedPalette };
 
 export const CAMPAIGN_LEVELS = [
     // ===== Chapter 1: Basics =====
