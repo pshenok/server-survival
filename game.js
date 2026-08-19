@@ -385,6 +385,28 @@ function resetGame(mode = "survival") {
     // a side effect of the category tabs). Any non-campaign mode starts ungated.
     if (mode !== "campaign") applyToolbarGating([], []);
 
+    // ...and the campaign CONTROLLER stops with it. `active` is set by
+    // loadLevel() and cleared by exit(), which only exitCampaignToMap()
+    // called — so every other way out of a level (Escape to the pause menu,
+    // then New Game or Sandbox; or the menu's own campaign exit) left the
+    // controller running. animate() then kept calling campaign.tick(dt) on
+    // the NEW run: it repainted the abandoned level's objectives over the
+    // HUD, fired that level's scripted bursts into a survival board, and
+    // graded the new run against the old level's conditions.
+    //
+    // The worst of that is not cosmetic. resetGame hands the new run
+    // reputation 100 while STATE.campaign.completedByType still holds the
+    // completions banked during the campaign attempt, and those two together
+    // are the win gate: a level abandoned in failure was scored a WIN — three
+    // stars, persisted, next level unlocked — on a sandbox board with no
+    // services on it at all. Levels with a timeoutSec did the mirror of it,
+    // ending a later run in a LOSE debrief and freezing its clock.
+    //
+    // startCampaignLevel() calls resetGame("campaign") before loadLevel(),
+    // so gating on the mode is what keeps this from shutting down the run it
+    // is about to start.
+    if (mode !== "campaign") window.campaign?.exit();
+
     // Set budget based on mode
     if (mode === "campaign") {
         STATE.money = 0; // will be set by startCampaignLevel from level.budget
