@@ -635,6 +635,8 @@ export const DE_TRANSLATIONS = {
     "fail_gpu_only": "GPUs bedienen nur Inferenz",
     "soft_bad_answer": "Schlechte Antwort",
     "soft_slow": "Langsam",
+    "goodput_label": "GOODPUT (30s)",
+    "goodput_hint": "Anteil der Anfragen aus den letzten 30 Sekunden, die bedient wurden, solange noch jemand auf sie wartete. Anders als die Reputation kann er nicht bei 100% stehen bleiben, nur weil gerade nichts passiert.",
     "report_title": "Was passiert ist",
     "report_peak_load": "Spitzenlast",
     "report_top_failures": "Häufigste Fehler",

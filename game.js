@@ -39,7 +39,7 @@ import { checkSmartHints } from "./src/core/hints.js";
 import { upkeepInstanceFactor } from "./src/sim/autoscaling.js";
 import { resetResilience } from "./src/sim/circuit-breaker.js";
 import { recomputePower } from "./src/sim/power.js";
-import { metricsTick, resetMetrics } from "./src/core/metrics.js";
+import { getRollingGoodput, metricsTick, resetMetrics } from "./src/core/metrics.js";
 import { renderMetricsPanel } from "./src/ui/metrics-panel.js";
 // Educational failure badges (#156): the floating "why did this fail" labels.
 // game.js owns their scene group (badgeGroup, below), ticks them once per
@@ -1266,6 +1266,27 @@ function animate(time) {
     const elapsedEl = document.getElementById("elapsed-time");
     if (elapsedEl) {
         elapsedEl.textContent = formatTime(STATE.elapsedGameTime);
+    }
+
+    // Rolling goodput (#261). Deliberately NOT behind the Monitoring gate:
+    // this is one board-wide headline number, the equivalent of knowing your
+    // revenue without hiring an analyst. PER-SERVICE attribution — which node
+    // is slow — stays behind Monitoring, which is where the buy-the-eyes
+    // lesson actually lives.
+    const goodputEl = document.getElementById("goodput-display");
+    if (goodputEl) {
+        const g = getRollingGoodput();
+        if (g === null) {
+            goodputEl.textContent = "--";
+            goodputEl.className = "text-gray-500 font-mono text-lg font-bold";
+        } else {
+            goodputEl.textContent = `${Math.round(g * 100)}%`;
+            // Coloured on the same scale the load rings use, so "amber means
+            // busy, red means losing" reads the same everywhere on screen.
+            const tone =
+                g >= 0.9 ? "text-green-400" : g >= 0.7 ? "text-yellow-400" : "text-red-400";
+            goodputEl.className = `${tone} font-mono text-lg font-bold`;
+        }
     }
 
     // Update next RPS milestone (survival mode only)

@@ -635,6 +635,8 @@ export const KO_TRANSLATIONS = {
     "fail_gpu_only": "GPU는 추론만 처리합니다",
     "soft_bad_answer": "잘못된 답변",
     "soft_slow": "늦은 응답",
+    "goodput_label": "유효 처리량 (30초)",
+    "goodput_hint": "최근 30초 동안 들어온 수요 중 아직 답을 기다리는 사람이 있을 때 처리해 낸 비율입니다. 평판과 달리 아무 일도 일어나지 않는다는 이유만으로 100%에 머물러 있을 수는 없습니다.",
     "report_title": "일어난 일",
     "report_peak_load": "최고 부하",
     "report_top_failures": "주요 장애",

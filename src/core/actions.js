@@ -11,7 +11,7 @@ import { Request } from "../entities/Request.js";
 // metrics ring buffers. Runtime-only cycle (actions.js -> metrics.js ->
 // events.js -> game.js -> actions.js) — established pattern, hoisted
 // function declarations only dereferenced at runtime.
-import { recordServiceError, recordServiceSuccess } from "./metrics.js";
+import { recordOutcome, recordServiceError, recordServiceSuccess } from "./metrics.js";
 // Resilience (#196): routing skips tripped nodes exactly like disabled ones.
 // The breaker's counters are NOT fed from here — see the note on failRequest.
 // hasTrippedDownstream is the fail-fast attribution for the badges (#156).
@@ -279,6 +279,9 @@ function finishRequest(req, viaServiceType, service) {
         recordServiceSuccess(service, latency);
     }
     updateScore(req, "COMPLETED");
+    // Rolling goodput (#261): an answer nobody was waiting for any more is
+    // not a win. Recorded after updateScore, which owns the wasLate verdict.
+    recordOutcome(req.wasLate ? "late" : "onTime");
     // The badge is spawned AFTER scoring and reads the flag updateScore set,
     // so it can never change which requests are late — it only tells the
     // player which node made them wait (#156 inertness contract).
@@ -304,6 +307,10 @@ function failRequest(req, reason = null) {
     if (reason) {
         STATE.failuresByReason[reason] = (STATE.failuresByReason[reason] || 0) + 1;
     }
+    // A drop is demand the board failed to answer, so it belongs in the
+    // goodput denominator (#261) — otherwise a board that drops everything
+    // and serves three requests quickly would read 100%.
+    recordOutcome("failed");
     // Observability (#194): attribute the failure to the service the request
     // was headed to / sitting on. Entry-routing failures with no target (no
     // Internet connections at all) stay unattributed by design. `failed` marks

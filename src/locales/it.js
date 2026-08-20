@@ -635,6 +635,8 @@ export const IT_TRANSLATIONS = {
     "fail_gpu_only": "Le GPU servono solo inferenza",
     "soft_bad_answer": "Risposta sbagliata",
     "soft_slow": "In ritardo",
+    "goodput_label": "GOODPUT (30s)",
+    "goodput_hint": "Quota della domanda degli ultimi 30 secondi servita mentre a qualcuno interessava ancora la risposta. A differenza della reputazione, non può restare al 100% solo perché non sta succedendo nulla.",
     "report_title": "Cosa è successo",
     "report_peak_load": "Picco di carico",
     "report_top_failures": "Errori principali",
