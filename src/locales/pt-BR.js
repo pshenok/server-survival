@@ -637,6 +637,7 @@ export const PT_BR_TRANSLATIONS = {
     "soft_slow": "Resposta lenta",
     "goodput_label": "Goodput (30s)",
     "goodput_hint": "Parcela da demanda dos últimos 30 segundos atendida enquanto alguém ainda queria a resposta. Ao contrário da reputação, ela não pode ficar em 100% só porque nada está acontecendo.",
+    "replay_tutorial": "Repetir tutorial",
     "report_title": "O que aconteceu",
     "report_peak_load": "Pico de carga",
     "report_top_failures": "Principais falhas",

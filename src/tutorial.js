@@ -1,3 +1,4 @@
+import { isTypeAllowed } from './ui/toolbar.js';
 import { STATE } from "./state.js";
 import { i18n } from "./i18n.js";
 
@@ -38,6 +39,7 @@ function getTutorialSteps() {
     },
     {
         id: 'place-firewall',
+        requires: 'waf',
         title: i18n.t('tut_place_fw_title'),
         text: i18n.t('tut_place_fw_text'),
         icon: '🛡️',
@@ -47,6 +49,7 @@ function getTutorialSteps() {
     },
     {
         id: 'connect-firewall',
+        requires: 'waf',
         title: i18n.t('tut_connect_fw_title'),
         text: i18n.t('tut_connect_fw_text'),
         icon: '🔗',
@@ -56,6 +59,7 @@ function getTutorialSteps() {
     },
     {
         id: 'place-lb',
+        requires: 'alb',
         title: i18n.t('tut_place_lb_title'),
         text: i18n.t('tut_place_lb_text'),
         icon: '⚖️',
@@ -65,6 +69,7 @@ function getTutorialSteps() {
     },
     {
         id: 'connect-fw-lb',
+        requires: 'alb',
         title: i18n.t('tut_connect_fw_lb_title'),
         text: i18n.t('tut_connect_fw_lb_text'),
         icon: '🔗',
@@ -74,6 +79,7 @@ function getTutorialSteps() {
     },
     {
         id: 'place-compute',
+        requires: 'compute',
         title: i18n.t('tut_place_compute_title'),
         text: i18n.t('tut_place_compute_text'),
         icon: '⚡',
@@ -83,6 +89,7 @@ function getTutorialSteps() {
     },
     {
         id: 'connect-lb-compute',
+        requires: 'compute',
         title: i18n.t('tut_connect_lb_compute_title'),
         text: i18n.t('tut_connect_lb_compute_text'),
         icon: '🔗',
@@ -92,6 +99,7 @@ function getTutorialSteps() {
     },
     {
         id: 'place-storage',
+        requires: 's3',
         title: i18n.t('tut_place_storage_title'),
         text: i18n.t('tut_place_storage_text'),
         icon: '📁',
@@ -101,6 +109,7 @@ function getTutorialSteps() {
     },
     {
         id: 'place-cdn',
+        requires: 'cdn',
         title: i18n.t('tut_place_cdn_title'),
         text: i18n.t('tut_place_cdn_text'),
         icon: '🌍',
@@ -110,6 +119,7 @@ function getTutorialSteps() {
     },
     {
         id: 'connect-internet-cdn',
+        requires: 'cdn',
         title: i18n.t('tut_connect_internet_cdn_title'),
         text: i18n.t('tut_connect_internet_cdn_text'),
         icon: '🔗',
@@ -119,6 +129,7 @@ function getTutorialSteps() {
     },
     {
         id: 'connect-cdn-s3',
+        requires: 'cdn',
         title: i18n.t('tut_connect_cdn_s3_title'),
         text: i18n.t('tut_connect_cdn_s3_text'),
         icon: '🔗',
@@ -128,6 +139,7 @@ function getTutorialSteps() {
     },
     {
         id: 'place-db',
+        requires: 'db',
         title: i18n.t('tut_place_db_title'),
         text: i18n.t('tut_place_db_text'),
         icon: '🗄️',
@@ -137,6 +149,7 @@ function getTutorialSteps() {
     },
     {
         id: 'connect-compute-storage',
+        requires: 's3',
         title: i18n.t('tut_connect_compute_storage_title'),
         text: i18n.t('tut_connect_compute_storage_text'),
         icon: '🔗',
@@ -146,6 +159,7 @@ function getTutorialSteps() {
     },
     {
         id: 'connect-compute-db',
+        requires: 'db',
         title: i18n.t('tut_connect_compute_db_title'),
         text: i18n.t('tut_connect_compute_db_text'),
         icon: '🔗',
@@ -230,10 +244,35 @@ class Tutorial {
         return true;
     }
 
+    // Steps whose service the current level does not offer are skipped
+    // (#263). Campaign level 1 forbids the CDN, and three tutorial steps ask
+    // for one — without this the tutorial would stall on an instruction the
+    // player physically cannot follow, which is worse than no tutorial.
+    isStepPlayable(step) {
+        if (!step?.requires) return true;
+        try {
+            return isTypeAllowed(step.requires);
+        } catch (e) {
+            return true; // toolbar not ready — never hide a step by accident
+        }
+    }
+
     showStep() {
         const steps = getTutorialSteps();
+        // Advance past anything unplayable here rather than at every call
+        // site, so skipping works for next/back and for action-driven jumps.
+        while (
+            this.currentStep < steps.length &&
+            !this.isStepPlayable(steps[this.currentStep])
+        ) {
+            this.currentStep++;
+        }
         const step = steps[this.currentStep];
-        if (!step) return;
+        if (!step) {
+            // Everything left was unplayable — finish rather than hang.
+            this.complete();
+            return;
+        }
 
         this.titleEl.textContent = step.title;
         this.textEl.innerHTML = step.text;

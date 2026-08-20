@@ -237,6 +237,17 @@ function startCampaignLevel(levelId) {
     // Toolbar gating
     applyCampaignToolbarGating(level.allowedServices, level.forbiddenServices);
 
+    // Teach a first-timer who entered through the EDUCATION mode (#263).
+    // The tutorial had exactly one call site — survival's start button — so a
+    // player who clicked Campaign, the mode whose whole purpose is teaching,
+    // was taught neither the controls nor anything else. Level 1 is the only
+    // level with an empty board, which is precisely what the walkthrough
+    // assumes; steps whose service this level does not offer are skipped by
+    // the tutorial itself, so its CDN steps drop out cleanly here.
+    if (levelId === 1 && window.tutorial && !window.tutorial.isCompleted()) {
+        setTimeout(() => window.tutorial.start(), 500);
+    }
+
     // Start PAUSED — like Survival mode. Player surveys the situation
     // (pre-built architecture, allowed services, objectives panel) and
     // presses Play when ready. resetGame already set timeScale=0 and put

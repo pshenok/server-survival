@@ -830,6 +830,14 @@
           <span id="campaign-progress-label" class="text-xs opacity-75 font-normal">0/25 ★0</span>
         </button>
 
+        <!-- Replay the walkthrough (#263). The tutorial now respects its own
+             completed flag, so this is the way back in for anyone who wants
+             it again — and the way in for a player who skipped it. -->
+        <button onclick="startTutorial()"
+          class="w-full bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-2 px-8 rounded-lg transition font-mono uppercase text-sm border border-gray-600">
+          <span data-i18n="replay_tutorial">Replay tutorial</span>
+        </button>
+
         <button onclick="startSandbox()"
           data-i18n="sandbox_mode"
           class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-purple-400/50">

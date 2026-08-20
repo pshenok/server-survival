@@ -637,6 +637,7 @@ export const IT_TRANSLATIONS = {
     "soft_slow": "In ritardo",
     "goodput_label": "GOODPUT (30s)",
     "goodput_hint": "Quota della domanda degli ultimi 30 secondi servita mentre a qualcuno interessava ancora la risposta. A differenza della reputazione, non può restare al 100% solo perché non sta succedendo nulla.",
+    "replay_tutorial": "Ripeti Tutorial",
     "report_title": "Cosa è successo",
     "report_peak_load": "Picco di carico",
     "report_top_failures": "Errori principali",

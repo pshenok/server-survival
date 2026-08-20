@@ -637,6 +637,7 @@ export const FR_TRANSLATIONS = {
     "soft_slow": "Lent",
     "goodput_label": "DÉBIT UTILE (30s)",
     "goodput_hint": "Part de la demande des 30 dernières secondes servie pendant que quelqu'un l'attendait encore. Contrairement à la réputation, elle ne peut pas rester à 100 % simplement parce qu'il ne se passe rien.",
+    "replay_tutorial": "Refaire le tutoriel",
     "report_title": "Ce qui s'est passé",
     "report_peak_load": "Pic de charge",
     "report_top_failures": "Principaux échecs",
