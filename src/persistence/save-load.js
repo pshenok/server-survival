@@ -4,6 +4,8 @@
 // keeps thin window.x = importedX assignments in its ESM-boundary block.
 
 import { STATE } from "../state.js";
+import { resetMetrics } from "../core/metrics.js";
+import { resetResilience } from "../sim/circuit-breaker.js";
 import { i18n } from "../i18n.js";
 // Achievements (#158): loading a save is a session boundary — baselines must
 // re-capture from the RESTORED board (elapsedGameTime is restored below but
@@ -210,6 +212,26 @@ function loadGameState(saveData = null) {
         STATE.money = saveData.money || 0;
         STATE.reputation = saveData.reputation || 100;
         STATE.requestsProcessed = saveData.requestsProcessed || 0;
+        // The counters that PAIR with requestsProcessed. saveGameState()
+        // spreads ...STATE, so all three have always been in the file — the
+        // load simply never read them back, while requestsProcessed jumped to
+        // the save's value. The abandoned session's tallies stayed, and
+        // getRunReport's `onTime: max(0, processed - late)` then printed a
+        // debrief that contradicts itself: "Served 0 of 5 (0% on time) - 40
+        // late", forty late answers out of five requests.
+        //
+        // Fresh objects, not the parsed ones: STATE must not alias a blob the
+        // next save spreads back out. Old saves lack the keys and restore as
+        // a clean slate, which is the same thing resetGame would have given
+        // them.
+        STATE.lateCompletions = saveData.lateCompletions || 0;
+        STATE.failures = {
+            STATIC: 0, READ: 0, WRITE: 0, UPLOAD: 0,
+            SEARCH: 0, MALICIOUS: 0, INFERENCE: 0,
+            ...(saveData.failures || {}),
+        };
+        STATE.failuresByReason = { ...(saveData.failuresByReason || {}) };
+        STATE.failuresDismissedAt = saveData.failuresDismissedAt || 0;
         // A spread of undefined is {} (truthy), so `|| default` never fired —
         // an old save without this field got {} and NaN'd the score math.
         STATE.score = saveData.score ? { ...saveData.score } : {
@@ -242,6 +264,15 @@ function loadGameState(saveData = null) {
         // $4300 and a three-Compute fleet was graded against level 15's
         // objectives and won it. Both the budget and allowedServices are
         // bypassed, the palette gate being UI-only.
+        // The rolling windows cannot be restored — a ring buffer of the last
+        // thirty seconds is not in the file, and showing the ABANDONED
+        // session's last thirty seconds next to a resumed board is worse than
+        // showing nothing. resetGame calls both of these; the load path called
+        // neither, so goodput, the service peaks and the breaker state all
+        // carried over from a run the player walked away from.
+        resetMetrics();
+        resetResilience();
+
         window.campaign?.exit();
         STATE.campaign.level = null;
         STATE.campaign.currentLevelId = null;
