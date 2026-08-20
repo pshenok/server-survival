@@ -461,6 +461,26 @@ class Tutorial {
         STATE?.sound?.playSuccess();
     }
 
+    // LEAVING THE LESSON WITHOUT FINISHING IT. hide() only hides the modal —
+    // isActive stays true, and the step machine keeps listening. Escape opens
+    // the pause menu and calls hide(), and every way out of that menu starts a
+    // NEW run, so the tutorial used to stay armed and invisible for the life
+    // of the page: it suppressed the pulse-green button hints for the whole
+    // session, took onAction("start_game") from a run it was not teaching,
+    // and — if those stray actions walked it to the end — ran complete(),
+    // which calls markCompleted() and writes 'tutorial done' to localStorage
+    // for a lesson the player never saw.
+    //
+    // Deliberately NOT skip() or complete(): both mark it done, and someone
+    // who wandered off mid-lesson has not chosen to be finished with it. The
+    // offer survives.
+    abandon() {
+        if (!this.isActive) return false;
+        this.isActive = false;
+        this.hide();
+        return true;
+    }
+
     hide() {
         this.modal.classList.add('hidden');
         this.clearHighlights();
