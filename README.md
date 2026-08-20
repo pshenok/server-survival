@@ -219,7 +219,7 @@ python3 -m http.server 8000    # then open http://localhost:8000
 
 There is still **zero build step** — the dev tooling is optional and for contributors only:
 
-- `npm install` once, then `npm run check` runs ESLint + the full Vitest suite (44 test files, 957 tests).
+- `npm install` once, then `npm run check` runs ESLint + the full Vitest suite (45 test files, 979 tests).
 - CI runs the same check on every PR.
 - The code is native ESM: `game.js` plus focused modules under `src/` (`sim/`, `core/`, `ui/`, `campaign/`, `persistence/`, `input/`).
 
