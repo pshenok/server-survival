@@ -978,6 +978,7 @@ export const NE_TRANSLATIONS = {
     "campaign_level_failed": "लेभल असफल",
     "campaign_completed_in": "{sec} से मा पूरा भयो",
     "campaign_objectives_not_met": "उद्देश्यहरू पूरा भएनन्",
+    "campaign_third_star_hint": "तेस्रो तारा: सबै bonus उद्देश्य, वा {sec} से भित्र सक्नु।",
     "campaign_fail_rep": "प्रतिष्ठा {n}% भन्दा तल झर्‍यो",
     "campaign_fail_money": "पैसा ${n} भन्दा तल झर्‍यो",
     "campaign_fail_timeout": "समय सकियो",

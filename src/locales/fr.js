@@ -978,6 +978,7 @@ export const FR_TRANSLATIONS = {
     "campaign_level_failed": "ÉCHEC DU NIVEAU",
     "campaign_completed_in": "Terminé en {sec} s",
     "campaign_objectives_not_met": "Objectifs non atteints",
+    "campaign_third_star_hint": "Troisième étoile : tous les objectifs bonus, ou une victoire en moins de {sec} s.",
     "campaign_fail_rep": "Réputation tombée sous {n} %",
     "campaign_fail_money": "Argent tombé sous ${n}",
     "campaign_fail_timeout": "Temps épuisé",
