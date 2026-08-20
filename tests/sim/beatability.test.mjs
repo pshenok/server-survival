@@ -9,27 +9,37 @@
 // predict. Two levers are available on every one of these levels: the service
 // the briefing teaches, and the $100 Compute tier (capacity 4 -> 10) that every
 // budget here can afford. Removing them one at a time says which one the level
-// actually turns on:
+// actually turns on (five seeds, with the levels' own burst patterns firing):
 //
 //   level  teaches   taught+tier  tier only  taught only  neither
 //   L3     CDN         5/5          5/5        5/5         5/5
 //   L4     Cache       5/5          5/5        2/5         2/5
-//   L5     Queue       5/5          5/5        5/5         4/5
+//   L5     Queue       5/5          0/5        0/5         0/5
 //   L6     Replica     5/5          5/5        0/5         0/5
 //   L7     Search      5/5          5/5        0/5         0/5
 //   L8     NoSQL       5/5          5/5        0/5         0/5
-//   L9     API GW      5/5          5/5        5/5         5/5
+//   L9     API GW      0/5          0/5        0/5         0/5
 //   L12    2nd WAF     5/5          0/5        0/5         0/5
 //
-// Three levels (3, 5, 9) pass on an untouched board. On three more (6, 7, 8)
-// the taught node is decorative in BOTH directions: without the tier they lose
+// Two levels (3, 4) pass on an untouched board. On three more (6, 7, 8) the
+// taught node is decorative in BOTH directions: without the tier they lose
 // even when it is correctly wired, and with the tier they win without it. The
-// cause is capacity — Compute runs 4 concurrent at 600ms, about 6.7 req/s,
-// and those levels arrive at 6-7 rps — so Compute binds before any downstream
-// store can matter. Mechanically, chapter 2 teaches "buy a bigger box".
+// cause is capacity — Compute runs 4 concurrent at 600ms, about 6.7 req/s, and
+// those levels arrive at 6-7 rps — so Compute binds before any downstream
+// store can matter. For those five, chapter 2 mechanically teaches "buy a
+// bigger box".
 //
-// L12 is the counter-example: what a second WAF defends against is not
-// something more CPU absorbs, so it is load-bearing in every column.
+// L5 and L12 are what a working lesson looks like: withhold the queue or the
+// second WAF and the level is lost 0/5, whatever else is bought. Neither a
+// spike nor a malicious share is something more CPU absorbs.
+//
+// L9 is broken rather than hollow — no legal build wins it at all (#276).
+//
+// An earlier revision of this file recorded L5 as hollow and L9 as winnable.
+// Both were wrong for the same reason: `burstPattern` schedules its spawns on
+// real setTimeout, the harness ran a synchronous loop, and all five burst
+// levels were measured as if they had no bursts. campaign-play.mjs now
+// advances timers per frame, calibrated on L21.
 //
 // This file does not retune anything. Retuning shipped levels moves the
 // difficulty of a campaign people have already played, and that is a decision
@@ -116,8 +126,13 @@ const LEVELS = {
 // Today's answer, measured. Membership means "this level still wins with its
 // own lesson withheld". The assertion below lets this set shrink and never
 // grow, so fixing a level is a one-line deletion and shipping a new hollow one
-// is a red build.
-const KNOWN_HOLLOW = new Set([3, 4, 5, 6, 7, 8, 9]);
+// is a red build. L9 is absent because it wins with NOTHING withheld either
+// (#276) — broken is a different state from hollow, and it is asserted apart.
+const KNOWN_HOLLOW = new Set([3, 4, 6, 7, 8]);
+
+// Winnable by nobody (#276). Kept out of the hollow set: a level that no build
+// can beat is a different defect from one that any build can.
+const BROKEN = 9;
 
 function winRate(id, build) {
     return SEEDS.filter((seed) => play(Number(id), seed, build).outcome === "win").length;
@@ -131,6 +146,7 @@ afterEach(() => {
 
 describe("every reference solution wins the level it belongs to (#254)", () => {
     for (const [id, level] of Object.entries(LEVELS)) {
+        if (Number(id) === BROKEN) continue;
         it(`L${id} — ${level.teaches}, played as briefed`, () => {
             expect(winRate(id, () => {
                 level.taught();
@@ -138,11 +154,21 @@ describe("every reference solution wins the level it belongs to (#254)", () => {
             })).toBe(SEEDS.length);
         });
     }
+
+    it(`L${BROKEN} has no reference solution — it cannot be won (#276)`, () => {
+        // Asserted as a loss on purpose, so fixing #276 turns this red and the
+        // level rejoins the loop above. Its own burst puts ~29 requests into
+        // the peak second against a gateway limit of 30: the limiter never
+        // engages, a circuit breaker opens at t=8, and reputation crosses the
+        // floor by t=20. Measured across seven builds including auto-scaling.
+        expect(winRate(BROKEN, () => { LEVELS[BROKEN].taught(); tier(); })).toBe(0);
+    });
 });
 
 describe("and the level is LOST when its own mechanic is ignored", () => {
     for (const [id, level] of Object.entries(LEVELS)) {
         const n = Number(id);
+        if (n === BROKEN) continue;
         it(`L${id} — ${level.teaches} withheld, everything else the same`, () => {
             const wins = winRate(id, tier);
             if (KNOWN_HOLLOW.has(n)) {
@@ -159,6 +185,7 @@ describe("and the level is LOST when its own mechanic is ignored", () => {
     it("the hollow set never grows", () => {
         const measured = Object.keys(LEVELS)
             .map(Number)
+            .filter((id) => id !== BROKEN)
             .filter((id) => winRate(id, tier) > 0);
         const unexpected = measured.filter((id) => !KNOWN_HOLLOW.has(id));
         expect(
@@ -168,7 +195,15 @@ describe("and the level is LOST when its own mechanic is ignored", () => {
         ).toEqual([]);
     });
 
-    it("L12 shows the shape a fixed level has", () => {
+    it("L5 and L12 show the shape a fixed level has", () => {
+        // Withhold the queue and the level is lost however much Compute is
+        // bought: a spike is not something a faster box absorbs. This is the
+        // row that was recorded backwards before the harness ran the timers.
+        expect(winRate(5, tier)).toBe(0);
+        expect(winRate(5, () => { LEVELS[5].taught(); tier(); })).toBe(SEEDS.length);
+    });
+
+    it("L12 shows it too, against a malicious share instead of a spike", () => {
         // Kept explicit because it is the target, not a passing detail: what a
         // second WAF defends against cannot be absorbed by a faster box, so no
         // amount of vertical scaling substitutes for it.
@@ -188,10 +223,12 @@ describe("the Compute tier is the lever chapter 2 actually turns on", () => {
         });
     }
 
-    it("three levels pass on a board the player never touched", () => {
-        const untouched = [3, 5, 9].filter((id) => winRate(id, () => {}) > 0);
+    it("two levels pass on a board the player never touched", () => {
+        const untouched = [3, 4, 5, 9].filter((id) => winRate(id, () => {}) > 0);
         // Asserting the defect so the fix has something to turn red. When a
         // level here stops passing untouched, this list is what to edit.
-        expect(untouched).toEqual([3, 5, 9]);
+        // L5 and L9 are probed and expected to be absent: L5's burst makes its
+        // queue load-bearing, and L9 cannot be won by anyone.
+        expect(untouched).toEqual([3, 4]);
     });
 });
