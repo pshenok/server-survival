@@ -978,6 +978,7 @@ export const ZH_TRANSLATIONS = {
     "campaign_level_failed": "关卡失败",
     "campaign_completed_in": "用时 {sec} 秒",
     "campaign_objectives_not_met": "目标未达成",
+    "campaign_third_star_hint": "第三颗星：完成全部奖励目标，或在 {sec} 秒内通关。",
     "campaign_fail_rep": "声誉跌破 {n}%",
     "campaign_fail_money": "资金跌破 ${n}",
     "campaign_fail_timeout": "时间耗尽",

@@ -978,6 +978,7 @@ export const RU_TRANSLATIONS = {
     "campaign_level_failed": "УРОВЕНЬ ПРОВАЛЕН",
     "campaign_completed_in": "Пройден за {sec} с",
     "campaign_objectives_not_met": "Цели не выполнены",
+    "campaign_third_star_hint": "Третья звезда: все бонусные цели или финиш быстрее {sec} с.",
     "campaign_fail_rep": "Репутация упала ниже {n}%",
     "campaign_fail_money": "Деньги упали ниже ${n}",
     "campaign_fail_timeout": "Время вышло",

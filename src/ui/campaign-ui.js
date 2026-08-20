@@ -369,6 +369,7 @@ function showCampaignDebrief(outcome, reason, level) {
     const iconEl = document.getElementById("campaign-debrief-icon");
     const starsEl = document.getElementById("campaign-debrief-stars");
     const reasonEl = document.getElementById("campaign-debrief-reason");
+    const starHintEl = document.getElementById("campaign-debrief-star-hint");
     const tipEl = document.getElementById("campaign-debrief-tip");
     const nextBtn = document.getElementById("campaign-debrief-next-btn");
 
@@ -378,6 +379,18 @@ function showCampaignDebrief(outcome, reason, level) {
         titleEl.textContent = i18n.t("campaign_level_complete");
         titleEl.className = "text-3xl font-bold mb-2 text-green-400";
         starsEl.textContent = "★".repeat(stars) + "☆".repeat(3 - stars);
+        // Say what the empty star wants (#256). Both paths are named because
+        // both are real: on a level that ends on a timer the speed bar is out
+        // of reach and the bonus sweep is the way in, and seeing the two side
+        // by side is how the player works that out.
+        if (starHintEl) {
+            starHintEl.textContent =
+                stars < 3
+                    ? i18n.t("campaign_third_star_hint", {
+                          sec: Math.round(level.durationSec * 0.8),
+                      })
+                    : "";
+        }
         reasonEl.textContent = i18n.t("campaign_completed_in", { sec: Math.round(STATE.elapsedGameTime) });
         tipEl.textContent = levelText(level.id, "debrief");
 
@@ -389,6 +402,7 @@ function showCampaignDebrief(outcome, reason, level) {
         titleEl.textContent = i18n.t("campaign_level_failed");
         titleEl.className = "text-3xl font-bold mb-2 text-red-400";
         starsEl.textContent = "";
+        if (starHintEl) starHintEl.textContent = "";
         // The sim layer reports WHY as { key, vars } (campaign.js knows no
         // display text); the boundary translates at render time so a locale
         // switch between death and debrief still shows the right language.

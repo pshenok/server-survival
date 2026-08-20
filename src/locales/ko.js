@@ -978,6 +978,7 @@ export const KO_TRANSLATIONS = {
     "campaign_level_failed": "레벨 실패",
     "campaign_completed_in": "{sec}초 만에 클리어",
     "campaign_objectives_not_met": "목표를 달성하지 못했습니다",
+    "campaign_third_star_hint": "세 번째 별: 보너스 목표 전부, 또는 {sec}초 이내 클리어.",
     "campaign_fail_rep": "평판이 {n}% 아래로 떨어졌습니다",
     "campaign_fail_money": "돈이 ${n} 아래로 떨어졌습니다",
     "campaign_fail_timeout": "시간이 초과되었습니다",

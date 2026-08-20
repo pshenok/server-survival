@@ -961,6 +961,7 @@ export const UK_TRANSLATIONS = {
     "campaign_level_failed": "РІВЕНЬ ПРОВАЛЕНО",
     "campaign_completed_in": "Пройдено за {sec} с",
     "campaign_objectives_not_met": "Цілі не виконано",
+    "campaign_third_star_hint": "Третя зірка: усі бонусні цілі або фініш швидше за {sec} с.",
     "campaign_fail_rep": "Репутація впала нижче {n}%",
     "campaign_fail_money": "Баланс упав нижче ${n}",
     "campaign_fail_timeout": "Час вийшов",

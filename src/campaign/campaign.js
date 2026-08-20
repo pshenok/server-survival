@@ -287,12 +287,39 @@ export class CampaignController {
         const level = STATE.campaign.level;
         let stars = 1; // base for completion
 
-        // +1 if any bonus objective met
-        const anyBonus = level.objectives.bonus.some((o) => STATE.campaign.bonusResults[o.id]);
-        if (anyBonus) stars++;
+        const bonuses = level.objectives.bonus || [];
+        const met = bonuses.filter((o) => STATE.campaign.bonusResults[o.id]).length;
 
-        // +1 if speedrun (finished under durationSec * 0.8)
-        if (STATE.elapsedGameTime <= level.durationSec * 0.8) stars++;
+        // +1 if any bonus objective met
+        if (met > 0) stars++;
+
+        // +1 for doing MORE than finishing — by speed, or by completeness.
+        //
+        // Speed alone could not carry this star (#256). A level ends the
+        // instant its primaries all pass, so on the eleven levels whose
+        // primary is `survive_Ns` the earliest possible win is exactly N and
+        // the star wanted 0.8N: unreachable by any play, however perfect, and
+        // with it went cache_master, replica_master, search_master and
+        // completionist. "Hold the line for sixty seconds" cannot be rushed,
+        // so on those levels the third star has to mean something else.
+        //
+        // Every bonus met is that something else, and it costs nothing to
+        // read: both bonus objectives are already listed on screen. It also
+        // gives the second bonus a purpose for the first time — under the old
+        // rule the first bonus bought a star and the second bought nothing.
+        //
+        // Strictly additive: this only ever adds a path, so no run that
+        // scored three stars before scores fewer now, and no saved star is
+        // revoked (_persistWin keeps the max).
+        //
+        // The `>= 2` guard is what keeps the star earned. With a single bonus,
+        // "any" and "every" are the same condition and the third star would
+        // fall out with the second. A future level that has one bonus AND a
+        // time-gated primary must grow a second bonus instead — the
+        // reachability walk in campaign-stars.test.mjs fails until it does.
+        const fast = STATE.elapsedGameTime <= level.durationSec * 0.8;
+        const flawless = bonuses.length >= 2 && met === bonuses.length;
+        if (fast || flawless) stars++;
 
         return Math.min(3, stars);
     }

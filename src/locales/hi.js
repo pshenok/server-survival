@@ -1013,6 +1013,7 @@ export const HI_TRANSLATIONS = {
     "campaign_level_failed": "LEVEL विफल",
     "campaign_completed_in": "{sec}s में पूरा",
     "campaign_objectives_not_met": "लक्ष्य पूरे नहीं हुए",
+    "campaign_third_star_hint": "तीसरा star: सारे bonus लक्ष्य, या {sec}s से कम में finish.",
     "campaign_fail_rep": "Reputation {n}% से नीचे गिर गई",
     "campaign_fail_money": "पैसा ${n} से नीचे गिर गया",
     "campaign_fail_timeout": "समय खत्म हो गया",
