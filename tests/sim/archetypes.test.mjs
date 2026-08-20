@@ -172,6 +172,89 @@ describe("Pub/Sub Topic (#197)", () => {
         expect(STATE.requests.length).toBe(0); // TERMINATION: every clone drained
     });
 
+    it("THE MONEY PRINTER: subscribers used to multiply the money from one event", () => {
+        // A clone is an extra DELIVERY of one arrival, not an extra arrival.
+        // It used to run the full success path — money, score and standing —
+        // so wiring a second and third subscriber tripled the income from
+        // unchanged customer traffic at a few dollars of extra upkeep. That
+        // is fan-out backwards: real fan-out costs MORE per event and is not
+        // paid more for it.
+        const board = (subscriberCount) => {
+            resetWorld({ gameMode: "survival" });
+            const pubsub = place("pubsub");
+            // Each subscriber gets its OWN database. Sharing one would make
+            // the three-subscriber board saturate it — three times the writes
+            // through one node — and the capacity effect is real but it is
+            // not what this test is measuring. Isolating it leaves subscriber
+            // count as the only variable.
+            for (let i = 0; i < subscriberCount; i++) {
+                const c = place("compute");
+                const db = place("db");
+                connect(pubsub, c);
+                connect(c, db);
+            }
+            const before = { money: STATE.money, score: STATE.score.total, rep: STATE.reputation };
+            for (let i = 0; i < 5; i++) flyInto("WRITE", pubsub);   // five customer events
+            run(20);
+            return {
+                earned: +(STATE.money - before.money).toFixed(4),
+                score: STATE.score.total - before.score,
+                rep: +(STATE.reputation - before.rep).toFixed(4),
+                processed: STATE.requestsProcessed,
+                leftover: STATE.requests.length,
+                fails: Object.values(STATE.failures).reduce((a, n) => a + n, 0),
+            };
+        };
+        const one = board(1);
+        const three = board(3);
+
+        // The same five customers pay the same, whatever the topology behind
+        // them: $6 vs $18 before this.
+        expect(three.earned).toBeCloseTo(one.earned, 6);
+        expect(three.score).toBe(one.score);
+        expect(three.rep).toBeCloseTo(one.rep, 6);
+
+        // ...and the deliveries themselves are still real and still counted:
+        // three subscribers really did do three times the work.
+        expect(three.processed).toBe(one.processed * 3);
+        expect(three.leftover).toBe(0);          // TERMINATION still holds
+        expect(three.fails).toBe(0);             // ...and nothing was dropped
+    });
+
+    it("the ORIGINAL still pays in full — only the copies are unpaid", () => {
+        resetWorld({ gameMode: "survival" });
+        const pubsub = place("pubsub");
+        const compute = place("compute");
+        const db = place("db");
+        connect(pubsub, compute);
+        connect(compute, db);
+        const before = STATE.money;
+        flyInto("WRITE", pubsub);
+        run(15);
+        expect(STATE.money - before).toBeCloseTo(CONFIG.trafficTypes.WRITE.reward, 6);
+    });
+
+    it("...and a copy that FAILS still costs — fan-out buys risk, not revenue", () => {
+        // The other half of the lesson. If copies were made inert entirely,
+        // extra subscribers would be free, which is its own lie.
+        resetWorld({ gameMode: "survival" });
+        const pubsub = place("pubsub");
+        const good = place("compute");
+        const db = place("db");
+        connect(pubsub, good);
+        connect(good, db);
+        // A second subscriber with nowhere to send its work.
+        const orphan = place("compute");
+        connect(pubsub, orphan);
+
+        const before = { rep: STATE.reputation, fails: Object.values(STATE.failures).reduce((a, n) => a + n, 0) };
+        for (let i = 0; i < 5; i++) flyInto("WRITE", pubsub);
+        run(20);
+        const failsAfter = Object.values(STATE.failures).reduce((a, n) => a + n, 0);
+        expect(failsAfter, "a delivery that goes nowhere is still a failure").toBeGreaterThan(before.fails);
+        expect(STATE.reputation).toBeLessThan(before.rep);
+    });
+
     it("one subscriber: the original is delivered, no clone is minted", () => {
         const pubsub = place("pubsub");
         const notify = place("notify");
