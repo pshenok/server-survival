@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { STATE, CONFIG, resetWorld, place, connect } from "../helpers/sim-world.mjs";
 import { Request } from "../../src/entities/Request.js";
+import { getRollingGoodput, metricsTick, resetMetrics } from "../../src/core/metrics.js";
 import { finishRequest } from "../../src/core/actions.js";
 import { mulberry32, REFERENCE_MIX, frame } from "../helpers/reference-board.mjs";
 
@@ -177,6 +178,70 @@ describe("a late completion is worth less (#248)", () => {
     }
     expect(STATE.lateCompletions).toBe(4);
     expect(STATE.lateCompletions).toBeLessThanOrEqual(STATE.requestsProcessed);
+  });
+
+  it("GOODPUT IS A REPORT, NOT A PRICE: it sees lateness in every mode", () => {
+    // The headline HUD number read the priced flag (req.wasLate), which is
+    // survival-only by design. So the same board — every answer three SLOs
+    // late — measured 0% in survival and 100% GREEN in campaign and sandbox.
+    // The one number meant to separate "healthy" from "drowning" said the
+    // opposite of the truth for two of the three modes.
+    const measure = (mode) => {
+      resetWorld({ gameMode: mode });
+      resetMetrics();
+      const db = place("db");
+      for (let i = 0; i < 10; i++) {
+        const req = new Request("READ");
+        STATE.requests.push(req);
+        req.age = SLO * 3;
+        finishRequest(req, db.type, db);
+      }
+      metricsTick(0.5);
+      return getRollingGoodput();
+    };
+    const survival = measure("survival");
+    const campaign = measure("campaign");
+    const sandbox = measure("sandbox");
+    expect(survival).toBe(0);
+    expect(campaign, "campaign read 100% while every answer was late").toBe(survival);
+    expect(sandbox, "sandbox read 100% while every answer was late").toBe(survival);
+  });
+
+  it("...and a PUNCTUAL board still reads 100% in every mode", () => {
+    // The mirror. A fix that simply buckets everything as late would satisfy
+    // the test above and be just as wrong.
+    for (const mode of ["survival", "campaign", "sandbox"]) {
+      resetWorld({ gameMode: mode });
+      resetMetrics();
+      const db = place("db");
+      for (let i = 0; i < 10; i++) {
+        const req = new Request("READ");
+        STATE.requests.push(req);
+        req.age = SLO - 0.5;
+        finishRequest(req, db.type, db);
+      }
+      metricsTick(0.5);
+      expect(getRollingGoodput(), `${mode} punished a board that was on time`).toBe(1);
+    }
+  });
+
+  it("the PRICE stays survival-only — the report moving must not move balance", () => {
+    // pastSlo is the observation; wasLate is what reputation and the SLOW
+    // badge read back. If the fix had set wasLate in every mode instead, it
+    // would have re-priced twenty-five tuned campaign levels.
+    resetWorld({ gameMode: "campaign" });
+    const db = place("db");
+    const req = new Request("READ");
+    STATE.requests.push(req);
+    req.age = SLO * 5;
+    const before = { money: STATE.money, rep: STATE.reputation };
+    finishRequest(req, db.type, db);
+    expect(req.wasLate).toBeUndefined();
+    expect(req.pastSlo).toBe(true);
+    expect(STATE.money - before.money).toBeCloseTo(CONFIG.trafficTypes.READ.reward, 5);
+    expect(STATE.reputation - before.rep).toBeCloseTo(
+      CONFIG.survival.SCORE_POINTS.SUCCESS_REPUTATION, 5
+    );
   });
 
   it("...but the campaign DEBRIEF still counts it, or it reports a lie", () => {

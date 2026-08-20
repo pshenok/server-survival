@@ -216,6 +216,11 @@ function updateScore(req, outcome) {
         // back by reputation and by the SLOW badge.
         if (req.sloSec && req.age > req.sloSec) {
             STATE.lateCompletions = (STATE.lateCompletions || 0) + 1;
+            // The OBSERVATION that this answer missed its deadline, kept
+            // separate from req.wasLate below, which is the PRICE. Anything
+            // that merely reports what happened reads this one; anything the
+            // simulation feeds back off reads wasLate and stays survival-only.
+            req.pastSlo = true;
         }
         if (STATE.gameMode === "survival" && req.sloSec && req.age > req.sloSec) {
             // Decay toward a floor over one further SLO of lateness, so the
@@ -280,8 +285,18 @@ function finishRequest(req, viaServiceType, service) {
     }
     updateScore(req, "COMPLETED");
     // Rolling goodput (#261): an answer nobody was waiting for any more is
-    // not a win. Recorded after updateScore, which owns the wasLate verdict.
-    recordOutcome(req.wasLate ? "late" : "onTime");
+    // not a win. Recorded after updateScore, which owns both verdicts.
+    //
+    // pastSlo, NOT wasLate. wasLate is the priced flag and is survival-only
+    // on purpose — reputation and the SLOW badge read it back, so setting it
+    // elsewhere would move balance in twenty-five tuned levels. Goodput only
+    // REPORTS, so it takes the mode-independent observation, exactly like
+    // STATE.lateCompletions does for the debrief. Reading wasLate here pinned
+    // the headline HUD number at 100% green in campaign and sandbox however
+    // late every answer was: the same board measured survival 0%, campaign
+    // 100%. That is the #257 shape again — true about the variable, false
+    // about the room.
+    recordOutcome(req.pastSlo ? "late" : "onTime");
     // The badge is spawned AFTER scoring and reads the flag updateScore set,
     // so it can never change which requests are late — it only tells the
     // player which node made them wait (#156 inertness contract).
