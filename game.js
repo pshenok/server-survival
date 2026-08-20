@@ -452,6 +452,7 @@ function resetGame(mode = "survival") {
         INFERENCE: 0,
     };
     STATE.failuresByReason = {};
+    STATE.failuresDismissedAt = 0;
     // AI Wave session counter (#87) + the power grid derivation over the
     // (now empty) service list.
     STATE.inference = { expired: 0 };
@@ -1034,17 +1035,24 @@ syncFailureBadgeButton();
 let tooltipRefreshAcc = 0;
 
         // clear failure list
-        document.getElementById('clear-all').addEventListener('click',()=>{
-            STATE.failures.MALICIOUS=0;
-            STATE.failures.STATIC=0;
-            STATE.failures.READ=0;
-            STATE.failures.WRITE=0;
-            STATE.failures.UPLOAD=0;
-            STATE.failures.SEARCH=0;
-            STATE.failures.INFERENCE=0;
-            // when click on clear button, update ui immediately
+        document.getElementById('clear-all').addEventListener('click', () => {
+            // DISMISSES THE PANEL. It used to zero STATE.failures, which is
+            // not this button's to rewrite: four PRIMARY campaign objectives
+            // grade on that tally (fail_under_5_pct, fail_under_10_pct,
+            // no_leaks, fail_under_12_pct) plus eight bonuses, and the run
+            // report counts it too. One click turned a leaked level 11 into a
+            // clean win — the level whose entire subject is having the
+            // Firewall up BEFORE the wave, replaced by hiding the evidence.
+            //
+            // The achievements engine was already hardened against exactly
+            // this button (see the clean-window watermark in
+            // src/achievements/achievements.js) — the campaign evaluator and
+            // the debrief never were. Recording a view preference instead of
+            // erasing history fixes all three at once, and the panel is still
+            // dismissable: it comes back when something NEW fails.
+            STATE.failuresDismissedAt = Object.values(STATE.failures)
+                .reduce((a, n) => a + (typeof n === "number" ? n : 0), 0);
             document.getElementById('failures-panel').classList.add('hidden');
-            document.getElementById('failures-total').textContent = `0 ${i18n.t('total')}`;
         })
 
 // showTooltip / setupUITooltips moved to src/input/handlers.js (#155 PR 8).
@@ -1349,7 +1357,7 @@ function animate(time) {
     );
     const failuresPanel = document.getElementById("failures-panel");
     const points = CONFIG.survival.SCORE_POINTS;
-    if (totalFailures > 0 && failuresPanel) {
+    if (totalFailures > (STATE.failuresDismissedAt || 0) && failuresPanel) {
         failuresPanel.classList.remove("hidden");
         document.getElementById(
             "failures-total"

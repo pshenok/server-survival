@@ -18,6 +18,12 @@ export const STATE = {
         maliciousBlocked: 0
     },
 
+    // How many failures had been recorded when the player last dismissed the
+    // Failures panel. A VIEW preference, not evidence: the panel stays hidden
+    // until the tally rises above it, and the tally itself is never rewritten.
+    // The button used to zero STATE.failures outright, which rewrote what the
+    // campaign grades on and what the debrief reports.
+    failuresDismissedAt: 0,
     failures: {
         STATIC: 0,
         READ: 0,
