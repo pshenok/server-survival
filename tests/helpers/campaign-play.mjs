@@ -5,6 +5,7 @@
 // level as shipped: the real `startCampaignLevel` path, player placement
 // through `createService` (which is what stamps playerPlaced and charges the
 // money), and animate()'s own frame order. Nothing here touches tuning.
+import { vi } from "vitest";
 import { achievements } from "../../src/achievements/achievements.js";
 import { spawnRequest } from "../../src/core/actions.js";
 import { createService } from "../../src/sim/topology.js";
@@ -27,10 +28,21 @@ export function mulberry32(seed) {
 
 export const REAL_RANDOM = Math.random;
 
-/** One frame of animate()'s sim-relevant work, in animate()'s order. */
+/**
+ * One frame of animate()'s sim-relevant work, in animate()'s order.
+ *
+ * The timer advance is not decoration. A level's `burstPattern` schedules its
+ * spawns on real `setTimeout` (campaign.js stagggers them 20ms apart), so a
+ * synchronous loop never sees a single burst: five of the shipped levels
+ * declare one and all five played as if they had none. At timeScale 1 the game
+ * advances one second of game time per second of wall clock, so advancing fake
+ * timers by dt*1000 is exactly what the browser does. Calibrated on L21, whose
+ * reference solution wins 3/3 both with timers and without.
+ */
 export function frame(dt) {
     STATE.elapsedGameTime += dt;
     if (globalThis.window.campaign?.active) globalThis.window.campaign.tick(dt);
+    if (vi.isFakeTimers()) vi.advanceTimersByTime(dt * 1000);
     STATE.services.forEach((s) => s.update(dt));
     STATE.requests.slice().forEach((r) => r.update(dt));
     STATE.spawnTimer += dt;
@@ -64,7 +76,7 @@ export const svc = (type) => STATE.services.find((s) => s.type === type);
  * Starts a level, runs `build`, then plays to the level's own end.
  * Returns what the campaign scored, never a verdict — the caller decides.
  */
-export function play(levelId, seed, build, { capSec = 500, dt = 0.1 } = {}) {
+export function play(levelId, seed, build, { capSec = 500, dt = 0.1, bursts = true } = {}) {
     resetWorld();
     globalThis.localStorage.setItem(
         CAMPAIGN_KEY,
@@ -72,6 +84,8 @@ export function play(levelId, seed, build, { capSec = 500, dt = 0.1 } = {}) {
     );
     STATE.animationId = 1; // keep resetGame from starting the real rAF loop
     Math.random = mulberry32(seed);
+    // Fake timers so the level's own burstPattern actually fires (see frame()).
+    if (bursts) vi.useFakeTimers({ shouldAdvanceTime: false });
     try {
         startCampaignLevel(levelId);
         build();
@@ -91,6 +105,7 @@ export function play(levelId, seed, build, { capSec = 500, dt = 0.1 } = {}) {
             speedBar: STATE.campaign.level.durationSec * 0.8,
         };
     } finally {
+        if (bursts) vi.useRealTimers();
         Math.random = REAL_RANDOM;
     }
 }

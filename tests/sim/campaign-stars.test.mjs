@@ -251,13 +251,16 @@ describe("the rule stays honest at the edges", () => {
     });
 });
 
-describe("and the other eight levels speed could never carry", () => {
+describe("and the other levels speed could never carry", () => {
     // #256 blocked eleven levels. Three of them gate an achievement and are
-    // proven above, one build at a time. These are the remaining eight, each
-    // playing its own briefed lesson inside its own budget. Together they say
-    // the thing the walk cannot: on every level the fix reopened, some real
-    // play reaches three stars. (The other fourteen levels were never blocked
-    // — their speed star was reachable all along.)
+    // proven above, one build at a time. These are the rest, each playing its
+    // own briefed lesson inside its own budget. Together they say the thing
+    // the walk cannot: on the levels the fix reopened, some real play reaches
+    // three stars. (The other fourteen were never blocked — their speed star
+    // was reachable all along.)
+    //
+    // L9 is the exception and it is NOT a gap in this file: it cannot be won
+    // at all. See the block below, and #276.
     const BUILDS = {
         3: () => {
             // STATIC belongs at the edge, not on the origin.
@@ -277,13 +280,6 @@ describe("and the other eight levels speed could never carry", () => {
             // NoSQL takes the writes off the SQL box.
             const nosql = placeAt("nosql", 12, 10);
             createConnection(svc("compute").id, nosql.id);
-            svc("compute").upgrade();
-        },
-        9: () => {
-            // An API Gateway between the balancer and Compute.
-            const gw = placeAt("apigw", -15, 8);
-            createConnection(svc("alb").id, gw.id);
-            createConnection(gw.id, svc("compute").id);
             svc("compute").upgrade();
         },
         11: () => {
@@ -353,4 +349,22 @@ describe("and the other eight levels speed could never carry", () => {
             }
         });
     }
+
+    it("L9 cannot be three-starred because it cannot be WON (#276)", () => {
+        // This proof used to pass, and it was wrong. The harness ran a
+        // synchronous loop, so the setTimeout-scheduled `burstPattern` never
+        // fired and L9 played as though it had no bursts. With its own bursts
+        // running, no legal build survives: the first one trips a circuit
+        // breaker at t=8 and reputation crosses the floor by t=20.
+        //
+        // Asserted as a LOSS on purpose. When #276 is fixed this turns red,
+        // and the fix is to move L9 back into the table above.
+        const r = play(9, 1, () => {
+            const gw = placeAt("apigw", -15, 8);
+            createConnection(svc("alb").id, gw.id);
+            createConnection(gw.id, svc("compute").id);
+            svc("compute").upgrade();
+        });
+        expect(r.outcome, "L9 is expected to lose until #276 lands").toBe("lose");
+    });
 });
