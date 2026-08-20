@@ -19,7 +19,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { achievements } from "../../src/achievements/achievements.js";
 import { CAMPAIGN_LEVELS } from "../../src/campaign/levels.js";
 import { spawnRequest } from "../../src/core/actions.js";
-import { createConnection, createService } from "../../src/sim/topology.js";
+import { createConnection, createService, deleteObject } from "../../src/sim/topology.js";
 import { startCampaignLevel } from "../../src/ui/campaign-ui.js";
 import { STATE, resetWorld } from "../helpers/sim-world.mjs";
 
@@ -316,4 +316,108 @@ describe("the rule stays honest at the edges", () => {
         // Strictly additive: the path that already existed is untouched.
         expect(synthetic({ durationSec: 100, bonuses: ["b1", "b2"], met: ["b1"], elapsed: 79 })).toBe(3);
     });
+});
+
+describe("and the other eight levels speed could never carry", () => {
+    // #256 blocked eleven levels. Three of them gate an achievement and are
+    // proven above, one build at a time. These are the remaining eight, each
+    // playing its own briefed lesson inside its own budget. Together they say
+    // the thing the walk cannot: on every level the fix reopened, some real
+    // play reaches three stars. (The other fourteen levels were never blocked
+    // — their speed star was reachable all along.)
+    const BUILDS = {
+        3: () => {
+            // STATIC belongs at the edge, not on the origin.
+            const cdn = placeAt("cdn", -15, 12);
+            createConnection("internet", cdn.id);
+            createConnection(cdn.id, svc("s3").id);
+            svc("compute").upgrade();
+        },
+        5: () => {
+            // A queue in front of Compute, which is the level's whole point.
+            const sqs = placeAt("sqs", -5, 10);
+            createConnection(svc("alb").id, sqs.id);
+            createConnection(sqs.id, svc("compute").id);
+            svc("compute").upgrade();
+        },
+        8: () => {
+            // NoSQL takes the writes off the SQL box.
+            const nosql = placeAt("nosql", 12, 10);
+            createConnection(svc("compute").id, nosql.id);
+            svc("compute").upgrade();
+        },
+        9: () => {
+            // An API Gateway between the balancer and Compute.
+            const gw = placeAt("apigw", -15, 8);
+            createConnection(svc("alb").id, gw.id);
+            createConnection(gw.id, svc("compute").id);
+            svc("compute").upgrade();
+        },
+        11: () => {
+            // Both edge defenses, which is what `uses_both` asks for.
+            const waf = placeAt("waf", -28, 0);
+            const gw = placeAt("apigw", -22, 8);
+            createConnection("internet", waf.id);
+            createConnection(waf.id, gw.id);
+            createConnection(gw.id, svc("alb").id);
+            svc("compute").upgrade();
+        },
+        12: () => {
+            // A second WAF, in parallel with the first.
+            const w2 = placeAt("waf", -20, 10);
+            createConnection("internet", w2.id);
+            createConnection(w2.id, svc("alb").id);
+            svc("compute").upgrade();
+        },
+        13: () => {
+            // The only level whose lesson is SUBTRACTION: twelve services are
+            // already running and nothing new may be placed. Deleting every
+            // redundant node still leaves upkeep at 0.93/s against a 0.8 bar,
+            // so the SQL box — 0.4/s on its own, the most expensive thing on
+            // the board — has to go too, and NoSQL inherits the reads and
+            // writes. SEARCH then has nowhere to land and fails all level;
+            // reputation still finishes near 90 against a bar of 70. That
+            // trade IS the lesson, and the bar is set where it is to force it.
+            const keep = ["waf", "alb", "compute", "nosql", "s3"];
+            for (const s of STATE.services.slice()) {
+                if (!keep.includes(s.type)) deleteObject(s.id);
+            }
+            createConnection("internet", svc("waf").id);
+            createConnection(svc("waf").id, svc("alb").id);
+            createConnection(svc("alb").id, svc("compute").id);
+            createConnection(svc("compute").id, svc("nosql").id);
+            createConnection(svc("compute").id, svc("s3").id);
+        },
+        14: () => {
+            // Nothing pre-built and $1000 at 12 rps: the whole architecture,
+            // from the edge in.
+            const waf = placeAt("waf", -25, 0);
+            const alb = placeAt("alb", -15, 0);
+            const compute = placeAt("compute", -5, 0);
+            const cache = placeAt("cache", 5, 8);
+            const db = placeAt("db", 15, 0);
+            const cdn = placeAt("cdn", -15, 14);
+            const s3 = placeAt("s3", 5, 14);
+            createConnection("internet", waf.id);
+            createConnection(waf.id, alb.id);
+            createConnection(alb.id, compute.id);
+            createConnection(compute.id, cache.id);
+            createConnection(cache.id, db.id);
+            createConnection(compute.id, db.id);
+            createConnection(compute.id, s3.id);
+            createConnection("internet", cdn.id);
+            createConnection(cdn.id, s3.id);
+            compute.upgrade();
+        },
+    };
+
+    for (const [id, build] of Object.entries(BUILDS)) {
+        it(`L${id} reaches three stars on a play that could never be fast`, () => {
+            for (const seed of [1, 42]) {
+                const r = play(Number(id), seed, build);
+                expect(r.outcome, `seed ${seed}`).toBe("win");
+                expectThreeStarsWithoutSpeed(r);
+            }
+        });
+    }
 });
