@@ -18,12 +18,9 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { achievements } from "../../src/achievements/achievements.js";
 import { CAMPAIGN_LEVELS } from "../../src/campaign/levels.js";
-import { spawnRequest } from "../../src/core/actions.js";
-import { createConnection, createService, deleteObject } from "../../src/sim/topology.js";
-import { startCampaignLevel } from "../../src/ui/campaign-ui.js";
+import { createConnection, deleteObject } from "../../src/sim/topology.js";
+import { REAL_RANDOM, placeAt, play, svc } from "../helpers/campaign-play.mjs";
 import { STATE, resetWorld } from "../helpers/sim-world.mjs";
-
-const CAMPAIGN_KEY = "serverSurvivalCampaignProgress";
 
 // ---------------------------------------------------------------- the walk
 
@@ -139,70 +136,6 @@ describe("every level can be three-starred by SOME play (#256)", () => {
 });
 
 // -------------------------------------------------------------- the proofs
-
-function mulberry32(seed) {
-    let a = seed >>> 0;
-    return function () {
-        a |= 0;
-        a = (a + 0x6d2b79f5) | 0;
-        let t = Math.imul(a ^ (a >>> 15), 1 | a);
-        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-}
-const REAL_RANDOM = Math.random;
-
-// One frame of animate()'s sim-relevant work, in animate()'s order.
-function frame(dt) {
-    STATE.elapsedGameTime += dt;
-    if (globalThis.window.campaign?.active) globalThis.window.campaign.tick(dt);
-    STATE.services.forEach((s) => s.update(dt));
-    STATE.requests.slice().forEach((r) => r.update(dt));
-    STATE.spawnTimer += dt;
-    const rps = STATE.currentRPS * (STATE.intervention?.trafficBurstMultiplier || 1.0);
-    if (rps > 0) {
-        const iv = 1 / rps;
-        while (STATE.spawnTimer >= iv) {
-            STATE.spawnTimer -= iv;
-            spawnRequest();
-        }
-    }
-    STATE.reputation = Math.min(100, STATE.reputation);
-    achievements.tick(dt);
-}
-
-function placeAt(type, x, z) {
-    const before = STATE.services.length;
-    createService(type, new globalThis.THREE.Vector3(x, 0, z));
-    if (STATE.services.length === before) throw new Error(`placement of ${type} failed`);
-    return STATE.services[STATE.services.length - 1];
-}
-
-function svc(type) {
-    return STATE.services.find((s) => s.type === type);
-}
-
-/** Plays a level to its end with the given build and reports the scoring. */
-function play(levelId, seed, build) {
-    resetWorld();
-    globalThis.localStorage.setItem(
-        CAMPAIGN_KEY,
-        JSON.stringify({ version: 1, completed: {}, highestUnlocked: 25 })
-    );
-    STATE.animationId = 1; // keep resetGame from starting the real rAF loop
-    Math.random = mulberry32(seed);
-    startCampaignLevel(levelId);
-    build();
-    for (let t = 0; t < 400 && !STATE.campaign.ended; t += 0.1) frame(0.1);
-    return {
-        outcome: STATE.campaign.outcome,
-        elapsed: STATE.elapsedGameTime,
-        stars: globalThis.window.campaign._calculateStars(),
-        bonuses: { ...STATE.campaign.bonusResults },
-        failures: Object.values(STATE.failures).reduce((a, b) => a + b, 0),
-        speedBar: STATE.campaign.level.durationSec * 0.8,
-    };
-}
 
 /** What every one of these proofs must show: a perfect run, scored 3, NOT by speed. */
 function expectThreeStarsWithoutSpeed(r) {
