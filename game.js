@@ -799,6 +799,15 @@ function retryWithSameArchitecture() {
         STATE.services.push(service);
     });
 
+    // THE GRID HAS TO BE TOLD. This path pushes straight into STATE.services
+    // to skip the cost check, so it also skips createService's
+    // recomputePower() — and resetGame above ran that on the EMPTY board.
+    // Without this the HUD reads 0/8 kW for a room really drawing 12 on a 14
+    // kW grid, and both gates that read STATE.power rather than re-deriving
+    // it go with it: the next GPU is placed free past the cap, and the
+    // Substation holding the fleet up can be scrapped for its refund.
+    recomputePower();
+
     // Update repair cost table after all services are created
     updateRepairCostTable();
 
