@@ -26,6 +26,26 @@ function collectSources() {
 const CALL_RE = /i18n\.t\(\s*['"]([^'"]+)['"]/g;
 const ATTR_RE = /data-i18n(?:-title|-placeholder)?=["']([^"']+)["']/g;
 
+import { readFileSync as readIndex } from "node:fs";
+
+describe("a tooltip that exists is a tooltip a player can read", () => {
+  const INDEX = readIndex(new URL("../index.html", import.meta.url), "utf8");
+
+  it("no element carries an EMPTY title — that suppresses the tooltip entirely", () => {
+    // How the GOODPUT readout shipped with no explanation: the label had
+    // `title=""`, applyTranslations only fills titles on elements carrying
+    // data-i18n-title, and the empty string stands rather than falling back
+    // to anything. The one sentence written to explain the headline number
+    // was translated into eleven locales and never reached a player.
+    const empties = [...INDEX.matchAll(/<[a-zA-Z][^>]*\btitle=""[^>]*>/g)].map((m) => m[0]);
+    expect(empties, `remove title="" or give it text: ${empties.join(" | ")}`).toEqual([]);
+  });
+
+  it("the goodput hint is wired to the label, not just written", () => {
+    expect(INDEX).toMatch(/data-i18n-title="goodput_hint"/);
+  });
+});
+
 describe("i18n key usage", () => {
   it("every statically-referenced key exists in en", () => {
     const missing = [];
