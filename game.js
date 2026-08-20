@@ -407,6 +407,13 @@ function resetGame(mode = "survival") {
     // is about to start.
     if (mode !== "campaign") window.campaign?.exit();
 
+    // ...and a half-finished lesson stops with the run it belonged to. See
+    // Tutorial.abandon: this does NOT mark the tutorial completed, so the
+    // offer survives for a player who wandered off mid-lesson.
+    // window.startTutorial calls resetGame() BEFORE tutorial.reset() and
+    // start(), so re-arming still works.
+    window.tutorial?.abandon();
+
     // Set budget based on mode
     if (mode === "campaign") {
         STATE.money = 0; // will be set by startCampaignLevel from level.budget
