@@ -15,12 +15,20 @@
 //   2. The PROOFS are simulation. They play the three levels that gate an
 //      achievement through the real path and land three stars. Arithmetic
 //      cannot tell you a bonus pair is reachable; only a run can.
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { achievements } from "../../src/achievements/achievements.js";
 import { CAMPAIGN_LEVELS } from "../../src/campaign/levels.js";
 import { createConnection, deleteObject } from "../../src/sim/topology.js";
 import { REAL_RANDOM, placeAt, play, svc } from "../helpers/campaign-play.mjs";
 import { STATE, resetWorld } from "../helpers/sim-world.mjs";
+
+// The proofs here play whole campaign levels, several seeds each, which is
+// seconds of simulation rather than milliseconds of assertion. Vitest's 5s
+// default is comfortable on an idle machine and not on a busy one: measured
+// here, the same tests run about ten times slower when the CPU is saturated,
+// which is exactly the condition a shared CI runner is in. A flake that only
+// appears under load is worse than a slow test, so the budget is explicit.
+vi.setConfig({ testTimeout: 60_000 });
 
 // ---------------------------------------------------------------- the walk
 
