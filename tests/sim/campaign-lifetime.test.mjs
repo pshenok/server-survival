@@ -15,6 +15,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { STATE } from "../../src/state.js";
 import { resetGame } from "../../game.js";
+import { saveGameState, loadGameState } from "../../src/persistence/save-load.js";
 
 // What the campaign map writes before a level is playable.
 function unlock(upTo = 25) {
@@ -80,6 +81,47 @@ describe("a campaign level does not keep grading after you leave it", () => {
         const before = STATE.requests.length;
         for (let i = 0; i < 200; i++) frame(0.1);
         expect(STATE.requests.length, "a level's bursts fired into a survival run").toBe(before);
+    });
+
+    it("A SAVE IS A DIFFERENT RUN: loading one stops the level it landed on", () => {
+        // Escape opens the pause menu during a level, and "Continue Game" is
+        // offered whenever a save exists. save-load.js never saved or restored
+        // campaign state — but nothing shut the controller down either, so the
+        // load swapped the whole board while the level kept grading it.
+        //
+        // Level 15 hands the player $190 and a monitor-only palette. A sandbox
+        // save carrying $4300 and whatever the player felt like building was
+        // graded against level 15's objectives, and won it: both the budget
+        // and allowedServices bypassed, the palette gate being UI-only.
+        resetGame("sandbox");
+        STATE.money = 4300;
+        saveGameState();
+
+        window.startCampaignLevel(15);
+        const levelBudget = STATE.money;
+        expect(window.campaign.active).toBe(true);
+        expect(levelBudget).toBeLessThan(4300);
+
+        loadGameState();
+
+        expect(window.campaign.active, "a loaded save kept grading a level").toBe(false);
+        expect(STATE.campaign.level, "and it kept pointing at that level").toBeNull();
+        expect(STATE.money).toBe(4300);
+        // ...and a frame of the loaded run resolves nothing.
+        for (let i = 0; i < 10; i++) frame(0.1);
+        expect(STATE.campaign.ended).toBe(false);
+        expect(STATE.campaign.outcome).not.toBe("win");
+    });
+
+    it("...and the loaded run does not wear the abandoned level's objectives", () => {
+        resetGame("survival");
+        saveGameState();
+        window.startCampaignLevel(1);
+        frame(0.6);
+        loadGameState();
+        const panel = document.getElementById("objectivesPanel");
+        expect(panel.classList.contains("hidden"),
+            "a save has no campaign in it to show").toBe(true);
     });
 
     it("...but starting a campaign level still arms it — the gate is the mode, not the call", () => {

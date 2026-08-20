@@ -229,6 +229,22 @@ function loadGameState(saveData = null) {
         STATE.gameStartTime = performance.now();
 
         STATE.gameMode = saveData.gameMode || "survival";
+
+        // A SAVE IS A DIFFERENT RUN, so the campaign stops here — the same
+        // rule resetGame() follows, for the same reason and one path short of
+        // it. This module never saved or restored campaign state, but nothing
+        // shut the controller down either: Escape opens the pause menu during
+        // a level, "Continue Game" is offered whenever a save exists, and the
+        // load replaced the board while window.campaign kept grading it.
+        //
+        // The level's constraints go with the board it graded. Level 15 hands
+        // the player $190 and a monitor-only palette; a sandbox save carrying
+        // $4300 and a three-Compute fleet was graded against level 15's
+        // objectives and won it. Both the budget and allowedServices are
+        // bypassed, the palette gate being UI-only.
+        window.campaign?.exit();
+        STATE.campaign.level = null;
+        STATE.campaign.currentLevelId = null;
         STATE.sandboxBudget = saveData.sandboxBudget || 2000;
         STATE.upkeepEnabled = saveData.upkeepEnabled !== false;
         // Same dead-fallback pattern as score above: spread of undefined is {}.
@@ -362,7 +378,11 @@ function loadGameState(saveData = null) {
             }
         } else {
             if (sandboxPanel) sandboxPanel.classList.add("hidden");
-            if (objectivesPanel) objectivesPanel.classList.remove("hidden");
+            // ...and NOT un-hidden: this branch used to reveal the objectives
+            // panel for any non-sandbox save, which after the shutdown above
+            // means revealing the last level's goals over a run that is not
+            // playing it. A save has no campaign in it to show.
+            if (objectivesPanel) objectivesPanel.classList.add("hidden");
         }
 
         document.getElementById("main-menu-modal").classList.add("hidden");
