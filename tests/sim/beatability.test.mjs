@@ -45,11 +45,19 @@
 // difficulty of a campaign people have already played, and that is a decision
 // to take deliberately. What it does is pin the table above so the hollow set
 // can only ever SHRINK, and prove the reference solutions still win.
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { achievements } from "../../src/achievements/achievements.js";
 import { createConnection } from "../../src/sim/topology.js";
 import { REAL_RANDOM, placeAt, play, svc } from "../helpers/campaign-play.mjs";
 import { STATE, resetWorld } from "../helpers/sim-world.mjs";
+
+// Every test here plays several full campaign levels end to end, which is
+// seconds of simulation rather than milliseconds of assertion. Vitest's 5s
+// default is comfortable on an idle machine and not on a busy one: measured
+// here, the same tests run about ten times slower when the CPU is saturated,
+// which is exactly the condition a shared CI runner is in. A flake that only
+// appears under load is worse than a slow test, so the budget is explicit.
+vi.setConfig({ testTimeout: 60_000 });
 
 const SEEDS = [1, 2, 42];
 
