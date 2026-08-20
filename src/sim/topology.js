@@ -376,7 +376,28 @@ function deleteObject(id) {
     svc.destroy();
     STATE.services = STATE.services.filter((s) => s.id !== id);
     recomputePower();
-    STATE.money += Math.floor(svc.config.cost / 2);
+    // THE REFUND IS A MONEY MOVEMENT, so it books itself like every other one.
+    // Placement writes expenses.services, byService and countByService a few
+    // lines up; repair, upgrade, upkeep and the serverless per-invocation
+    // charge all book too. This was the only dollar moving outside the ledger
+    // the finances panel computes net profit from, so selling a node left the
+    // money counter and the Net Profit line permanently disagreeing by half
+    // the purchase price — and the expense breakdown still listing hardware
+    // the player no longer owns.
+    //
+    // Booked as a REDUCTION of what the hardware cost, not as income: the
+    // player recovered part of a purchase, they did not earn anything.
+    // Clamped at zero because a preBuilt service is placed free (the campaign
+    // prebuild bypasses the charge above) and selling one must not drive the
+    // ledger negative.
+    const refund = Math.floor(svc.config.cost / 2);
+    STATE.money += refund;
+    if (STATE.finances) {
+        const e = STATE.finances.expenses;
+        e.services = Math.max(0, e.services - refund);
+        e.byService[svc.type] = Math.max(0, (e.byService[svc.type] || 0) - refund);
+        e.countByService[svc.type] = Math.max(0, (e.countByService[svc.type] || 0) - 1);
+    }
     STATE.sound.playDelete();
     updateRepairCostTable();
 }

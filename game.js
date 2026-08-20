@@ -1220,7 +1220,18 @@ function animate(time) {
 
     const upkeepDisplay = document.getElementById("upkeep-display");
     if (upkeepDisplay) {
-        if (autoRepairCost > 0) {
+        if (!STATE.upkeepEnabled) {
+            // SANDBOX SHIPS WITH UPKEEP OFF, and Service.update() charges only
+            // inside `if (STATE.upkeepEnabled)`. The display was the one site
+            // that never asked — the auto-repair deduction ten lines up does —
+            // so every sandbox session showed a red "Upkeep Cost -$X.XX/s"
+            // that is never charged, next to a panel reporting $0 upkeep and a
+            // button reading "Upkeep: OFF". A learner budgeting a topology
+            // read a running cost off the HUD that the simulation does not
+            // apply.
+            upkeepDisplay.innerText = `-$0.00/s ${i18n.t('upkeep_off_label')}`;
+            upkeepDisplay.className = "text-gray-500 font-mono";
+        } else if (autoRepairCost > 0) {
             upkeepDisplay.innerText = `-$${totalUpkeep.toFixed(2)}/s ${i18n.t('plus_repair')}`;
             upkeepDisplay.className = "text-orange-400 font-mono";
         } else if (multiplier > 1.05) {
