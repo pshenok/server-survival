@@ -191,8 +191,14 @@ function updateScore(req, outcome) {
             `MALICIOUS PASSED: ${points.MALICIOUS_PASSED_REPUTATION} Rep. (Critical Failure)`
         );
     } else if (outcome === "COMPLETED") {
-        let reward = typeConfig.reward;
-        const score = typeConfig.score;
+        // A fan-out copy is an extra DELIVERY of one arrival, not an extra
+        // arrival: sim/handlers/pubsub.js mints one per additional subscriber.
+        // It is counted, it occupies capacity, it can fail and cost standing
+        // — but the customer paid once, so it earns nothing. Without this,
+        // subscribers were a revenue multiplier and the lesson ran backwards.
+        const paid = !req.isFanoutCopy;
+        let reward = paid ? typeConfig.reward : 0;
+        const score = paid ? typeConfig.score : 0;
 
         if (req.cached) {
             reward *= 1 + points.CACHE_HIT_BONUS;
@@ -253,9 +259,16 @@ function updateScore(req, outcome) {
         // A late completion earns the late tax INSTEAD of the success bonus,
         // so a board serving everything late bleeds slowly while its failure
         // counter reads zero — the production experience of a full queue.
-        STATE.reputation += req.wasLate
-            ? (points.LATE_REPUTATION ?? -0.3)
-            : (points.SUCCESS_REPUTATION || 0.5);
+        // Standing follows the customer, not the delivery count: one arrival
+        // satisfied is one arrival satisfied however many subscribers it was
+        // fanned out to, so a copy earns no bonus either. A copy that FAILS
+        // still costs — which is the honest shape of fan-out, more places for
+        // one event to go wrong and no more revenue for the risk.
+        if (paid) {
+            STATE.reputation += req.wasLate
+                ? (points.LATE_REPUTATION ?? -0.3)
+                : (points.SUCCESS_REPUTATION || 0.5);
+        }
     } else if (outcome === "THROTTLED") {
         // Soft fail from API Gateway rate limiting — much less reputation loss
         STATE.reputation += points.THROTTLED_REPUTATION || -0.2;

@@ -36,6 +36,14 @@ export function process(service, job) {
     // One clone per ADDITIONAL subscriber, minted before the original is re-flown.
     for (let i = 1; i < subs.length; i++) {
         const clone = new Request(job.req.type);
+        // A DELIVERY, NOT AN ARRIVAL. The clone is a real Request and must
+        // terminate like one, but it is not a second customer: marking it
+        // here is what stops updateScore paying for it. Wiring a second and
+        // third subscriber used to triple the money and the score from
+        // unchanged customer traffic — measured $6 -> $18 on the same five
+        // events — which is fan-out backwards. Real fan-out costs MORE per
+        // event; it does not get paid more.
+        clone.isFanoutCopy = true;
         STATE.requests.push(clone);
         clone.flyTo(subs[i]);
     }
