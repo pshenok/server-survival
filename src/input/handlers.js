@@ -33,9 +33,9 @@ import {
 // at event time (or, for resetCamera's camera/cameraTarget reads, when
 // game.js's own body calls it), long after both modules evaluate.
 import {
+    applyCameraFrustum,
     camera,
     cameraTarget,
-    d,
     mouse,
     openMainMenu,
     plane,
@@ -920,12 +920,10 @@ container.addEventListener("mouseup", (e) => {
 });
 
 window.addEventListener("resize", () => {
-    const aspect = window.innerWidth / window.innerHeight;
-    camera.left = -d * aspect;
-    camera.right = d * aspect;
-    camera.top = d;
-    camera.bottom = -d;
-    camera.updateProjectionMatrix();
+    // The frustum math lives in game.js and is shared with the initial camera
+    // (#12). It used to be written out twice, which is how the two copies came
+    // to disagree about what a portrait viewport should show.
+    applyCameraFrustum();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 

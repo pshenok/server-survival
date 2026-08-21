@@ -293,16 +293,37 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(CONFIG.colors.bg);
 scene.fog = new THREE.FogExp2(CONFIG.colors.bg, 0.008);
 
-const aspect = window.innerWidth / window.innerHeight;
 const d = 50;
-const camera = new THREE.OrthographicCamera(
-    -d * aspect,
-    d * aspect,
-    d,
-    -d,
-    1,
-    1000
-);
+const camera = new THREE.OrthographicCamera(-d, d, d, -d, 1, 1000);
+
+// The orthographic frustum, sized so the board stays on screen whatever shape
+// the viewport is (#12).
+//
+// The two half-extents have to keep the viewport's own aspect or the world
+// shears, so only one of them is free to choose. Fixing the VERTICAL one and
+// deriving the horizontal is right for a landscape screen and wrong for a
+// portrait one: at 375x812 the aspect is 0.46, which leaves 46 world units of a
+// 120-unit grid visible sideways while still showing 100 units top to bottom.
+// That is a strip of board in a field of empty grid, which is what #12 reports.
+//
+// So the HORIZONTAL half-extent is the one that carries a floor, and the
+// vertical follows from it. Landscape is untouched by construction: d * aspect
+// is already 50 at a square viewport and only grows from there, so every
+// viewport at or above 1:1 computes exactly the numbers it always did.
+const MIN_HALF_WIDTH = 45;
+
+function applyCameraFrustum() {
+    const aspect = window.innerWidth / window.innerHeight;
+    const halfWidth = Math.max(d * aspect, MIN_HALF_WIDTH);
+    const halfHeight = halfWidth / aspect;
+    camera.left = -halfWidth;
+    camera.right = halfWidth;
+    camera.top = halfHeight;
+    camera.bottom = -halfHeight;
+    camera.updateProjectionMatrix();
+}
+
+applyCameraFrustum();
 const cameraTarget = new THREE.Vector3(0, 0, 0);
 resetCamera();
 
@@ -1772,6 +1793,7 @@ export {
     animate,
     badgeGroup,
     calculateTargetRPS,
+    applyCameraFrustum,
     camera,
     cameraTarget,
     connectionGroup,
