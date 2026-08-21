@@ -70,7 +70,17 @@ let pendingOnTime = 0;
 let pendingLate = 0;
 let pendingFailed = 0;
 
-/** Called from the request lifecycle — one call per terminated request. */
+/**
+ * Called from the request lifecycle — one call per terminated request.
+ *
+ * Three buckets, and the third one is wider than its name: it is "demand that
+ * got no timely answer", not "a service errored". A dropped request, a 429
+ * from a rate limiter and an event drained out of a dead-letter queue are
+ * different events with different costs, and the player sees them differently
+ * — but to goodput they are the same thing, a customer who did not get served.
+ * Leaving any of them out of the denominator is what lets a board that sheds
+ * nine tenths of its traffic report itself perfect.
+ */
 function recordOutcome(kind) {
     if (kind === "onTime") pendingOnTime++;
     else if (kind === "late") pendingLate++;

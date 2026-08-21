@@ -14,6 +14,7 @@
 // normally, so nothing is ever stranded.
 
 import { STATE } from "../state.js";
+import { recordOutcome } from "../core/metrics.js";
 // Runtime-only cycle (actions.js ⇄ dlq.js): removeRequest is a hoisted
 // function declaration, only dereferenced when a drain actually fires — long
 // after both modules finish evaluating. Same established pattern as retry.js.
@@ -86,6 +87,13 @@ export function tickDLQ(dlq, dt) {
                 (STATE.finances.expenses.mitigation || 0) +
                 (dlq.config.drainCost || 0);
         }
+        // Neither success nor failure — that is the DLQ's whole point, and
+        // the failures panel still does not count it. Goodput does: the event
+        // was parked instead of served, and someone was waiting for it. A DLQ
+        // is the other node the game teaches you to buy so failures stop
+        // being failures, and a metric that cannot see it rewards hiding the
+        // outage rather than fixing it.
+        recordOutcome("unanswered");
         removeRequest(req);
     }
 }
