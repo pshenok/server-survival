@@ -878,7 +878,21 @@ function setupUITooltips() {
 setupUITooltips();
 window.addEventListener("toolbarRendered", setupUITooltips);
 
-container.addEventListener("mouseup", (e) => {
+// The pointer can be RELEASED ANYWHERE. This handler lived only on
+// #canvas-container, and the HUD panels are pointer-events-auto siblings of
+// the canvas, so letting go over the Finances panel — or off the window edge,
+// which delivers no mouseup at all to the container — left isDraggingNode,
+// draggedNode, isPanning and isOrbiting armed with nothing holding them.
+//
+// Nothing cleared them afterwards either: resetGame did not, so the state
+// crossed the run boundary. Grab the Internet node, release over a panel,
+// start a new run, and the node teleported on the first mouse MOVE with
+// nobody clicking — measured from x -40 to x 0.
+//
+// Bound to the window as well as the container. The release on the canvas
+// bubbles to both, and every branch below is guarded on the flag it clears,
+// so running twice is a no-op the second time.
+function handlePointerRelease(e) {
     if (e.button === 2 || e.button === 1) {
         isPanning = false;
         isOrbiting = false;
@@ -917,7 +931,27 @@ container.addEventListener("mouseup", (e) => {
         container.style.cursor = "default";
         return;
     }
-});
+}
+
+container.addEventListener("mouseup", handlePointerRelease);
+window.addEventListener("mouseup", handlePointerRelease);
+
+// A release that happens with the window unfocused (dragged off the edge and
+// let go) delivers no mouseup at all. Coming back to the page is the next
+// moment we can know the button is not held any more.
+window.addEventListener("blur", () => handlePointerRelease({ button: 0 }));
+
+// Ends any drag/pan in progress. Called by resetGame: a run boundary is not
+// a place for the pointer to still be holding something from the last one.
+export function endPointerInteraction() {
+    const wasActive = isDraggingNode || isPanning || isOrbiting;
+    isDraggingNode = false;
+    draggedNode = null;
+    isPanning = false;
+    isOrbiting = false;
+    if (container) container.style.cursor = "default";
+    return wasActive;
+}
 
 window.addEventListener("resize", () => {
     // The frustum math lives in game.js and is shared with the initial camera
