@@ -262,11 +262,26 @@ export class Plane {
   }
 }
 
+// What the next raycast should hit. Empty by default, so every test written
+// before this existed behaves exactly as it did: no picking, everything falls
+// through to the ground plane.
+//
+// Priming it is what makes the INPUT layer testable at all. getIntersect()
+// (src/input/handlers.js) is the single gate in front of node dragging,
+// selection, connecting and deleting, and none of that could be reached from
+// a test while both methods always returned nothing.
+export const raycastHits = { services: [], internet: [] };
+
+export function resetRaycastHits() {
+  raycastHits.services = [];
+  raycastHits.internet = [];
+}
+
 export class Raycaster {
   constructor() {
     this.ray = {
-      // Tests never raycast for real; the ground-plane intersection just
-      // needs to produce a point so callers don't crash.
+      // Real geometry is still never computed; the ground-plane intersection
+      // just needs to produce a point so callers don't crash.
       intersectPlane(plane, target) {
         target.set(0, 0, 0);
         return target;
@@ -275,10 +290,10 @@ export class Raycaster {
   }
   setFromCamera() {}
   intersectObjects() {
-    return [];
+    return raycastHits.services;
   }
   intersectObject() {
-    return [];
+    return raycastHits.internet;
   }
 }
 
@@ -341,6 +356,8 @@ export const THREE_STUB = {
   WebGLRenderer,
   Plane,
   Raycaster,
+  raycastHits,
+  resetRaycastHits,
   FogExp2,
   DoubleSide,
 };

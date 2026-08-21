@@ -94,6 +94,7 @@ import {
     orbitCamera,
     panCameraScreen,
     resetCamera,
+    endPointerInteraction,
 } from "./src/input/handlers.js";
 // Share Architecture (#157): the share modal, PNG export, and the ?arch=
 // link. consumeSharedArchParam/rebuildSharedArch are called from the boot
@@ -434,6 +435,12 @@ function resetGame(mode = "survival") {
     // window.startTutorial calls resetGame() BEFORE tutorial.reset() and
     // start(), so re-arming still works.
     window.tutorial?.abandon();
+
+    // ...and the pointer lets go of whatever it was holding. See
+    // endPointerInteraction: a drag or a pan released off the canvas is never
+    // cleared by the container's own handler, and a run boundary is not a
+    // place for the last run's grab to still be live.
+    endPointerInteraction();
 
     // Set budget based on mode
     if (mode === "campaign") {
