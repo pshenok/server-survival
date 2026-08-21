@@ -94,7 +94,10 @@ export const CAMPAIGN_LEVELS = [
         id: 3, chapter: 1,
         icon: "🌍",
         diagramHighlights: {},
-        budget: 150,
+        // 170, not 150: the level's own reference build is a CDN (60) plus the
+        // Compute tier (100), and at 150 the upgrade silently failed the
+        // affordability check — the briefed solution could not be bought.
+        budget: 170,
         durationSec: 60,
         preBuilt: {
             services: [
@@ -108,6 +111,15 @@ export const CAMPAIGN_LEVELS = [
         },
         trafficDistribution: { STATIC: 0.8, READ: 0.1, WRITE: 0.05, UPLOAD: 0, SEARCH: 0, MALICIOUS: 0.05 },
         rps: 8,
+        // "Your site went viral" is a SPIKE, and that is what makes the CDN
+        // load-bearing (#254). At a flat 8 rps the level was won by an
+        // untouched board — 80% STATIC at 0.5 processing weight fits inside a
+        // tier-1 Compute, so nothing the briefing teaches was needed. A burst
+        // arrives 20ms apart, i.e. 50 req/s while it lasts, and 80% of it is
+        // STATIC: the origin path needs ~17 concurrent slots to hold it and
+        // the biggest box the budget buys has 10. Only moving STATIC to the
+        // edge removes the demand instead of queueing it.
+        burstPattern: { enabled: true, intervalSec: 5, burstSize: 30 },
         allowedServices: ["cdn"],
         objectives: {
             primary: [

@@ -12,7 +12,7 @@
 // actually turns on (five seeds, with the levels' own burst patterns firing):
 //
 //   level  teaches   taught+tier  tier only  taught only  neither
-//   L3     CDN         5/5          5/5        5/5         5/5
+//   L3     CDN         5/5          0/5        5/5         0/5
 //   L4     Cache       5/5          5/5        2/5         2/5
 //   L5     Queue       5/5          0/5        0/5         0/5
 //   L6     Replica     5/5          5/5        0/5         0/5
@@ -21,17 +21,22 @@
 //   L9     API GW      0/5          0/5        0/5         0/5
 //   L12    2nd WAF     5/5          0/5        0/5         0/5
 //
-// Two levels (3, 4) pass on an untouched board. On three more (6, 7, 8) the
-// taught node is decorative in BOTH directions: without the tier they lose
-// even when it is correctly wired, and with the tier they win without it. The
-// cause is capacity — Compute runs 4 concurrent at 600ms, about 6.7 req/s, and
-// those levels arrive at 6-7 rps — so Compute binds before any downstream
-// store can matter. For those five, chapter 2 mechanically teaches "buy a
-// bigger box".
+// L4 still passes on an untouched board. On three more (6, 7, 8) the taught
+// node is decorative in BOTH directions: without the tier they lose even when
+// it is correctly wired, and with the tier they win without it. The cause is
+// capacity — Compute runs 4 concurrent at 600ms, about 6.7 req/s, and those
+// levels arrive at 6-7 rps — so Compute binds before any downstream store can
+// matter. For those four, chapter 2 mechanically teaches "buy a bigger box".
 //
-// L5 and L12 are what a working lesson looks like: withhold the queue or the
-// second WAF and the level is lost 0/5, whatever else is bought. Neither a
-// spike nor a malicious share is something more CPU absorbs.
+// L3, L5 and L12 are what a working lesson looks like: withhold the CDN, the
+// queue or the second WAF and the level is lost, whatever else is bought.
+// Neither a spike nor a malicious share is something more CPU absorbs.
+//
+// L3 is the strongest shape of the three, and the only one where the taught
+// node is not merely necessary but SUFFICIENT: the CDN alone wins 5/5 while
+// the Compute tier alone, a DB tier, auto-scaling, and tier-plus-auto-scaling
+// each lose 5/5. It got there by making its own briefing true — "your site
+// went viral" is a spike, and it did not have one.
 //
 // L9 is broken rather than hollow — no legal build wins it at all (#276).
 //
@@ -64,7 +69,24 @@ const SEEDS = [1, 2, 42];
 // Each level's own briefed lesson, split into the two levers so either can be
 // withheld. `taught` places and wires the service the level is about; `tier`
 // buys the Compute upgrade.
-const tier = () => svc("compute").upgrade();
+const tier = () => {
+    const compute = svc("compute");
+    const before = compute.tier;
+    compute.upgrade();
+    // Service.upgrade() returns silently when the money is not there, so a
+    // level whose budget cannot afford its own reference build quietly
+    // measures something other than the row it is printed under. L3 sat like
+    // that: budget 150 against a $60 CDN plus a $100 tier, so every number it
+    // ever produced in the "taught + tier" column was really taught-only, and
+    // nothing said so. Loud is better.
+    if (compute.tier === before) {
+        throw new Error(
+            `L${STATE.campaign.level?.id}: the Compute tier did not land ` +
+                `($${Math.round(STATE.money)} left) — this level cannot afford ` +
+                `the build this file claims to measure`
+        );
+    }
+};
 
 const LEVELS = {
     3: {
@@ -136,7 +158,7 @@ const LEVELS = {
 // grow, so fixing a level is a one-line deletion and shipping a new hollow one
 // is a red build. L9 is absent because it wins with NOTHING withheld either
 // (#276) — broken is a different state from hollow, and it is asserted apart.
-const KNOWN_HOLLOW = new Set([3, 4, 6, 7, 8]);
+const KNOWN_HOLLOW = new Set([4, 6, 7, 8]);
 
 // Winnable by nobody (#276). Kept out of the hollow set: a level that no build
 // can beat is a different defect from one that any build can.
@@ -231,12 +253,12 @@ describe("the Compute tier is the lever chapter 2 actually turns on", () => {
         });
     }
 
-    it("two levels pass on a board the player never touched", () => {
+    it("one level still passes on a board the player never touched", () => {
         const untouched = [3, 4, 5, 9].filter((id) => winRate(id, () => {}) > 0);
         // Asserting the defect so the fix has something to turn red. When a
-        // level here stops passing untouched, this list is what to edit.
-        // L5 and L9 are probed and expected to be absent: L5's burst makes its
-        // queue load-bearing, and L9 cannot be won by anyone.
-        expect(untouched).toEqual([3, 4]);
+        // level here stops passing untouched, this list is what to edit — L3
+        // just did. L5 and L9 are probed and expected to be absent: L5's burst
+        // makes its queue load-bearing, and L9 cannot be won by anyone.
+        expect(untouched).toEqual([4]);
     });
 });
