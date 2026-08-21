@@ -304,7 +304,7 @@ export const KO_TRANSLATIONS = {
     "traffic_malicious_desc": "DDoS 및 공격. <span class=\"text-purple-400\">방화벽</span>으로 차단.",
     "services": "서비스",
     "fw_desc_short": "악성 차단 ($40)",
-    "queue_desc_short": "요청 200개 버퍼 ($35)",
+    "queue_desc_short": "요청 200개 버퍼 ($45)",
     "lb_desc_short": "트래픽 분산 ($50)",
     "compute_desc_short": "요청 처리 ($60)",
     "db_desc_short": "API 데이터 저장 ($150)",

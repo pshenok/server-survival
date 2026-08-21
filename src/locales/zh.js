@@ -304,7 +304,7 @@ export const ZH_TRANSLATIONS = {
     "traffic_malicious_desc": "DDoS 和攻击。使用 <span class=\"text-purple-400\">防火墙</span> 拦截。",
     "services": "服务组件",
     "fw_desc_short": "拦截欺诈 ($40)",
-    "queue_desc_short": "缓冲 200 个请求 ($35)",
+    "queue_desc_short": "缓冲 200 个请求 ($45)",
     "lb_desc_short": "流量分发 ($50)",
     "compute_desc_short": "请求处理 ($60)",
     "db_desc_short": "存储 API 数据 ($150)",

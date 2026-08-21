@@ -302,7 +302,7 @@ export const UK_TRANSLATIONS = {
     "traffic_malicious_desc": "DDoS та атаки. Блокуй через <span class=\"text-purple-400\">Фаєрвол</span>.",
     "services": "СЕРВІСИ",
     "fw_desc_short": "Блокує фрод ($40)",
-    "queue_desc_short": "Буферизує 200 запитів ($35)",
+    "queue_desc_short": "Буферизує 200 запитів ($45)",
     "lb_desc_short": "Розподіляє трафік ($50)",
     "compute_desc_short": "Обробляє запити ($60)",
     "db_desc_short": "Зберігає дані API ($150)",

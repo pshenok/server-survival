@@ -304,7 +304,7 @@ export const RU_TRANSLATIONS = {
     "traffic_malicious_desc": "DDoS и атаки. Блокировать <span class=\"text-purple-400\">Firewall</span>.",
     "services": "СЕРВИСЫ",
     "fw_desc_short": "Блокирует мошенничество ($40)",
-    "queue_desc_short": "Буфер 200 запросов ($35)",
+    "queue_desc_short": "Буфер 200 запросов ($45)",
     "lb_desc_short": "Распределяет трафик ($50)",
     "compute_desc_short": "Обрабатывает запросы ($60)",
     "db_desc_short": "Хранит API‑данные ($150)",
