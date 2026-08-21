@@ -304,7 +304,7 @@ export const NE_TRANSLATIONS = {
     "traffic_malicious_desc": "DDoS र आक्रमणहरू। <span class=\"text-purple-400\">फायरवाल</span> सँग अवरुद्ध गर्नुहोस्।",
     "services": "सेवाहरू",
     "fw_desc_short": "धोखाधडी अवरुद्ध ($40)",
-    "queue_desc_short": "200 अनुरोधहरू बफर ($35)",
+    "queue_desc_short": "200 अनुरोधहरू बफर ($45)",
     "lb_desc_short": "ट्राफिक वितरण ($50)",
     "compute_desc_short": "अनुरोधहरू प्रक्रिया ($60)",
     "db_desc_short": "API डाटा भण्डारण ($150)",

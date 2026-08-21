@@ -338,7 +338,7 @@ export const HI_TRANSLATIONS = {
     "traffic_malicious_desc": "DDoS और attacks। <span class=\"text-purple-400\">Firewall</span> से block करें।",
     "services": "SERVICES",
     "fw_desc_short": "Fraud block करता है ($40)",
-    "queue_desc_short": "200 requests buffer करती है ($35)",
+    "queue_desc_short": "200 requests buffer करती है ($45)",
     "lb_desc_short": "Traffic बाँटता है ($50)",
     "compute_desc_short": "Requests process करता है ($60)",
     "db_desc_short": "API data store करता है ($150)",

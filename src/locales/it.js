@@ -304,7 +304,7 @@ export const IT_TRANSLATIONS = {
     "traffic_malicious_desc": "DDoS e attacchi. Blocca con il <span class=\"text-purple-400\">Firewall</span>.",
     "services": "SERVIZI",
     "fw_desc_short": "Blocca Frodi ($40)",
-    "queue_desc_short": "Bufferizza 200 richieste ($35)",
+    "queue_desc_short": "Bufferizza 200 richieste ($45)",
     "lb_desc_short": "Distribuisce il Traffico ($50)",
     "compute_desc_short": "Elabora le Richieste ($60)",
     "db_desc_short": "Memorizza Dati API ($150)",

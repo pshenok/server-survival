@@ -304,7 +304,7 @@ export const FR_TRANSLATIONS = {
     "traffic_malicious_desc": "DDoS et attaques. Bloquer avec <span class=\"text-purple-400\">Pare-feu</span>.",
     "services": "SERVICES",
     "fw_desc_short": "Bloque la fraude ($40)",
-    "queue_desc_short": "Tamponne 200 requêtes ($35)",
+    "queue_desc_short": "Tamponne 200 requêtes ($45)",
     "lb_desc_short": "Distribue le trafic ($50)",
     "compute_desc_short": "Traite les requêtes ($60)",
     "db_desc_short": "Stocke les données API ($150)",

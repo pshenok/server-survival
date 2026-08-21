@@ -304,7 +304,7 @@ export const EN_TRANSLATIONS = {
     "traffic_malicious_desc": "DDoS & attacks. Block with <span class=\"text-purple-400\">Firewall</span>.",
     "services": "SERVICES",
     "fw_desc_short": "Blocks Fraud ($40)",
-    "queue_desc_short": "Buffers 200 requests ($35)",
+    "queue_desc_short": "Buffers 200 requests ($45)",
     "lb_desc_short": "Distributes Traffic ($50)",
     "compute_desc_short": "Processes Requests ($60)",
     "db_desc_short": "Stores API Data ($150)",
