@@ -419,6 +419,14 @@ function throttleRequest(req, reason = null) {
     // keeps Service.update() from scoring it as a breaker success either.
     req.throttled = true;
     updateScore(req, "THROTTLED");
+    // A 429 is load shedding working as designed and deliberately NOT a
+    // failure — it stays out of the failures panel, the metrics error rate
+    // and the breaker window. But it is still a customer who got no answer,
+    // and goodput's whole job is to count those. Without this an API Gateway
+    // — the node the game teaches you to buy for shedding — turned the
+    // headline number green by making demand disappear: nine served and
+    // ninety shed read 100%.
+    recordOutcome("unanswered");
     STATE.sound.playFail();
     req.mesh.material.color.setHex(CONFIG.colors.apigw); // Pink flash for throttled
     // Soft fail (#156): the badge paints this one amber, not red — the
