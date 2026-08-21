@@ -47,6 +47,29 @@ export function resetWorld({ money = 100000, gameMode = "sandbox" } = {}) {
   STATE.selectedNodeId = null;
   STATE.activeTool = "select";
 
+  // ...and so do the interventions, which this helper's own header has
+  // claimed since it was written ("no degradation, no upkeep drain, no
+  // INTERVENTIONS") without ever clearing them. Nothing noticed while the
+  // one that bites — costMultiplier — was suppressed outside survival by a
+  // mode gate; the moment that gate was narrowed to the survival ramp it
+  // belongs to, a COST_SPIKE left behind by one test started doubling the
+  // upkeep in the next. Same list resetGame() clears.
+  if (STATE.intervention) {
+    STATE.intervention.costMultiplier = 1.0;
+    STATE.intervention.trafficBurstMultiplier = 1.0;
+    STATE.intervention.rpsMultiplier = 1.0;
+    STATE.intervention.eventEndTime = 0;
+    STATE.intervention.randomEventTimer = 0;
+    STATE.intervention.pausedEvent = null;
+    STATE.intervention.remainingTime = 0;
+    STATE.intervention.pausedOutageServiceId = null;
+    STATE.intervention.currentMilestoneIndex = 0;
+    STATE.intervention.trafficShiftActive = false;
+    STATE.intervention.trafficShiftTimer = 0;
+    STATE.intervention.originalTrafficDist = null;
+    STATE.intervention.currentShift = null;
+  }
+
   resetResilience(); // mirrors resetGame() (#196 session counters)
 
   STATE.campaign.active = false;

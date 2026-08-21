@@ -28,8 +28,23 @@ import { spawnFailureBadge, spawnServiceBadge } from "../ui/failure-badges.js";
 import { parkInDLQ } from "../sim/dlq.js";
 
 function getUpkeepMultiplier() {
-    if (STATE.gameMode !== "survival") return 1.0;
-    if (!CONFIG.survival.upkeepScaling.enabled) return 1.0;
+    // TWO different things live here, and they had one gate between them.
+    //
+    // The RAMP below (1x to 2x over ten minutes) is a survival progression
+    // mechanic and stays survival-only — that is what the gate was written
+    // for, before the event existed.
+    //
+    // The COST SPIKE is an EVENT, and updateRandomEvents runs it inside any
+    // campaign level with enableSurvivalShifts (14 and 25). Its arrival was
+    // gated on the level; its effect was gated on the mode. So the player got
+    // an eight-second danger toast reading "Upkeep doubled for 30s" plus a
+    // full-width red bar, and the meter charged exactly what it had before.
+    // The other three event types have no such split — CAPACITY_DROP and the
+    // rest write state that is consumed ungated.
+    const spike = STATE.intervention?.costMultiplier || 1.0;
+
+    if (STATE.gameMode !== "survival") return spike;
+    if (!CONFIG.survival.upkeepScaling.enabled) return spike;
 
     const gameTime =
         STATE.elapsedGameTime ?? (performance.now() - STATE.gameStartTime) / 1000;
@@ -43,11 +58,7 @@ function getUpkeepMultiplier() {
 
     let multiplier = base + (max - base) * progress;
 
-    if (STATE.intervention?.costMultiplier) {
-        multiplier *= STATE.intervention.costMultiplier;
-    }
-
-    return multiplier;
+    return multiplier * spike;
 }
 
 function getTrafficType() {
