@@ -163,6 +163,20 @@ function panCameraScreen(rightUnits, upUnits) {
     }
 }
 
+// A screen-space drag delta (pixels) to a camera pan. Shared by the mouse
+// pan-drag and the two-finger touch pan (#12) — both just measure how far a
+// pointer moved between frames and hand the pixels here.
+function panByScreenDelta(dx, dy) {
+    const panX = ((-dx * (camera.right - camera.left)) / window.innerWidth) * panSpeed;
+    const panY = ((dy * (camera.top - camera.bottom)) / window.innerHeight) * panSpeed;
+    // panX slides along the screen's X, panY along its Y — panCameraScreen
+    // rotates that into world XZ by the current azimuth (#231), so dragging
+    // behaves the same from any angle. Both signs are negative-of-delta:
+    // screen Y grows downward, which is why the vertical term needs +dy
+    // rather than the -dy it would take in world space (#242).
+    panCameraScreen(panX, panY);
+}
+
 function getIntersect(clientX, clientY) {
     mouse.x = (clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(clientY / window.innerHeight) * 2 + 1;
@@ -189,21 +203,22 @@ const minZoom = 0.5;
 const maxZoom = 3.0;
 const zoomSpeed = 0.001;
 
-container.addEventListener("wheel", (e) => {
-    e.preventDefault();
-
-    // Zoom logic
-    const zoomDelta = e.deltaY * -zoomSpeed;
-    const newZoom = Math.max(minZoom, Math.min(maxZoom, currentZoom + zoomDelta));
-
-    if (newZoom !== currentZoom) {
-        currentZoom = newZoom;
-
+// Shared by the wheel and the touch pinch (#12) — both just compute a target
+// zoom level by their own means and hand it here for the clamp + apply.
+function setZoom(target) {
+    const clamped = Math.max(minZoom, Math.min(maxZoom, target));
+    if (clamped !== currentZoom) {
+        currentZoom = clamped;
         // For OrthographicCamera, zoom is applied via dividing the frustum or using the zoom property
         // Three.js OrthographicCamera has a .zoom property
         camera.zoom = currentZoom;
         camera.updateProjectionMatrix();
     }
+}
+
+container.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    setZoom(currentZoom + e.deltaY * -zoomSpeed);
 }, { passive: false });
 
 // Upgrade Indicator Logic
@@ -374,26 +389,20 @@ window.addEventListener("blur", () => {
 
 container.addEventListener("contextmenu", (e) => e.preventDefault());
 
-container.addEventListener("mousedown", (e) => {
+// The tool logic that fires on a primary click/tap: place, select-and-grab,
+// connect, delete, unlink, upgrade. Factored out so a touch tap (#12) reaches
+// exactly this code rather than a second copy of it — the mouse-only button-2/
+// button-1 orbit/pan gesture below is the only part that stays in the mouse
+// listener, since touch has no equivalent "other button" to check.
+// `preventDefault` defaults to a no-op: it is only ever called from the
+// drag-grab branch (to stop text-selection drag on desktop), and the touch
+// listener passes the real one.
+function handlePrimaryDown(clientX, clientY, preventDefault = () => {}) {
     if (!STATE.isRunning) return;
 
-    if (e.button === 2 || e.button === 1) {
-        // Middle-drag (or Shift+right-drag, for mice without a wheel button)
-        // orbits — the CAD convention the issue asked for (#231); plain
-        // right-drag stays the pan it has always been. Works in BOTH views
-        // since the top-down grid spins too (community follow-up on #231).
-        isOrbiting = e.button === 1 || e.shiftKey;
-        isPanning = !isOrbiting;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-        container.style.cursor = "grabbing";
-        e.preventDefault();
-        return;
-    }
-
-    const i = getIntersect(e.clientX, e.clientY);
+    const i = getIntersect(clientX, clientY);
     if (STATE.activeTool === "select") {
-        const i = getIntersect(e.clientX, e.clientY);
+        const i = getIntersect(clientX, clientY);
         if (i.type === "service") {
             const svc = STATE.services.find((s) => s.id === i.id);
             // Use criticalHealth from config for consistency
@@ -416,18 +425,18 @@ container.addEventListener("mousedown", (e) => {
         if (draggedNode) {
             isDraggingNode = true;
             dragStartPos.copy(draggedNode.position);
-            const hit = getIntersect(e.clientX, e.clientY);
+            const hit = getIntersect(clientX, clientY);
             if (hit.pos) {
                 dragOffset.copy(draggedNode.position).sub(hit.pos);
             }
             container.style.cursor = "grabbing";
-            e.preventDefault();
+            preventDefault();
             return;
         }
     } else if (STATE.activeTool === "delete" && i.type === "service")
         deleteObject(i.id);
     else if (STATE.activeTool === "unlink") {
-        const conn = getConnectionAtPoint(e.clientX, e.clientY);
+        const conn = getConnectionAtPoint(clientX, clientY);
         if (conn) {
             deleteConnection(conn.from, conn.to);
         } else {
@@ -476,6 +485,26 @@ container.addEventListener("mousedown", (e) => {
             createService(PLACEMENT_TYPE_MAP[STATE.activeTool], snapToGrid(i.pos));
         }
     }
+}
+
+container.addEventListener("mousedown", (e) => {
+    if (!STATE.isRunning) return;
+
+    if (e.button === 2 || e.button === 1) {
+        // Middle-drag (or Shift+right-drag, for mice without a wheel button)
+        // orbits — the CAD convention the issue asked for (#231); plain
+        // right-drag stays the pan it has always been. Works in BOTH views
+        // since the top-down grid spins too (community follow-up on #231).
+        isOrbiting = e.button === 1 || e.shiftKey;
+        isPanning = !isOrbiting;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        container.style.cursor = "grabbing";
+        e.preventDefault();
+        return;
+    }
+
+    handlePrimaryDown(e.clientX, e.clientY, () => e.preventDefault());
 });
 
 // Last known pointer position over the canvas — lets the animate loop
@@ -485,10 +514,19 @@ container.addEventListener("mouseleave", () => {
     lastPointerPos = null;
 });
 
-container.addEventListener("mousemove", (e) => {
-    lastPointerPos = { x: e.clientX, y: e.clientY };
+// The whole hover/drag/pan/orbit continuation for a moving pointer — node
+// drag, camera pan, camera orbit, and (when none of those claim the move) the
+// hover tooltip + upgrade-indicator + connection-highlight tail. None of it
+// reads anything off the event but the coordinates, so a touch drag (#12)
+// calls this directly with a finger's clientX/clientY: dragging a grabbed
+// node behaves identically, and if nothing is grabbed the branches above
+// fall through to the same hover tail a mouse would — showing tooltip/
+// upgrade info under a stationary finger, which is harmless and often useful
+// mid-drag on touch too.
+function handlePointerMove(clientX, clientY) {
+    lastPointerPos = { x: clientX, y: clientY };
     if (isDraggingNode && draggedNode) {
-        const hit = getIntersect(e.clientX, e.clientY);
+        const hit = getIntersect(clientX, clientY);
         if (hit.pos) {
             const newPos = hit.pos.clone().add(dragOffset);
             newPos.y = 0;
@@ -512,42 +550,26 @@ container.addEventListener("mousemove", (e) => {
         return;
     }
     if (isOrbiting) {
-        const dx = e.clientX - lastMouseX;
+        const dx = clientX - lastMouseX;
         // Turntable-grab feel: a full-width drag is one full revolution, and
         // the near edge of the board follows the cursor.
         orbitCamera((dx * 2 * Math.PI) / window.innerWidth);
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
+        lastMouseX = clientX;
+        lastMouseY = clientY;
         document.getElementById("tooltip").style.display = "none";
         return;
     }
     if (isPanning) {
-        const dx = e.clientX - lastMouseX;
-        const dy = e.clientY - lastMouseY;
-
-        const panX =
-            ((-dx * (camera.right - camera.left)) / window.innerWidth) * panSpeed;
-        const panY =
-            ((dy * (camera.top - camera.bottom)) / window.innerHeight) * panSpeed;
-
-        // panX slides along the screen's X, panY along its Y —
-        // panCameraScreen rotates that into world XZ by the current azimuth
-        // (#231), so dragging behaves the same from any angle.
-        //
-        // The two axes used to disagree (#242): horizontal was grab-the-world
-        // (drag right, the board follows right) while vertical was inverted
-        // (drag down, the board went UP). Both signs are negative-of-delta
-        // now, so the board follows the cursor on both axes — screen Y grows
-        // downward, which is why the vertical term needs +dy here rather than
-        // the -dy it had.
-        panCameraScreen(panX, panY);
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
+        const dx = clientX - lastMouseX;
+        const dy = clientY - lastMouseY;
+        panByScreenDelta(dx, dy);
+        lastMouseX = clientX;
+        lastMouseY = clientY;
         document.getElementById("tooltip").style.display = "none";
         return;
     }
 
-    const i = getIntersect(e.clientX, e.clientY);
+    const i = getIntersect(clientX, clientY);
     const t = document.getElementById("tooltip");
     let cursor = "default";
 
@@ -560,7 +582,7 @@ container.addEventListener("mousemove", (e) => {
 
     // Handle unlink tool hover
     if (STATE.activeTool === "unlink") {
-        const conn = getConnectionAtPoint(e.clientX, e.clientY);
+        const conn = getConnectionAtPoint(clientX, clientY);
         if (conn) {
             cursor = "pointer";
             // Highlight the connection in red
@@ -583,8 +605,8 @@ container.addEventListener("mousemove", (e) => {
                 conn.to === "internet" ? i18n.t('internet') : to?.config?.name || i18n.t('unknown');
 
             showTooltip(
-                e.clientX + 15,
-                e.clientY + 15,
+                clientX + 15,
+                clientY + 15,
                 `<strong class="text-orange-400">${i18n.t('remove_link')}</strong><br>
                 <span class="text-gray-300">${fromName}</span> → <span class="text-gray-300">${toName}</span><br>
                 <span class="text-red-400 text-xs">${i18n.t('click_to_remove')}</span>`
@@ -799,7 +821,7 @@ container.addEventListener("mousemove", (e) => {
                 scheduleAsgHide();
             }
 
-            showTooltip(e.clientX + 15, e.clientY + 15, content);
+            showTooltip(clientX + 15, clientY + 15, content);
 
             // Reset previous highlights
             STATE.services.forEach((svc) => {
@@ -829,6 +851,10 @@ container.addEventListener("mousemove", (e) => {
     }
 
     container.style.cursor = cursor;
+}
+
+container.addEventListener("mousemove", (e) => {
+    handlePointerMove(e.clientX, e.clientY);
 });
 
 // Helper function for showing tooltips
@@ -878,6 +904,44 @@ function setupUITooltips() {
 setupUITooltips();
 window.addEventListener("toolbarRendered", setupUITooltips);
 
+// Drops the node currently being dragged onto its nearest grid tile. No-op
+// if nothing is being dragged. Shared by every way a grab can end — mouse
+// release, touch release, touch cancel — since it only ever acts on the
+// module's own drag state and takes nothing from the event that ended it.
+function finishNodeDrag() {
+    if (!(isDraggingNode && draggedNode)) return;
+    isDraggingNode = false;
+
+    let snapped = snapToGrid(draggedNode.position);
+
+    // Reject a drop onto a tile already occupied by another service —
+    // otherwise the two overlap and whichever mesh the raycaster hits first
+    // makes the other permanently unselectable (can't delete/upgrade it).
+    const occupied = STATE.services.some(
+        (s) => s !== draggedNode && s.position.distanceTo(snapped) < 1
+    );
+    if (occupied) {
+        snapped = snapToGrid(dragStartPos);
+    }
+
+    draggedNode.position.copy(snapped);
+
+    if (draggedNode === STATE.internetNode) {
+        STATE.internetNode.mesh.position.x = snapped.x;
+        STATE.internetNode.mesh.position.z = snapped.z;
+        STATE.internetNode.ring.position.x = snapped.x;
+        STATE.internetNode.ring.position.z = snapped.z;
+    } else if (draggedNode.mesh) {
+        draggedNode.mesh.position.x = snapped.x;
+        draggedNode.mesh.position.z = snapped.z;
+    }
+
+    updateConnectionsForNode(draggedNode.id);
+
+    draggedNode = null;
+    container.style.cursor = "default";
+}
+
 // The pointer can be RELEASED ANYWHERE. This handler lived only on
 // #canvas-container, and the HUD panels are pointer-events-auto siblings of
 // the canvas, so letting go over the Finances panel — or off the window edge,
@@ -898,39 +962,7 @@ function handlePointerRelease(e) {
         isOrbiting = false;
         container.style.cursor = "default";
     }
-    if (isDraggingNode && draggedNode) {
-        isDraggingNode = false;
-
-        let snapped = snapToGrid(draggedNode.position);
-
-        // Reject a drop onto a tile already occupied by another service —
-        // otherwise the two overlap and whichever mesh the raycaster hits first
-        // makes the other permanently unselectable (can't delete/upgrade it).
-        const occupied = STATE.services.some(
-            (s) => s !== draggedNode && s.position.distanceTo(snapped) < 1
-        );
-        if (occupied) {
-            snapped = snapToGrid(dragStartPos);
-        }
-
-        draggedNode.position.copy(snapped);
-
-        if (draggedNode === STATE.internetNode) {
-            STATE.internetNode.mesh.position.x = snapped.x;
-            STATE.internetNode.mesh.position.z = snapped.z;
-            STATE.internetNode.ring.position.x = snapped.x;
-            STATE.internetNode.ring.position.z = snapped.z;
-        } else if (draggedNode.mesh) {
-            draggedNode.mesh.position.x = snapped.x;
-            draggedNode.mesh.position.z = snapped.z;
-        }
-
-        updateConnectionsForNode(draggedNode.id);
-
-        draggedNode = null;
-        container.style.cursor = "default";
-        return;
-    }
+    finishNodeDrag();
 }
 
 container.addEventListener("mouseup", handlePointerRelease);
@@ -943,6 +975,8 @@ window.addEventListener("blur", () => handlePointerRelease({ button: 0 }));
 
 // Ends any drag/pan in progress. Called by resetGame: a run boundary is not
 // a place for the pointer to still be holding something from the last one.
+// Covers touch too — it never introduced state of its own, only new ways to
+// arm the same isDraggingNode/isPanning/isOrbiting flags this already clears.
 export function endPointerInteraction() {
     const wasActive = isDraggingNode || isPanning || isOrbiting;
     isDraggingNode = false;
@@ -952,6 +986,104 @@ export function endPointerInteraction() {
     if (container) container.style.cursor = "default";
     return wasActive;
 }
+
+// Touch input (#12). The board is otherwise unreachable on a touchscreen —
+// every gesture above is mouse-only, and a synthetic click from a tap covers
+// menu buttons but never a drag.
+//
+// One finger is the primary pointer: a tap reaches handlePrimaryDown exactly
+// like a left click, and dragging (after grabbing a node) reaches
+// handlePointerMove exactly like a mouse drag. Two fingers is unambiguously a
+// camera gesture — there is no second mouse button to reserve it for, so it
+// takes over pan (from the midpoint) and zoom (from the finger spacing) at
+// once, the way every touch map app combines them. A pinch starting while a
+// node is held drops the node rather than dragging it AND zooming, since a
+// service half-dragged, half-zoomed has no sensible position to land on.
+function touchMidpoint(t0, t1) {
+    return { x: (t0.clientX + t1.clientX) / 2, y: (t0.clientY + t1.clientY) / 2 };
+}
+function touchDistance(t0, t1) {
+    return Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+}
+
+let pinchStartDist = 0;
+let pinchStartZoom = 1;
+
+container.addEventListener("touchstart", (e) => {
+    if (!STATE.isRunning) return;
+
+    if (e.touches.length >= 2) {
+        if (isDraggingNode) {
+            isDraggingNode = false;
+            draggedNode = null;
+        }
+        isPanning = true;
+        const mid = touchMidpoint(e.touches[0], e.touches[1]);
+        lastMouseX = mid.x;
+        lastMouseY = mid.y;
+        pinchStartDist = touchDistance(e.touches[0], e.touches[1]);
+        pinchStartZoom = currentZoom;
+        e.preventDefault();
+        return;
+    }
+
+    // Always prevented, not just from inside the node-grab branch the way the
+    // mouse path does it: on a real touchscreen a tap that does NOT call
+    // preventDefault can still trigger the browser's own delayed synthetic
+    // click and page-scroll gestures a few hundred ms later, on top of
+    // whatever the game already did with it. The mouse path never had that
+    // problem to guard against, which is why it only calls it when starting
+    // a drag.
+    e.preventDefault();
+    const t = e.touches[0];
+    handlePrimaryDown(t.clientX, t.clientY, () => {});
+}, { passive: false });
+
+container.addEventListener("touchmove", (e) => {
+    if (e.touches.length >= 2) {
+        const mid = touchMidpoint(e.touches[0], e.touches[1]);
+        panByScreenDelta(mid.x - lastMouseX, mid.y - lastMouseY);
+        lastMouseX = mid.x;
+        lastMouseY = mid.y;
+
+        const dist = touchDistance(e.touches[0], e.touches[1]);
+        if (pinchStartDist > 0) {
+            setZoom(pinchStartZoom * (dist / pinchStartDist));
+        }
+        e.preventDefault();
+        return;
+    }
+
+    // A single-finger move only ever means something while a node is being
+    // dragged — touch has no hover to drive the tooltip tail, and a stray
+    // single-finger move (a slightly shaky tap) should not smear a tooltip
+    // across the screen the way it harmlessly does under a mouse.
+    if (isDraggingNode) {
+        handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+        e.preventDefault();
+    }
+}, { passive: false });
+
+container.addEventListener("touchend", (e) => {
+    if (e.touches.length < 2) {
+        isPanning = false;
+        pinchStartDist = 0;
+    }
+    if (e.touches.length === 0) {
+        finishNodeDrag();
+    }
+});
+
+// touchcancel fires with NO touchend at all — the OS interrupting the
+// gesture (an incoming call, a system-reserved edge swipe) is the touch
+// equivalent of the off-window release #288 fixed for the mouse above, and
+// deserves the same answer: give up whatever the pointer was holding rather
+// than leave it armed for the next touch to inherit.
+container.addEventListener("touchcancel", () => {
+    isPanning = false;
+    pinchStartDist = 0;
+    endPointerInteraction();
+});
 
 window.addEventListener("resize", () => {
     // The frustum math lives in game.js and is shared with the initial camera
