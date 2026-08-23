@@ -15,7 +15,10 @@ export const STATE = {
         total: 0,
         storage: 0,
         database: 0,
-        maliciousBlocked: 0
+        maliciousBlocked: 0,
+        // Score lost to failed requests. A ROW, not just a subtraction:
+        // see updateScore's FAILED branch.
+        penalties: 0
     },
 
     // How many failures had been recorded when the player last dismissed the

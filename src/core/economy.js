@@ -271,6 +271,13 @@ function updateFinancesDisplay() {
             )}</span></div>`;
         }
 
+        // Dead-letter drains, under the name of the node that charges them.
+        if (f.expenses.dlq > 0) {
+            expenseHtml += `<div class="flex justify-between mt-1 border-t border-gray-800"><span class="text-stone-300">${i18n.t('dlq')}</span><span class="text-red-300">-$${Math.floor(
+                f.expenses.dlq
+            )}</span></div>`;
+        }
+
         // Mitigation costs
         if (f.expenses.mitigation > 0) {
             expenseHtml += `<div class="flex justify-between mt-1 border-t border-gray-800"><span class="text-blue-300">DDoS Mitigation</span><span class="text-red-300">-$${Math.floor(
@@ -297,6 +304,7 @@ function updateFinancesDisplay() {
         f.expenses.upkeep +
         f.expenses.repairs +
         f.expenses.autoRepair +
+        (f.expenses.dlq || 0) +
         (f.expenses.mitigation || 0) +
         (f.expenses.breach || 0);
     const expenseTotal = document.getElementById("expense-total");

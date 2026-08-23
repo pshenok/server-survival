@@ -79,7 +79,12 @@ describe("migrateOldSave (via loadGameState on a version-less/1.0 save)", () => 
 describe("fallback defaults (the PR-1 dead-fallback fix)", () => {
   it("a save without score gets zeroed defaults, not {} (no NaN score math)", () => {
     loadGameState(baseSave());
-    expect(STATE.score).toEqual({ total: 0, storage: 0, database: 0, maliciousBlocked: 0 });
+    // penalties joins the fallback at 0 (#294): a save without it must not
+    // leave the field undefined, or the FAILED branch's `+= penalty` writes
+    // NaN into the panel on the first dropped request of a resumed run.
+    expect(STATE.score).toEqual({
+        total: 0, storage: 0, database: 0, maliciousBlocked: 0, penalties: 0,
+    });
     expect(Number.isNaN(STATE.score.total)).toBe(false);
   });
 

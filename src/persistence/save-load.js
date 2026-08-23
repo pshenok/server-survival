@@ -239,6 +239,7 @@ function loadGameState(saveData = null) {
             storage: 0,
             database: 0,
             maliciousBlocked: 0,
+            penalties: 0,
         };
         STATE.activeTool = saveData.activeTool || "select";
         STATE.selectedNodeId = saveData.selectedNodeId || null;

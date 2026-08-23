@@ -476,7 +476,7 @@ function resetGame(mode = "survival") {
     STATE.services = [];
     STATE.requests = [];
     STATE.connections = [];
-    STATE.score = { total: 0, storage: 0, database: 0, maliciousBlocked: 0 };
+    STATE.score = { total: 0, storage: 0, database: 0, maliciousBlocked: 0, penalties: 0 };
     STATE.failures = {
         STATIC: 0,
         READ: 0,

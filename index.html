@@ -224,6 +224,13 @@
             <span data-i18n="attacks_blocked" class="text-purple-300 font-bold">ATTACKS BLOCKED</span>
             <span id="score-malicious" class="text-purple-300">0</span>
           </div>
+          <!-- Score lost to failures. Hidden until something fails, so a clean
+               board is not decorated with a zero; shown when it is, so the
+               three rows plus this one add up to the TOTAL SCORE above. -->
+          <div id="score-penalties-row" class="flex justify-between items-center hidden">
+            <span data-i18n="failures" class="text-gray-500">Failures</span>
+            <span id="score-penalties" class="text-red-300">0</span>
+          </div>
         </div>
       </div>
 

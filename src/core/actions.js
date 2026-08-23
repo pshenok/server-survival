@@ -285,7 +285,16 @@ function updateScore(req, outcome) {
         STATE.reputation += points.THROTTLED_REPUTATION || -0.2;
     } else if (outcome === "FAILED") {
         STATE.reputation += points.FAIL_REPUTATION;
-        STATE.score.total -= (typeConfig.score || 5) / 2;
+        // Booked into a ROW as well as the total. The three rows of the
+        // Traffic Score Details panel are painted directly under TOTAL SCORE,
+        // and this was the one path that moved the total without touching
+        // any of them — so adding the rows up gave a different number from
+        // the total above them, carrying a .5 the integer rows could not
+        // explain. A scoreboard that contradicts itself teaches the player
+        // to stop reading it.
+        const penalty = (typeConfig.score || 5) / 2;
+        STATE.score.penalties = (STATE.score.penalties || 0) + penalty;
+        STATE.score.total -= penalty;
         if (STATE.failures[req.type] !== undefined) {
             STATE.failures[req.type]++;
         }
@@ -457,6 +466,13 @@ function updateScoreUI() {
     document.getElementById("score-database").innerText = STATE.score.database;
     document.getElementById("score-malicious").innerText =
         STATE.score.maliciousBlocked;
+    const penalties = STATE.score.penalties || 0;
+    const row = document.getElementById("score-penalties-row");
+    const cell = document.getElementById("score-penalties");
+    if (cell) cell.innerText = `-${penalties}`;
+    // Hidden until something has actually failed, so an unblemished board is
+    // not decorated with a zero.
+    if (row) row.classList.toggle("hidden", penalties === 0);
 }
 
 function flashMoney() {

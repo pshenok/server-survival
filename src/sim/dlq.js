@@ -83,9 +83,12 @@ export function tickDLQ(dlq, dt) {
         STATE.money -= dlq.config.drainCost || 0;
         STATE.reputation += dlq.config.drainRepRefund || 0;
         if (STATE.finances) {
-            STATE.finances.expenses.mitigation =
-                (STATE.finances.expenses.mitigation || 0) +
-                (dlq.config.drainCost || 0);
+            // Its OWN line. This used to be booked into expenses.mitigation,
+            // whose single renderer prints "DDoS Mitigation" — so a board with
+            // a busy dead-letter queue and no attack traffic at all grew a
+            // DDoS line, and the DLQ's real running cost was invisible.
+            STATE.finances.expenses.dlq =
+                (STATE.finances.expenses.dlq || 0) + (dlq.config.drainCost || 0);
         }
         // Neither success nor failure — that is the DLQ's whole point, and
         // the failures panel still does not count it. Goodput does: the event
