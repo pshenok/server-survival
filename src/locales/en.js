@@ -832,7 +832,7 @@ export const EN_TRANSLATIONS = {
     "obj_10_speedrun": "Complete under 72s",
     // -- Level 11: Defense in Depth --
     "level_11_title": "Defense in Depth",
-    "level_11_scenario": "A DDoS wave is incoming — 70% malicious traffic. A single Firewall isn't enough; you need defense in layers.",
+    "level_11_scenario": "A DDoS wave is incoming — 70% malicious traffic. A Firewall stops it at the door; the API Gateway is the layer beneath it, rate-limiting the spikes a filter does not judge. The bonus asks for both.",
     "level_11_learn": "WAF blocks MALICIOUS hard. API Gateway throttles legitimate spikes. Together they form a layered defense.",
     "level_11_debrief": "MALICIOUS leaks are 5× worse than failures. WAF is non-negotiable for any production system.",
     "obj_11_survive_60s": "Survive 60 seconds",
