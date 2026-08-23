@@ -52,7 +52,7 @@
 // can only ever SHRINK, and prove the reference solutions still win.
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { achievements } from "../../src/achievements/achievements.js";
-import { createConnection } from "../../src/sim/topology.js";
+import { createConnection, deleteConnection } from "../../src/sim/topology.js";
 import { REAL_RANDOM, placeAt, play, svc } from "../helpers/campaign-play.mjs";
 import { STATE, resetWorld } from "../helpers/sim-world.mjs";
 
@@ -138,9 +138,22 @@ const LEVELS = {
     9: {
         teaches: "API Gateway",
         taught: () => {
+            // alb -> apigw is not a legal edge (src/sim/topology.js
+            // isValidEdge — a gateway sits BEFORE a balancer, never after
+            // one), so an earlier version of this recipe that wired it that
+            // way silently failed to connect: createConnection() rejects an
+            // invalid pair without throwing. The gateway sat on the board
+            // receiving no traffic at all, which is a stronger and false
+            // form of "hollow" than any measurement here was meant to prove.
+            // The level's own pre-built waf -> alb edge has to come out too,
+            // or the balancer round-robins between the direct path and the
+            // gateway and only half the traffic is ever rate-limited.
+            const waf = svc("waf");
+            const alb = svc("alb");
+            deleteConnection(waf.id, alb.id);
             const gw = placeAt("apigw", -15, 8);
-            createConnection(svc("alb").id, gw.id);
-            createConnection(gw.id, svc("compute").id);
+            createConnection(waf.id, gw.id);
+            createConnection(gw.id, alb.id);
         },
     },
     12: {
