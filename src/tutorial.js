@@ -1,4 +1,4 @@
-import { isTypeAllowed } from './ui/toolbar.js';
+import { categoryForTool, isTypeAllowed, setToolbarCategory } from "./ui/toolbar.js";
 import { STATE } from "./state.js";
 import { i18n } from "./i18n.js";
 
@@ -306,7 +306,24 @@ class Tutorial {
     }
 
     highlightElement(elementId) {
-        const el = document.getElementById(elementId);
+        let el = document.getElementById(elementId);
+        if (!el) {
+            // REVEAL THE TAB FIRST. The palette renders only the active
+            // category's buttons, so a spotlight aimed at tool-lambda,
+            // tool-s3 or tool-db found nothing on a fresh profile — the
+            // default tab is "frontdoor" — and gave up without a word.
+            // Steps 3-6 worked, then the ring simply stopped appearing while
+            // the text kept naming a button, and the Next button stays hidden
+            // until the service is placed. A first-time player was told to
+            // place a Compute and shown an empty screen to place it from.
+            const category = categoryForTool(elementId);
+            if (category) {
+                // Persisted: the player is about to click this button, so the
+                // tab has to survive the next re-render.
+                setToolbarCategory(category);
+                el = document.getElementById(elementId);
+            }
+        }
         if (!el) return;
         el.classList.add('tutorial-tool-highlight');
         const rect = el.getBoundingClientRect();

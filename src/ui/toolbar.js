@@ -367,6 +367,27 @@ function renderToolbar() {
 // Switch tabs and redraw. `persist` is false for the automatic switch a
 // campaign level triggers, so a level's gating cannot overwrite the tab the
 // player last chose for themselves.
+// Which category tab holds a given tool button id: "tool-db" -> "data".
+//
+// renderPalette only puts the ACTIVE tab's buttons in the DOM, so an id from
+// another tab does not merely look wrong — it does not exist. The tutorial
+// spotlights buttons by id and gives up silently when getElementById returns
+// null, which is how three of its seven steps came to point at nothing on a
+// fresh profile.
+//
+// Reads the same SERVICE_BUTTONS.tool alias the ids are generated from, so
+// Compute's historical id="tool-lambda" resolves like everything else instead
+// of needing a second table that can drift.
+function categoryForTool(buttonId) {
+    const tool = String(buttonId || "").replace(/^tool-/, "");
+    for (const cat of SERVICE_CATEGORIES) {
+        for (const type of cat.types) {
+            if ((SERVICE_BUTTONS[type]?.tool || type) === tool) return cat.id;
+        }
+    }
+    return null;
+}
+
 function setToolbarCategory(id, { persist = true } = {}) {
     if (!SERVICE_CATEGORIES.some((c) => c.id === id)) return;
     activeCategoryId = id;
@@ -407,6 +428,10 @@ export {
     // that forbids a service must not hand the player an instruction they
     // physically cannot follow.
     isTypeAllowed,
+    // ...and this one for the same reason, one step earlier: an instruction
+    // pointing at a button that is not on the visible tab cannot be followed
+    // either.
+    categoryForTool,
     renderToolbar,
     setToolbarCategory,
 };
