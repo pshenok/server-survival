@@ -772,7 +772,7 @@ export const DE_TRANSLATIONS = {
     "level_4_learn": "Der Memory Cache hält Antworten im RAM und bedient wiederholte READs, ohne die DB zu treffen. ~40% der READs sind cachebar.",
     "level_4_debrief": "Bei einzigartigen Keys bricht die Cache-Hit-Rate ein (z. B. SEARCH mit zufälligen Abfragen). Nutze ihn für wiederholte READs.",
     "obj_4_survive_60s": "Überlebe 60 Sekunden",
-    "obj_4_db_load_below_70": "DB-Last im Schnitt unter 70%",
+    "obj_4_db_load_below_70": "DB-Last unter 70%",
     "obj_4_no_drops": "Keine fehlgeschlagenen Anfragen",
     "obj_4_rep_above_90": "Reputation über 90%",
     // -- Level 5: Buffer the Spikes --

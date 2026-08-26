@@ -773,7 +773,7 @@ export const EN_TRANSLATIONS = {
     "level_4_learn": "Memory Cache stores responses in RAM and serves repeated READs without hitting the DB. ~40% of READs are cacheable.",
     "level_4_debrief": "Cache hit rate degrades for unique keys (e.g. SEARCH with random queries). Use it for repeated READs.",
     "obj_4_survive_60s": "Survive 60 seconds",
-    "obj_4_db_load_below_70": "Average DB load below 70%",
+    "obj_4_db_load_below_70": "DB load below 70%",
     "obj_4_no_drops": "Zero failed requests",
     "obj_4_rep_above_90": "Reputation above 90%",
     // -- Level 5: Buffer the Spikes --

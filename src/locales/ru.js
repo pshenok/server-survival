@@ -772,7 +772,7 @@ export const RU_TRANSLATIONS = {
     "level_4_learn": "Memory Cache хранит ответы в RAM и отдаёт повторные READ, не трогая БД. Кэшируемы ~40% READ-запросов.",
     "level_4_debrief": "Hit-rate кэша падает на уникальных ключах (например, SEARCH со случайными запросами). Используйте кэш для повторяющихся READ.",
     "obj_4_survive_60s": "Продержитесь 60 с",
-    "obj_4_db_load_below_70": "Средняя нагрузка БД ниже 70%",
+    "obj_4_db_load_below_70": "Нагрузка БД ниже 70%",
     "obj_4_no_drops": "Ноль проваленных запросов",
     "obj_4_rep_above_90": "Репутация выше 90%",
     // -- Level 5: Buffer the Spikes --

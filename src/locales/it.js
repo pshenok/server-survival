@@ -772,7 +772,7 @@ export const IT_TRANSLATIONS = {
     "level_4_learn": "La Memory Cache conserva le risposte in RAM e serve le LETTURE ripetute senza toccare il DB. Circa il 40% delle LETTURE è memorizzabile in cache.",
     "level_4_debrief": "L'hit rate della cache degrada con le chiavi uniche (es. RICERCA con query casuali). Usala per le LETTURE ripetute.",
     "obj_4_survive_60s": "Sopravvivi 60 secondi",
-    "obj_4_db_load_below_70": "Carico DB medio sotto il 70%",
+    "obj_4_db_load_below_70": "Carico DB sotto il 70%",
     "obj_4_no_drops": "Zero richieste fallite",
     "obj_4_rep_above_90": "Reputazione sopra il 90%",
     // -- Level 5: Buffer the Spikes --

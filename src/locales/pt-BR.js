@@ -772,7 +772,7 @@ export const PT_BR_TRANSLATIONS = {
     "level_4_learn": "O Cache de Memória guarda respostas na RAM e serve READs repetidos sem tocar no BD. ~40% dos READs são cacheáveis.",
     "level_4_debrief": "A taxa de acerto do cache degrada com chaves únicas (ex.: SEARCH com consultas aleatórias). Use-o para READs repetidos.",
     "obj_4_survive_60s": "Sobreviva 60 segundos",
-    "obj_4_db_load_below_70": "Carga média do BD abaixo de 70%",
+    "obj_4_db_load_below_70": "Carga do BD abaixo de 70%",
     "obj_4_no_drops": "Zero requisições com falha",
     "obj_4_rep_above_90": "Reputação acima de 90%",
     // -- Level 5: Buffer the Spikes --

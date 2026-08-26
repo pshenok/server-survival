@@ -772,7 +772,7 @@ export const ZH_TRANSLATIONS = {
     "level_4_learn": "内存缓存把响应存进 RAM，重复的 READ 不必触及数据库就能直接返回。约 40% 的 READ 是可缓存的。",
     "level_4_debrief": "对唯一键（比如带随机查询串的 SEARCH），缓存命中率会一路走低。把它用在重复出现的 READ 上。",
     "obj_4_survive_60s": "存活 60 秒",
-    "obj_4_db_load_below_70": "平均数据库负载低于 70%",
+    "obj_4_db_load_below_70": "数据库负载低于 70%",
     "obj_4_no_drops": "零失败请求",
     "obj_4_rep_above_90": "声誉高于 90%",
     // -- Level 5: Buffer the Spikes --

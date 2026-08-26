@@ -772,7 +772,7 @@ export const KO_TRANSLATIONS = {
     "level_4_learn": "메모리 캐시는 응답을 RAM에 저장해 반복되는 READ를 DB에 가지 않고 처리합니다. READ의 약 40%는 캐시 가능합니다.",
     "level_4_debrief": "고유한 키(예: 무작위 쿼리의 SEARCH)에서는 캐시 적중률이 떨어집니다. 반복되는 READ에 사용하세요.",
     "obj_4_survive_60s": "60초 생존",
-    "obj_4_db_load_below_70": "평균 DB 부하 70% 미만",
+    "obj_4_db_load_below_70": "DB 부하 70% 미만",
     "obj_4_no_drops": "실패 요청 0개",
     "obj_4_rep_above_90": "평판 90% 이상",
     // -- Level 5: Buffer the Spikes --

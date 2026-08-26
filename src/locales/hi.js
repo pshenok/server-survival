@@ -807,7 +807,7 @@ export const HI_TRANSLATIONS = {
     "level_4_learn": "Memory Cache responses को RAM में रखता है और बार-बार आने वाली READs को DB तक जाए बिना serve करता है। करीब 40% READs cache हो सकती हैं।",
     "level_4_debrief": "Unique keys पर cache hit rate गिर जाता है (जैसे random queries वाली SEARCH)। इसे बार-बार दोहराई जाने वाली READs के लिए इस्तेमाल करें।",
     "obj_4_survive_60s": "60s टिके रहें",
-    "obj_4_db_load_below_70": "औसत DB load 70% से नीचे",
+    "obj_4_db_load_below_70": "DB load 70% से नीचे",
     "obj_4_no_drops": "एक भी request fail नहीं",
     "obj_4_rep_above_90": "Reputation 90% से ऊपर",
     // -- Level 5: Buffer the Spikes --

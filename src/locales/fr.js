@@ -772,7 +772,7 @@ export const FR_TRANSLATIONS = {
     "level_4_learn": "Le Cache mémoire garde les réponses en RAM et sert les READ répétés sans toucher la DB. ~40 % des READ peuvent être mis en cache.",
     "level_4_debrief": "Le taux de réussite du cache s'effondre sur des clés uniques (ex. SEARCH avec des requêtes aléatoires). Réservez-le aux READ répétés.",
     "obj_4_survive_60s": "Survivre 60 secondes",
-    "obj_4_db_load_below_70": "Charge DB moyenne sous 70 %",
+    "obj_4_db_load_below_70": "Charge DB sous 70 %",
     "obj_4_no_drops": "Zéro requête échouée",
     "obj_4_rep_above_90": "Réputation au-dessus de 90 %",
     // -- Level 5: Buffer the Spikes --
