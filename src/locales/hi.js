@@ -812,7 +812,7 @@ export const HI_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputation 90% से ऊपर",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Buffer the Spikes",
-    "level_5_scenario": "आपका traffic bursty है — 5 सेकंड शांति, फिर एक साथ 20 requests। Compute तालमेल नहीं बिठा पाता और requests गिरने लगती हैं।",
+    "level_5_scenario": "आपका traffic bursty है — 5 सेकंड शांति, फिर एक साथ 15 requests। Compute तालमेल नहीं बिठा पाता और requests गिरने लगती हैं।",
     "level_5_learn": "Message Queue (max 200) bursts को buffer करती है, ताकि Compute उन्हें अपनी रफ़्तार से process कर सके। पर queue सिर्फ़ समय खरीदती है — throughput नहीं जोड़ सकती। यहाँ sustained load Compute Tier 1 से ज़्यादा है, इसलिए Compute भी upgrade करें, वरना queue देर-सबेर भर जाएगी।",
     "level_5_debrief": "Queues peaks को शांत करती हैं, पर latency जोड़ती हैं। Low-latency reads के लिए इन्हें इस्तेमाल न करें।",
     "obj_5_survive_90s": "90s टिके रहें",
@@ -821,7 +821,7 @@ export const HI_TRANSLATIONS = {
     "obj_5_rep_above_85": "Reputation 85% से ऊपर",
     // -- Level 6: Scale Reads --
     "level_6_title": "Scale Reads",
-    "level_6_scenario": "Read-heavy API traffic (45% READ)। अकेला DB यह बोझ नहीं खींच पाता।",
+    "level_6_scenario": "Read-heavy API traffic (60% READ)। अकेला DB यह बोझ नहीं खींच पाता।",
     "level_6_learn": "Read Replica master DB से READ traffic का बोझ हटा लेता है। Compute अपने आप Replica → NoSQL → SQL को priority देता है।",
     "level_6_debrief": "Read Replica को master DB से connection चाहिए। इसके बिना replica पर आई READs fail हो जाती हैं।",
     "obj_6_survive_75s": "75s टिके रहें",
@@ -830,7 +830,7 @@ export const HI_TRANSLATIONS = {
     "obj_6_rep_above_85": "Reputation 85% से ऊपर",
     // -- Level 7: Search Done Right --
     "level_7_title": "Search Done Right",
-    "level_7_scenario": "Search Storm टकराया है — 50% SEARCH traffic। महँगी full-text queries के बोझ तले SQL DB घिसटकर ठप हो जाता है।",
+    "level_7_scenario": "Search Storm टकराया है — 60% SEARCH traffic। महँगी full-text queries के बोझ तले SQL DB घिसटकर ठप हो जाता है।",
     "level_7_learn": "Search Engine SEARCH को SQL DB से 3× तेज़ संभालता है। Search Engine मौजूद हो, तो Compute SEARCH को अपने आप उसी पर route कर देता है।",
     "level_7_debrief": "Search Engine सिर्फ़ SEARCH संभालता है। बाकी traffic को DB/NoSQL पर ही जाते रहना होगा।",
     "obj_7_survive_60s": "60s टिके रहें",

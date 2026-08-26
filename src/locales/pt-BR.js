@@ -777,7 +777,7 @@ export const PT_BR_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputação acima de 90%",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Amorteça os Picos",
-    "level_5_scenario": "Seu tráfego vem em rajadas — 5 segundos de silêncio, depois 20 requisições de uma vez. A Computação não acompanha e as requisições se perdem.",
+    "level_5_scenario": "Seu tráfego vem em rajadas — 5 segundos de silêncio, depois 15 requisições de uma vez. A Computação não acompanha e as requisições se perdem.",
     "level_5_learn": "A Fila de Mensagens (máx. 200) amortece as rajadas para que a Computação as processe no próprio ritmo. Mas uma fila só compra tempo — ela não adiciona throughput. A carga sustentada aqui excede o Tier 1 da Computação, então aprimore a Computação também, ou a fila vai acabar saturando.",
     "level_5_debrief": "Filas suavizam picos, mas adicionam latência. Não as use para leituras de baixa latência.",
     "obj_5_survive_90s": "Sobreviva 90 segundos",
@@ -786,7 +786,7 @@ export const PT_BR_TRANSLATIONS = {
     "obj_5_rep_above_85": "Reputação acima de 85%",
     // -- Level 6: Scale Reads --
     "level_6_title": "Escale as Leituras",
-    "level_6_scenario": "Tráfego de API pesado em leitura (45% READ). Um BD só não dá conta.",
+    "level_6_scenario": "Tráfego de API pesado em leitura (60% READ). Um BD só não dá conta.",
     "level_6_learn": "A Réplica de Leitura desvia o tráfego READ do BD principal. A Computação prefere Réplica → NoSQL → SQL automaticamente.",
     "level_6_debrief": "A Réplica de Leitura precisa de conexão com um BD principal. Sem ela, os READs na réplica falham.",
     "obj_6_survive_75s": "Sobreviva 75 segundos",
@@ -795,7 +795,7 @@ export const PT_BR_TRANSLATIONS = {
     "obj_6_rep_above_85": "Reputação acima de 85%",
     // -- Level 7: Search Done Right --
     "level_7_title": "Busca do Jeito Certo",
-    "level_7_scenario": "Uma tempestade de busca chega — 50% de tráfego SEARCH. O BD SQL trava sob consultas full-text caras.",
+    "level_7_scenario": "Uma tempestade de busca chega — 60% de tráfego SEARCH. O BD SQL trava sob consultas full-text caras.",
     "level_7_learn": "O Search Engine processa SEARCH 3× mais rápido que o BD SQL. A Computação roteia SEARCH → Search Engine automaticamente quando ele está disponível.",
     "level_7_debrief": "O Search Engine só atende SEARCH. O resto do tráfego precisa continuar indo para o BD/NoSQL.",
     "obj_7_survive_60s": "Sobreviva 60 segundos",

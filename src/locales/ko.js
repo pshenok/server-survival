@@ -777,7 +777,7 @@ export const KO_TRANSLATIONS = {
     "obj_4_rep_above_90": "평판 90% 이상",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "급증 버퍼링",
-    "level_5_scenario": "트래픽이 버스트성입니다 — 5초간 잠잠하다가 한꺼번에 요청 20개가 몰려옵니다. 컴퓨트가 따라가지 못해 요청이 드롭됩니다.",
+    "level_5_scenario": "트래픽이 버스트성입니다 — 5초간 잠잠하다가 한꺼번에 요청 15개가 몰려옵니다. 컴퓨트가 따라가지 못해 요청이 드롭됩니다.",
     "level_5_learn": "메시지 큐(최대 200)는 버스트를 버퍼링해 컴퓨트가 자기 속도로 처리하게 합니다. 하지만 큐는 시간을 벌 뿐 — 처리량을 더해 주지는 못합니다. 이 레벨의 지속 부하는 컴퓨트 티어 1을 넘어서므로 컴퓨트도 업그레이드하세요. 아니면 큐가 결국 포화됩니다.",
     "level_5_debrief": "큐는 피크를 완만하게 만들지만 지연을 더합니다. 낮은 지연이 필요한 읽기에는 쓰지 마세요.",
     "obj_5_survive_90s": "90초 생존",
@@ -786,7 +786,7 @@ export const KO_TRANSLATIONS = {
     "obj_5_rep_above_85": "평판 85% 이상",
     // -- Level 6: Scale Reads --
     "level_6_title": "읽기 확장",
-    "level_6_scenario": "읽기 위주의 API 트래픽입니다(45% READ). DB 하나로는 감당할 수 없습니다.",
+    "level_6_scenario": "읽기 위주의 API 트래픽입니다(60% READ). DB 하나로는 감당할 수 없습니다.",
     "level_6_learn": "읽기 복제본은 마스터 DB에서 READ 트래픽을 빼내 갑니다. 컴퓨트는 자동으로 복제본 → NoSQL → SQL 순으로 우선 선택합니다.",
     "level_6_debrief": "읽기 복제본은 마스터 DB 연결이 필요합니다. 없으면 복제본으로 간 READ가 실패합니다.",
     "obj_6_survive_75s": "75초 생존",
@@ -795,7 +795,7 @@ export const KO_TRANSLATIONS = {
     "obj_6_rep_above_85": "평판 85% 이상",
     // -- Level 7: Search Done Right --
     "level_7_title": "제대로 된 검색",
-    "level_7_scenario": "검색 폭풍이 덮칩니다 — 트래픽의 50%가 SEARCH입니다. 값비싼 전체 텍스트 쿼리에 SQL DB가 멈춰 섭니다.",
+    "level_7_scenario": "검색 폭풍이 덮칩니다 — 트래픽의 60%가 SEARCH입니다. 값비싼 전체 텍스트 쿼리에 SQL DB가 멈춰 섭니다.",
     "level_7_learn": "검색 엔진은 SEARCH를 SQL DB보다 3배 빠르게 처리합니다. 검색 엔진이 있으면 컴퓨트가 SEARCH를 자동으로 그쪽에 라우팅합니다.",
     "level_7_debrief": "검색 엔진은 SEARCH만 처리합니다. 다른 트래픽은 계속 DB/NoSQL로 보내야 합니다.",
     "obj_7_survive_60s": "60초 생존",

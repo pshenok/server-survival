@@ -777,7 +777,7 @@ export const DE_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputation über 90%",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Puffere die Spitzen",
-    "level_5_scenario": "Dein Traffic kommt in Schüben — 5 Sekunden Ruhe, dann 20 Anfragen auf einmal. Compute kommt nicht hinterher, und Anfragen gehen verloren.",
+    "level_5_scenario": "Dein Traffic kommt in Schüben — 5 Sekunden Ruhe, dann 15 Anfragen auf einmal. Compute kommt nicht hinterher, und Anfragen gehen verloren.",
     "level_5_learn": "Die Message Queue (max. 200) puffert Bursts, damit Compute sie im eigenen Tempo abarbeitet. Aber eine Queue kauft nur Zeit — Durchsatz liefert sie nicht. Die Dauerlast hier übersteigt Compute Tier 1: Upgrade also auch Compute, sonst läuft die Queue irgendwann voll.",
     "level_5_debrief": "Queues glätten Spitzen, kosten aber Latenz. Nutze sie nicht für latenzkritische Reads.",
     "obj_5_survive_90s": "Überlebe 90 Sekunden",
@@ -786,7 +786,7 @@ export const DE_TRANSLATIONS = {
     "obj_5_rep_above_85": "Reputation über 85%",
     // -- Level 6: Scale Reads --
     "level_6_title": "Skaliere die Reads",
-    "level_6_scenario": "Leselastiger API-Traffic (45% READ). Eine DB allein kommt nicht hinterher.",
+    "level_6_scenario": "Leselastiger API-Traffic (60% READ). Eine DB allein kommt nicht hinterher.",
     "level_6_learn": "Die Read Replica zieht READ-Traffic von der Master-DB ab. Compute bevorzugt automatisch Replica → NoSQL → SQL.",
     "level_6_debrief": "Die Read Replica braucht eine Verbindung zur Master-DB. Ohne sie schlagen READs an die Replica fehl.",
     "obj_6_survive_75s": "Überlebe 75 Sekunden",
@@ -795,7 +795,7 @@ export const DE_TRANSLATIONS = {
     "obj_6_rep_above_85": "Reputation über 85%",
     // -- Level 7: Search Done Right --
     "level_7_title": "Suche, richtig gemacht",
-    "level_7_scenario": "Ein Such-Sturm bricht los — 50% SEARCH-Traffic. Die SQL DB kommt unter teuren Volltextabfragen zum Erliegen.",
+    "level_7_scenario": "Ein Such-Sturm bricht los — 60% SEARCH-Traffic. Die SQL DB kommt unter teuren Volltextabfragen zum Erliegen.",
     "level_7_learn": "Die Search Engine verarbeitet SEARCH 3× schneller als die SQL DB. Compute leitet SEARCH automatisch zur Search Engine, sobald es eine gibt.",
     "level_7_debrief": "Die Search Engine verarbeitet nur SEARCH. Der übrige Traffic muss weiter zur DB/NoSQL.",
     "obj_7_survive_60s": "Überlebe 60 Sekunden",

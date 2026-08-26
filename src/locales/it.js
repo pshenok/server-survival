@@ -777,7 +777,7 @@ export const IT_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputazione sopra il 90%",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Bufferizza i Picchi",
-    "level_5_scenario": "Il tuo traffico è a raffiche — 5 secondi di quiete, poi 20 richieste tutte insieme. Compute non tiene il passo e le richieste vanno perse.",
+    "level_5_scenario": "Il tuo traffico è a raffiche — 5 secondi di quiete, poi 15 richieste tutte insieme. Compute non tiene il passo e le richieste vanno perse.",
     "level_5_learn": "La Coda di Messaggi (max 200) bufferizza le raffiche, così Compute le elabora al proprio ritmo. Ma una coda compra solo tempo — non aggiunge throughput. Qui il carico sostenuto supera un Compute di livello 1: aggiorna anche Compute, o prima o poi la coda si saturerà.",
     "level_5_debrief": "Le code attenuano i picchi ma aggiungono latenza. Non usarle per letture a bassa latenza.",
     "obj_5_survive_90s": "Sopravvivi 90 secondi",
@@ -786,7 +786,7 @@ export const IT_TRANSLATIONS = {
     "obj_5_rep_above_85": "Reputazione sopra l'85%",
     // -- Level 6: Scale Reads --
     "level_6_title": "Scala le Letture",
-    "level_6_scenario": "Traffico API a prevalenza di letture (45% LETTURA). Un solo DB non tiene il passo.",
+    "level_6_scenario": "Traffico API a prevalenza di letture (60% LETTURA). Un solo DB non tiene il passo.",
     "level_6_learn": "La Read Replica allevia il traffico di LETTURA dal DB master. Compute preferisce automaticamente Replica → NoSQL → SQL.",
     "level_6_debrief": "La Read Replica richiede una connessione a un DB master. Senza, le LETTURE verso la replica falliscono.",
     "obj_6_survive_75s": "Sopravvivi 75 secondi",
@@ -795,7 +795,7 @@ export const IT_TRANSLATIONS = {
     "obj_6_rep_above_85": "Reputazione sopra l'85%",
     // -- Level 7: Search Done Right --
     "level_7_title": "La Ricerca Fatta Bene",
-    "level_7_scenario": "Arriva una tempesta di ricerche — 50% di traffico RICERCA. Il DB SQL si blocca sotto costose query full-text.",
+    "level_7_scenario": "Arriva una tempesta di ricerche — 60% di traffico RICERCA. Il DB SQL si blocca sotto costose query full-text.",
     "level_7_learn": "Il Motore di Ricerca gestisce la RICERCA 3× più velocemente del DB SQL. Compute instrada automaticamente RICERCA → Motore di Ricerca quando disponibile.",
     "level_7_debrief": "Il Motore di Ricerca gestisce solo la RICERCA. Il resto del traffico deve continuare ad andare a DB/NoSQL.",
     "obj_7_survive_60s": "Sopravvivi 60 secondi",

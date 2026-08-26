@@ -777,7 +777,7 @@ export const FR_TRANSLATIONS = {
     "obj_4_rep_above_90": "Réputation au-dessus de 90 %",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Tamponner les pics",
-    "level_5_scenario": "Votre trafic arrive en rafales — 5 secondes de calme, puis 20 requêtes d'un coup. Calcul ne suit pas et des requêtes sont perdues.",
+    "level_5_scenario": "Votre trafic arrive en rafales — 5 secondes de calme, puis 15 requêtes d'un coup. Calcul ne suit pas et des requêtes sont perdues.",
     "level_5_learn": "La File d'attente (max 200) tamponne les rafales pour que Calcul les traite à son rythme. Mais une file n'achète que du temps — elle n'ajoute aucun débit. La charge soutenue ici dépasse un Calcul Niveau 1 : améliorez aussi Calcul, sinon la file finira par saturer.",
     "level_5_debrief": "Les files lissent les pics mais ajoutent de la latence. Ne les utilisez pas pour des lectures à faible latence.",
     "obj_5_survive_90s": "Survivre 90 secondes",
@@ -786,7 +786,7 @@ export const FR_TRANSLATIONS = {
     "obj_5_rep_above_85": "Réputation au-dessus de 85 %",
     // -- Level 6: Scale Reads --
     "level_6_title": "Les lectures à l'échelle",
-    "level_6_scenario": "Un trafic API dominé par la lecture (45 % de READ). Une seule DB ne suit pas.",
+    "level_6_scenario": "Un trafic API dominé par la lecture (60 % de READ). Une seule DB ne suit pas.",
     "level_6_learn": "Le Réplica de lecture détourne le trafic READ de la DB principale. Calcul préfère automatiquement Réplica → NoSQL → SQL.",
     "level_6_debrief": "Le Réplica de lecture exige une connexion à une DB principale. Sans elle, les READ vers le réplica échouent.",
     "obj_6_survive_75s": "Survivre 75 secondes",
@@ -795,7 +795,7 @@ export const FR_TRANSLATIONS = {
     "obj_6_rep_above_85": "Réputation au-dessus de 85 %",
     // -- Level 7: Search Done Right --
     "level_7_title": "La recherche bien faite",
-    "level_7_scenario": "Une tempête de recherche frappe — 50 % de trafic SEARCH. La DB SQL s'écroule sous les requêtes en texte intégral, coûteuses.",
+    "level_7_scenario": "Une tempête de recherche frappe — 60 % de trafic SEARCH. La DB SQL s'écroule sous les requêtes en texte intégral, coûteuses.",
     "level_7_learn": "Le Moteur de recherche traite SEARCH 3× plus vite que la DB SQL. Calcul route automatiquement SEARCH → Moteur de recherche dès qu'il existe.",
     "level_7_debrief": "Le Moteur de recherche ne gère que SEARCH. Le reste du trafic doit continuer vers DB/NoSQL.",
     "obj_7_survive_60s": "Survivre 60 secondes",

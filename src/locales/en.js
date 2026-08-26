@@ -778,7 +778,7 @@ export const EN_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputation above 90%",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Buffer the Spikes",
-    "level_5_scenario": "Your traffic is bursty — quiet for 5 seconds, then 20 requests at once. Compute can't keep up and requests drop.",
+    "level_5_scenario": "Your traffic is bursty — quiet for 5 seconds, then 15 requests at once. Compute can't keep up and requests drop.",
     "level_5_learn": "Message Queue (max 200) buffers bursts so Compute processes them at its own pace. But a queue only buys time — it can't add throughput. Sustained load here exceeds Compute Tier 1, so upgrade Compute too, or the queue will eventually saturate.",
     "level_5_debrief": "Queues smooth peaks but add latency. Don't use them for low-latency reads.",
     "obj_5_survive_90s": "Survive 90 seconds",
@@ -787,7 +787,7 @@ export const EN_TRANSLATIONS = {
     "obj_5_rep_above_85": "Reputation above 85%",
     // -- Level 6: Scale Reads --
     "level_6_title": "Scale Reads",
-    "level_6_scenario": "Read-heavy API traffic (45% READ). One DB can't keep up.",
+    "level_6_scenario": "Read-heavy API traffic (60% READ). One DB can't keep up.",
     "level_6_learn": "Read Replica syphons READ traffic off the master DB. Compute prefers Replica → NoSQL → SQL automatically.",
     "level_6_debrief": "Read Replica needs a master DB connection. Without it, READs to the replica fail.",
     "obj_6_survive_75s": "Survive 75 seconds",
@@ -796,7 +796,7 @@ export const EN_TRANSLATIONS = {
     "obj_6_rep_above_85": "Reputation above 85%",
     // -- Level 7: Search Done Right --
     "level_7_title": "Search Done Right",
-    "level_7_scenario": "A Search Storm hits — 50% SEARCH traffic. SQL DB grinds to a halt under expensive full-text queries.",
+    "level_7_scenario": "A Search Storm hits — 60% SEARCH traffic. SQL DB grinds to a halt under expensive full-text queries.",
     "level_7_learn": "Search Engine handles SEARCH 3× faster than SQL DB. Compute auto-routes SEARCH → Search Engine when available.",
     "level_7_debrief": "Search Engine only handles SEARCH. Other traffic must keep going to DB/NoSQL.",
     "obj_7_survive_60s": "Survive 60 seconds",

@@ -777,7 +777,7 @@ export const ZH_TRANSLATIONS = {
     "obj_4_rep_above_90": "声誉高于 90%",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "缓冲流量高峰",
-    "level_5_scenario": "你的流量是突发式的——安静 5 秒，然后 20 个请求一齐涌来。计算节点跟不上，请求开始丢失。",
+    "level_5_scenario": "你的流量是突发式的——安静 5 秒，然后 15 个请求一齐涌来。计算节点跟不上，请求开始丢失。",
     "level_5_learn": "消息队列（上限 200）能缓冲突发，让计算节点按自己的节奏消化。但队列只是在买时间——它加不了吞吐量。这里的持续负载超出了 1 级计算节点的能力，所以还得升级计算节点，否则队列迟早被灌满。",
     "level_5_debrief": "队列能抹平峰值，但会增加延迟。别把它用在低延迟读取上。",
     "obj_5_survive_90s": "存活 90 秒",
@@ -786,7 +786,7 @@ export const ZH_TRANSLATIONS = {
     "obj_5_rep_above_85": "声誉高于 85%",
     // -- Level 6: Scale Reads --
     "level_6_title": "扩展读取",
-    "level_6_scenario": "读取密集的 API 流量（45% READ）。一个数据库撑不住了。",
+    "level_6_scenario": "读取密集的 API 流量（60% READ）。一个数据库撑不住了。",
     "level_6_learn": "只读副本把 READ 流量从主库分流走。计算节点会自动按 只读副本 → NoSQL → SQL 的顺序优先路由。",
     "level_6_debrief": "只读副本必须连着一个主库。没有这条连接，发到副本的 READ 会失败。",
     "obj_6_survive_75s": "存活 75 秒",
@@ -795,7 +795,7 @@ export const ZH_TRANSLATIONS = {
     "obj_6_rep_above_85": "声誉高于 85%",
     // -- Level 7: Search Done Right --
     "level_7_title": "把搜索做对",
-    "level_7_scenario": "搜索风暴来袭——50% 的流量是 SEARCH。昂贵的全文查询让 SQL 数据库陷入停滞。",
+    "level_7_scenario": "搜索风暴来袭——60% 的流量是 SEARCH。昂贵的全文查询让 SQL 数据库陷入停滞。",
     "level_7_learn": "搜索引擎处理 SEARCH 的速度是 SQL 数据库的 3 倍。有搜索引擎在场时，计算节点会自动把 SEARCH 路由过去。",
     "level_7_debrief": "搜索引擎只处理 SEARCH。其余流量仍要继续流向数据库/NoSQL。",
     "obj_7_survive_60s": "存活 60 秒",
