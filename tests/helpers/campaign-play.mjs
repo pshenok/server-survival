@@ -38,8 +38,21 @@ export const REAL_RANDOM = Math.random;
  * advances one second of game time per second of wall clock, so advancing fake
  * timers by dt*1000 is exactly what the browser does. Calibrated on L21, whose
  * reference solution wins 3/3 both with timers and without.
+ *
+ * STATE.timeScale is forced to 1 on every call for the same reason: play()
+ * calls startCampaignLevel() before this loop starts, and startCampaignLevel
+ * runs resetGame(), which parks timeScale at 0 (paused) exactly like a real
+ * run before the player presses Play. Most systems never notice a stuck
+ * pause — they only ever see the dt they are handed, and every dt here is
+ * non-zero regardless of timeScale. But circuit-breaker recovery,
+ * autoscaling, metrics and hints all gate explicitly on
+ * `STATE.timeScale === 0`, so without this they would freeze forever mid-run
+ * instead of recovering the way an unpaused run does. Setting it here rather
+ * than once in play() means any future caller that drives frame() directly
+ * inherits the fix instead of needing to know about it.
  */
 export function frame(dt) {
+    STATE.timeScale = 1;
     STATE.elapsedGameTime += dt;
     if (globalThis.window.campaign?.active) globalThis.window.campaign.tick(dt);
     if (vi.isFakeTimers()) vi.advanceTimersByTime(dt * 1000);

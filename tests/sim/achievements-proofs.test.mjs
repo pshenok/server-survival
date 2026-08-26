@@ -34,6 +34,16 @@ const store = () => globalThis.localStorage;
 // including the reputation clamp animate applies every frame, so the proof
 // never banks reputation above 100 the way a raw sim loop would.
 function frame(dt) {
+  // startCampaignLevel runs resetGame(), which parks STATE.timeScale at 0
+  // (paused) exactly like a real run before the player presses Play. Most
+  // systems never notice: they only ever see the dt they are handed, and
+  // every dt here is non-zero regardless of STATE.timeScale. But circuit-
+  // breaker recovery, autoscaling, metrics and hints all gate explicitly on
+  // STATE.timeScale === 0, so without this they would freeze forever mid-
+  // proof instead of recovering the way an unpaused run does. Set every
+  // frame rather than once after startCampaignLevel, since nothing else in
+  // this file can clobber it back once simulation is under way.
+  STATE.timeScale = 1;
   STATE.elapsedGameTime += dt;
   if (globalThis.window.campaign?.active) globalThis.window.campaign.tick(dt);
   STATE.services.forEach((s) => s.update(dt));
