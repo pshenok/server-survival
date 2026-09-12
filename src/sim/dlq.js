@@ -1,3 +1,4 @@
+import { observeExperiment } from "../lab/context.js";
 // Dead-Letter Queue mechanic (#197, Sandbox archetypes batch 1). The DLQ is
 // the only node that HOLDS already-failed requests instead of dropping them,
 // turning a hard failure into a recoverable cost. It sits outside the normal
@@ -97,6 +98,7 @@ export function tickDLQ(dlq, dt) {
         // being failures, and a metric that cannot see it rewards hiding the
         // outage rather than fixing it.
         recordOutcome("unanswered");
+        observeExperiment(req, "RECOVERED");
         removeRequest(req);
     }
 }

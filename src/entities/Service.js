@@ -1,3 +1,4 @@
+import { simulationRandom } from "../lab/context.js";
 import { CONFIG, TRAFFIC_TYPES } from "../config.js";
 import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
@@ -506,7 +507,7 @@ export class Service {
       // it eventually breaches (that is the "slips past" lesson). The latency
       // cost is the node's high processingTime, paid by every request it passes.
       if (this.type === "auth" && req.type === TRAFFIC_TYPES.MALICIOUS) {
-        if (Math.random() < (this.config.catchRate ?? 0.5)) {
+        if (simulationRandom() < (this.config.catchRate ?? 0.5)) {
           updateScore(req, "MALICIOUS_BLOCKED");
           removeRequest(req);
           continue;
@@ -703,7 +704,7 @@ export class Service {
             ? (1 - this.health / 100) * 0.5
             : 0;
         const totalFailChance = Math.min(1, failChance + healthPenalty);
-        if (Math.random() < totalFailChance) {
+        if (simulationRandom() < totalFailChance) {
           // Serverless pays per invocation even when the function errors out
           // (no-op for every other type)
           chargeServerlessInvocation(this);

@@ -1,3 +1,4 @@
+import { simulationRandom } from "../lab/context.js";
 // GPU Cluster mechanic (#87, The AI Wave). The GPU is the ONLY node that
 // BATCHES: it accumulates INFERENCE requests into `service.batch` — up to
 // `batchSize` or `batchWindowSec` of game time from the FIRST arrival — and
@@ -151,7 +152,7 @@ export function tickGpu(service, dt) {
             const risk = service.config.qualityRisk || 0;
             for (const req of done) {
                 finishRequest(req, "gpu", service);
-                if (Math.random() < risk) {
+                if (simulationRandom() < risk) {
                     // A bad answer: completed and paid, but the user noticed.
                     // Success-side, so it must still be VISIBLE — the amber
                     // soft badge — without ever touching the fail path.

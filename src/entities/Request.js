@@ -1,3 +1,4 @@
+import { simulationRandom } from "../lab/context.js";
 import { CONFIG } from "../config.js";
 import { STATE } from "../state.js";
 // Cyclic imports (game.js / core/actions.js ⇄ Request.js) are safe: these are
@@ -37,9 +38,9 @@ export class Request {
         // sandbox bursts and test-injected requests vary too.
         if (type === "INFERENCE") {
             this.genLength =
-                Math.random() < 0.7
-                    ? 0.6 + Math.random() * 0.4
-                    : 1.8 + Math.random() * 1.2;
+                simulationRandom() < 0.7
+                    ? 0.6 + simulationRandom() * 0.4
+                    : 1.8 + simulationRandom() * 1.2;
         }
 
         const color = this.typeConfig.color;

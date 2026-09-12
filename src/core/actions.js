@@ -1,3 +1,4 @@
+import { inExperiment, observeExperiment } from "../lab/context.js";
 // Simulation-core request lifecycle (#155 PR 4): spawn -> route -> score ->
 // finish/fail/throttle/remove, plus the load/upkeep helpers Service.js and
 // Request.js consume. Code moved verbatim from game.js.
@@ -110,6 +111,10 @@ function pickEntryNode(entryNodes, type) {
     const idx = (entryRRIndex[type] || 0) % candidates.length;
     entryRRIndex[type] = idx + 1;
     return candidates[idx];
+}
+
+function resetEntryRouting() {
+    for (const key of Object.keys(entryRRIndex)) delete entryRRIndex[key];
 }
 
 function spawnRequest() {
@@ -300,7 +305,8 @@ function updateScore(req, outcome) {
         }
     }
 
-    updateScoreUI();
+    observeExperiment(req, outcome);
+    if (!inExperiment()) updateScoreUI();
 }
 
 // `service` (optional third param, #194) is the finishing Service instance —
@@ -389,7 +395,8 @@ function failRequest(req, reason = null) {
         req,
         req.type === TRAFFIC_TYPES.MALICIOUS ? FAIL_REASONS.BREACH : reason
     );
-    setTimeout(() => removeRequest(req), 500);
+    if (inExperiment()) removeRequest(req);
+    else setTimeout(() => removeRequest(req), 500);
 }
 
 // Fail-fast attribution (#156). A node that found no candidate downstream
@@ -424,6 +431,7 @@ function failOrPark(req, service, reason = null) {
 // reflects a struggling Notification node. `req.failed` keeps Service.update()
 // from scoring this dispatch as a breaker success.
 function notifySilentFail(req, service) {
+    observeExperiment(req, "FAILED");
     req.failed = true;
     if (service && service.id) recordServiceError(service);
     STATE.reputation -= service?.config?.dissatisfaction || 0;
@@ -452,7 +460,8 @@ function throttleRequest(req, reason = null) {
     // Soft fail (#156): the badge paints this one amber, not red — the
     // gateway did its job, the player just hit the rate limit.
     spawnFailureBadge(req, reason);
-    setTimeout(() => removeRequest(req), 500);
+    if (inExperiment()) removeRequest(req);
+    else setTimeout(() => removeRequest(req), 500);
 }
 
 function removeRequest(req) {
@@ -501,6 +510,7 @@ export {
     notifySilentFail,
     removeRequest,
     routeRequestToEntry,
+    resetEntryRouting,
     spawnRequest,
     throttleRequest,
     updateScore,

@@ -1,3 +1,4 @@
+import { simulationRandom } from "../../lab/context.js";
 // Memory Cache job handler (#155 PR 9). Rolls the cache-hit chance, and on a
 // miss routes toward the request's destination, preferring specialized
 // services (search / replica / nosql before sql). Logic lifted unchanged from
@@ -33,7 +34,7 @@ export function process(service, job) {
   if (job.req.isCacheable) {
     const hitRate = effectiveHitRate(service, job.req);
 
-    if (Math.random() < hitRate) {
+    if (simulationRandom() < hitRate) {
       job.req.cached = true;
       STATE.sound.playSuccess();
       service.flashCacheHit();
