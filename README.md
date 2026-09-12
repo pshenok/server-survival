@@ -150,6 +150,21 @@ A fully customizable testing environment for experimenting with any architecture
 
 **No game over in Sandbox** - experiment freely!
 
+### A/B Architecture Laboratory
+
+Open **Sandbox → A/B laboratory** to compare two architecture snapshots under
+identical, seeded traffic. Save A, edit your board, save B, then compare timely
+responses, failures, p50/p95/p99 latency, queues and costs. Both runs use the
+actual game simulation, run independently of your board, and allow 30 seconds
+for outstanding work after traffic ends.
+
+Try the built-in **queue experiment**, write a hypothesis, switch between
+steady traffic and bursts, and export a JSON report or CSV metrics. Snapshots
+include service tiers and autoscaling settings and persist in your browser.
+
+See [the laboratory guide](docs/AB_LAB.md) for the first exercise, measurement
+definitions and model limitations.
+
 ### Share Your Architecture
 
 Built something you're proud of? The share panel exports your architecture two ways:
@@ -219,7 +234,7 @@ python3 -m http.server 8000    # then open http://localhost:8000
 
 There is still **zero build step** — the dev tooling is optional and for contributors only:
 
-- `npm install` once, then `npm run check` runs ESLint + the full Vitest suite (61 test files, 1087 tests).
+- `npm install` once, then `npm run check` runs ESLint + the full Vitest suite (64 test files, 1118 tests).
 - CI runs the same check on every PR.
 - The code is native ESM: `game.js` plus focused modules under `src/` (`sim/`, `core/`, `ui/`, `campaign/`, `persistence/`, `input/`).
 

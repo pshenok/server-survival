@@ -1,3 +1,4 @@
+import { isLabFrame } from "./src/lab/context.js";
 import { CONFIG, TRAFFIC_TYPES } from "./src/config.js";
 import { STATE } from "./src/state.js";
 import { i18n } from "./src/i18n.js";
@@ -861,6 +862,7 @@ function retryWithSameArchitecture() {
 // the link. The param is stripped from the URL bar either way, so reloads
 // don't re-trigger and saves don't confuse.
 setTimeout(() => {
+    if (isLabFrame) return;
     // Achievements (#158) boot wiring — in this deferred block, NOT the
     // module body: game.js's body can run mid-graph through the established
     // import cycles (achievements → circuit-breaker → metrics → events →

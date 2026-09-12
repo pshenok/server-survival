@@ -1,3 +1,4 @@
+import { inExperiment } from "../lab/context.js";
 // Educational failure badges (#156). When a request dies, a short floating
 // label rises over the node that dropped it — "No route", "Read-only replica",
 // "Queue full ×7" — and fades over ~1.5 s. Every failure becomes a teaching
@@ -136,6 +137,7 @@ function disposeBadge(badge) {
 // Both public spawns funnel through here so the aggregation, the cap
 // eviction and the THREE disposal discipline exist exactly once.
 function spawnBadgeAt(key, pos, reason) {
+    if (inExperiment()) return;
     // Aggregate: the same node failing the same way keeps ONE badge that
     // counts up and lives longer, instead of stacking unreadable duplicates.
     const existing = badges.get(key);
