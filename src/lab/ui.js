@@ -1,12 +1,12 @@
 import { STATE } from '../state.js';
 import { CONFIG } from '../config.js';
 import { i18n } from '../i18n.js';
-import { LAB_MESSAGES } from './messages.js';
 import { architectureCost, captureArchitecture, LAB_MODEL_VERSION, LAB_STORAGE_KEY,
     TYPES, validateArchitecture, validateScenario } from './scenario.js';
 import { runInFrame } from './transport.js';
 
-const t = key => (LAB_MESSAGES[i18n.currentLocale] || LAB_MESSAGES.en)[key];
+const t = key => i18n.t('lab_' + key);
+const number = (value, options = {}) => new Intl.NumberFormat(i18n.currentLocale, options).format(value);
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 const slots = { A: null, B: null };
@@ -60,7 +60,7 @@ function diagram(board) {
         const p = positions[i];
         const label = i === 0 ? 'WWW' : s.type;
         const color = i === 0 ? '#67e8f9' : '#' + CONFIG.colors[s.type].toString(16).padStart(6, '0');
-        return `<g><title>${escape(label)}${i ? ` · T${s.tier} · ×${s.instances}` : ''}</title><circle cx="${p.x}" cy="${p.y}" r="7" fill="${color}"/>${all.length <= 12 ? `<text x="${p.x}" y="${p.y + 22}" text-anchor="middle" fill="#cbd5e1" font-size="10">${escape(label)}</text>` : ''}</g>`;
+        return `<g><title>${escape(i ? i18n.t(s.type) : label)}${i ? ` · T${s.tier} · ×${s.instances}` : ''}</title><circle cx="${p.x}" cy="${p.y}" r="7" fill="${color}"/>${all.length <= 12 ? `<text x="${p.x}" y="${p.y + 22}" text-anchor="middle" fill="#cbd5e1" font-size="10">${escape(label)}</text>` : ''}</g>`;
     }).join('');
     return `<svg aria-hidden="true" viewBox="0 0 400 125">${lines}${nodes}</svg>`;
 }
@@ -85,13 +85,14 @@ function paintSlots() {
     for (const name of ['A', 'B']) {
         const board = slots[name];
         const target = $(`lab-slot-${name}`);
-        target.innerHTML = board ? `${diagram(board)}<p>${board.services.length} ${t('nodes')} · ${board.connections.length} ${t('links')} · $${architectureCost(board)}</p>` : `<p class="lab-empty">${t('empty')}</p>`;
+        target.innerHTML = board ? `${diagram(board)}<p>${t('nodes')}: ${number(board.services.length)} · ${t('links')}: ${number(board.connections.length)} · ${format('buildCost', architectureCost(board))}</p>` : `<p class="lab-empty">${t('empty')}</p>`;
     }
     $('lab-run').disabled = !slots.A || !slots.B;
     $('lab-sample').hidden = !!(slots.A || slots.B);
 }
 
 function render() {
+    dialog.lang = i18n.currentLocale;
     dialog.innerHTML = `<header class="lab-header"><div><h2 id="lab-title">${t('title')}</h2><p>${t('intro')}</p></div><button id="lab-close">${t('close')}</button></header>
     <div class="lab-body"><p>${t('instruction')}</p>
     <fieldset id="lab-controls"><div class="lab-variants">${['A', 'B'].map(name => `<section class="lab-variant lab-${name}"><h3>${name}</h3><div id="lab-slot-${name}"></div><button id="lab-capture-${name}">${t('capture')} ${name}</button></section>`).join('')}</div>
@@ -99,11 +100,11 @@ function render() {
     <label class="lab-hypothesis" for="lab-hypothesis">${t('hypothesis')}</label><textarea id="lab-hypothesis" maxlength="1000" rows="2" placeholder="${escape(t('placeholder'))}">${escape(hypothesis)}</textarea>
     <h3>${t('setup')}</h3><div class="lab-settings">
     <label>${t('profile')}<select id="lab-profile"><option value="steady">${t('steady')}</option><option value="bursts">${t('bursts')}</option></select></label>
-    <label>${t('duration')}<select id="lab-duration">${[30, 60, 120].map(n => `<option value="${n}">${n} ${t('seconds')}</option>`).join('')}</select></label>
+    <label>${t('duration')}<select id="lab-duration">${[30, 60, 120].map(n => `<option value="${n}">${number(n)} ${t('seconds')}</option>`).join('')}</select></label>
     <label>${t('rate')}<input id="lab-rps" type="number" min="0.5" max="50" step="0.5" value="${scenario.rps}" required></label>
     <label>${t('seed')}<input id="lab-seed" type="number" min="0" max="4294967295" step="1" value="${scenario.seed}" required></label>
     </div><p class="lab-note">${t('burstHint')}</p>
-    <h4>${t('mix')}</h4><div class="lab-mix">${TYPES.map(type => `<label>${type}<input id="lab-mix-${type}" type="number" min="0" max="100" step="1" value="${scenario.mix[type]}" required></label>`).join('')}</div>
+    <h4>${t('mix')}</h4><div class="lab-mix">${TYPES.map(type => `<label>${escape(i18n.t('traffic_' + (type === 'MALICIOUS' ? 'attack' : type.toLowerCase())))}<input id="lab-mix-${type}" type="number" min="0" max="100" step="1" value="${scenario.mix[type]}" required></label>`).join('')}</div>
     <p class="lab-note">${t('mixHint')}</p></fieldset>
     <div class="lab-actions"><button id="lab-run" class="lab-primary">${t('run')}</button><button id="lab-cancel" hidden>${t('cancel')}</button><button id="lab-export" disabled>${t('export')}</button><button id="lab-csv" disabled>${t('csv')}</button></div>
     <p id="lab-status" role="status" aria-live="polite"></p><progress id="lab-progress" max="100" value="0" hidden aria-label="${escape(t('run'))}"></progress>
@@ -179,6 +180,11 @@ async function compare() {
         $('lab-run').disabled = false;
         $('lab-cancel').hidden = true;
         $('lab-progress').hidden = true;
+        if (dialog.open && dialog.lang !== i18n.currentLocale) {
+            const finalStatus = $('lab-status').textContent;
+            render();
+            $('lab-status').textContent = finalStatus;
+        }
     }
 }
 
@@ -187,10 +193,10 @@ export const REPORT_METRICS = ['arrivals', 'goodput', 'completed', 'onTime', 'la
     'costPer1000', 'attacks', 'blocked', 'breaches', 'pendingAttacks'];
 function format(key, value) {
     if (value === null) return t('missing');
-    if (key === 'goodput') return `${(value * 100).toFixed(1)}%`;
-    if (['p50', 'p95', 'p99'].includes(key)) return `${value.toFixed(2)} ${t('seconds')}`;
-    if (key.toLowerCase().includes('cost')) return `$${value.toFixed(2)}`;
-    return String(value);
+    if (key === 'goodput') return number(value, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    if (['p50', 'p95', 'p99'].includes(key)) return `${number(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${t('seconds')}`;
+    if (key.toLowerCase().includes('cost')) return number(value, { style: 'currency', currency: 'USD' });
+    return number(value);
 }
 
 function queueChart() {
@@ -203,7 +209,7 @@ function queueChart() {
         return `<polyline points="${points}" fill="none" stroke="${name === 'A' ? '#7dd3fc' : '#fdba74'}" stroke-width="2.5" ${name === 'B' ? 'stroke-dasharray="7 4"' : ''}/>`;
     }).join('');
     const end = x(results.A.scenario.duration);
-    return `<svg role="img" aria-label="${escape(t('queueChart'))}" viewBox="0 0 760 165"><path d="M35 20V130H725" stroke="#64748b" fill="none"/><line x1="${end}" y1="20" x2="${end}" y2="130" stroke="#94a3b8" stroke-dasharray="3 5"/>${lines}<g fill="#cbd5e1" font-size="12"><text x="4" y="25">${maximum}</text><text x="14" y="135">0</text><text x="35" y="153">0</text><text x="${end - 8}" y="153">${results.A.scenario.duration}</text><text x="710" y="153">${horizon}s</text></g></svg>`;
+    return `<svg role="img" aria-label="${escape(t('queueChart'))}" viewBox="0 0 760 165"><path d="M35 20V130H725" stroke="#64748b" fill="none"/><line x1="${end}" y1="20" x2="${end}" y2="130" stroke="#94a3b8" stroke-dasharray="3 5"/>${lines}<g fill="#cbd5e1" font-size="12"><text x="4" y="25">${number(maximum)}</text><text x="14" y="135">${number(0)}</text><text x="35" y="153">${number(0)}</text><text x="${end - 8}" y="153">${number(results.A.scenario.duration)}</text><text x="725" y="153" text-anchor="end">${number(horizon)} ${t('seconds')}</text></g></svg>`;
 }
 function paintResults() {
     $('lab-results').innerHTML = `<h3>${t('results')}</h3><div class="lab-table-wrap"><table><thead><tr><th scope="col">${t('metric')}</th><th scope="col">A</th><th scope="col">B</th></tr></thead><tbody>${REPORT_METRICS.map(key => `<tr><th scope="row">${t(key)}</th><td>${format(key, results.A[key])}</td><td>${format(key, results.B[key])}</td></tr>`).join('')}</tbody></table></div><h4>${t('queueChart')}</h4>${queueChart()}<p class="lab-note">${t('chartHint')}</p><p class="lab-reflect">${t('reflect')}</p>`;

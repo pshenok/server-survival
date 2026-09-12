@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { architectureCost, captureArchitecture, createRecorder, createSchedule, percentile,
     seededRandom, validateArchitecture, validateScenario } from '../src/lab/scenario.js';
-import { LAB_MESSAGES } from '../src/lab/messages.js';
+import { readFileSync } from 'node:fs';
+import { LOCALES, loadLocale } from './helpers/load-globals.mjs';
 const settings = { seed: 42, duration: 30, profile: 'bursts', rps: 5, mix: { READ: 80, INFERENCE: 20 } };
 
 describe('a common experimental workload', () => {
@@ -71,7 +72,15 @@ describe('honest experiment accounting', () => {
         expect(createRecorder([]).report()).toMatchObject({ goodput: null, p50: null, p95: null, p99: null });
         expect(percentile([3, 1, 2], 0.5)).toBe(2);
     });
-    it('keeps Russian and English lab copy complete', () => {
-        expect(Object.keys(LAB_MESSAGES.ru).sort()).toEqual(Object.keys(LAB_MESSAGES.en).sort());
+    it('translates every lab control and report metric through the shared dictionaries', async () => {
+        const source = readFileSync(new URL('../src/lab/ui.js', import.meta.url), 'utf8');
+        const controls = [...source.matchAll(/\bt\('([^']+)'\)/g)].map(m => m[1]);
+        const metrics = [...source.match(/REPORT_METRICS = \[([^\]]+)\]/s)[1].matchAll(/'([^']+)'/g)].map(m => m[1]);
+        for (const locale of LOCALES) {
+            const dict = await loadLocale(locale);
+            for (const key of [...controls, ...metrics]) {
+                expect(dict['lab_' + key], locale.code + ': ' + key).toBeTruthy();
+            }
+        }
     });
 });

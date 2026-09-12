@@ -8,8 +8,10 @@ Write a hypothesis, choose a workload and run the comparison. The laboratory
 pauses the board. Closing or cancelling leaves that board in place and paused.
 Snapshots (including tiers, autoscaling flags and ready fleet sizes), the last
 valid workload and the hypothesis persist in this browser. Reports can be
-exported as JSON; the numerical comparison is also available as CSV. English
-and Russian UI copy ship initially; other game locales use English in the lab.
+exported as JSON; the numerical comparison is also available as CSV.
+The lab uses the shared translation dictionaries for all 11 game languages,
+with English as the default. Displayed numbers follow the selected locale;
+JSON and CSV keep stable English field names and numeric values for analysis.
 
 ## First laboratory exercise: can a queue save burst traffic?
 
