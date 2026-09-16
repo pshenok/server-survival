@@ -267,8 +267,10 @@ describe("and the other levels speed could never carry", () => {
     // three stars. (The other fourteen were never blocked — their speed star
     // was reachable all along.)
     //
-    // L9 is the exception and it is NOT a gap in this file: it cannot be won
-    // at all. See the block below, and #276.
+    // L9 rejoined this set once its gateway was recalibrated (#276): a
+    // waf -> apigw -> alb wiring with the tier throttles the burst instead of
+    // hard-failing it, and the flawless-bonus path (rep >= 80 and >= 90) pays
+    // the third star.
     const BUILDS = {
         3: () => {
             // STATIC belongs at the edge, not on the origin.
@@ -288,6 +290,19 @@ describe("and the other levels speed could never carry", () => {
             // NoSQL takes the writes off the SQL box.
             const nosql = placeAt("nosql", 12, 10);
             createConnection(svc("compute").id, nosql.id);
+            svc("compute").upgrade();
+        },
+        9: () => {
+            // The gateway between the balancer and Compute, with the level's
+            // own pre-built waf -> alb edge removed so ALL traffic is forced
+            // through the limiter (otherwise the balancer round-robins around
+            // it). A gateway sits BEFORE a balancer: waf -> apigw -> alb.
+            const waf = svc("waf");
+            const alb = svc("alb");
+            deleteConnection(waf.id, alb.id);
+            const gw = placeAt("apigw", -15, 8);
+            createConnection(waf.id, gw.id);
+            createConnection(gw.id, alb.id);
             svc("compute").upgrade();
         },
         11: () => {
@@ -357,44 +372,4 @@ describe("and the other levels speed could never carry", () => {
             }
         });
     }
-
-    it("L9 cannot be three-starred because it cannot be WON (#276)", () => {
-        // This proof used to pass, and it was wrong twice over.
-        //
-        // First: the harness ran a synchronous loop, so the setTimeout-
-        // scheduled `burstPattern` never fired and L9 played as though it
-        // had no bursts. Fixed in #277 — the harness now advances fake
-        // timers so the burst actually lands.
-        //
-        // Second, found while trying to fix #276 itself: `alb -> apigw` is
-        // not a legal edge (a gateway sits BEFORE a balancer, never after
-        // one — see isValidEdge in src/sim/topology.js). createConnection()
-        // rejects an invalid pair silently, with no exception, so the
-        // gateway this test built was never actually wired to receive any
-        // traffic at all. Every failure measured against that build was a
-        // disconnected node's failure, not the gateway's.
-        //
-        // With the gateway CORRECTLY wired (waf -> apigw -> alb, and the
-        // level's own pre-built waf -> alb edge removed so the balancer
-        // cannot round-robin around it), the verdict is unchanged — L9 is
-        // still lost — but now for a real and much narrower reason: the
-        // gateway's rate counter climbs to 27-30 against its own limit of
-        // 30 during the burst, so it is a near miss on timing rather than
-        // simple inertness. Reputation lands at 28-29 against a floor of
-        // 30, across the tier upgrade, auto-scaling, and a tier-2 gateway,
-        // separately and together (measured, not assumed).
-        //
-        // Asserted as a LOSS on purpose. When #276 is fixed this turns red,
-        // and the fix is to move L9 back into the table above.
-        const r = play(9, 1, () => {
-            const waf = svc("waf");
-            const alb = svc("alb");
-            deleteConnection(waf.id, alb.id);
-            const gw = placeAt("apigw", -15, 8);
-            createConnection(waf.id, gw.id);
-            createConnection(gw.id, alb.id);
-            svc("compute").upgrade();
-        });
-        expect(r.outcome, "L9 is expected to lose until #276 lands").toBe("lose");
-    });
 });

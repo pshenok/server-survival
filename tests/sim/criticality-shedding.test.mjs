@@ -112,10 +112,16 @@ describe("traffic classes are declared, not discovered (#248)", () => {
 
 describe("THE LESSON: the shed order is a decision, not an accident", () => {
   it("at mild overload the policy earns MORE than shedding blindly", () => {
-    // 24 rps against a tier-1 gateway's 30 rps limit: the cheap class is
-    // refused early, which frees downstream slots for traffic worth more.
-    const blind = runAt(24, { policy: BLIND });
-    const tiered = runAt(24);
+    // Derived from the gateway's OWN limit, not a hardcoded rps, so the test
+    // measures the mechanism at a fixed overload RATIO and can never drift
+    // from the config the way it did when the tier-1 limit moved 30 -> 15
+    // (#276). ~1.5x the limit: past the SHEDDABLE/STANDARD thresholds (0.6 /
+    // 0.85 of the limit) so the cheap classes are refused early, freeing
+    // downstream slots for traffic worth more.
+    const limit = CONFIG.services.apigw.rateLimit;
+    const rps = Math.round(1.5 * limit);
+    const blind = runAt(rps, { policy: BLIND });
+    const tiered = runAt(rps);
     const fmt = (r) =>
       Object.entries(r.served).filter(([t]) => EVEN_MIX[t] > 0)
         .map(([t, n]) => `${t}=${n}`).join(" ");
@@ -128,15 +134,18 @@ describe("THE LESSON: the shed order is a decision, not an accident", () => {
   });
 
   it("at DEEP overload it protects what was declared critical — and that costs something", () => {
-    // 50 rps. Here the honest result is a trade, not a free win: CRITICAL
+    // ~2x the gateway's own limit (derived, not hardcoded — see the mild
+    // test). Here the honest result is a trade, not a free win: CRITICAL
     // survival is bought with SHEDDABLE traffic AND with some SEARCH, which
     // is STANDARD despite paying $1.20. That is the consequence of
     // classifying by ROLE (a transaction outranks a query) rather than by
     // price list, and it is the decision the player is being taught to make
-    // in advance. Measured: UPLOAD 5 -> 8, STATIC 6 -> 3, income 33.38 ->
-    // 32.51. A policy is a choice about what to lose, not a way to lose less.
-    const blind = runAt(50, { policy: BLIND });
-    const tiered = runAt(50);
+    // in advance. A policy is a choice about what to lose, not a way to lose
+    // less.
+    const limit = CONFIG.services.apigw.rateLimit;
+    const rps = Math.round(2.0 * limit);
+    const blind = runAt(rps, { policy: BLIND });
+    const tiered = runAt(rps);
     const fmt = (r) =>
       Object.entries(r.served).filter(([t]) => EVEN_MIX[t] > 0)
         .map(([t, n]) => `${t}=${n}`).join(" ");
