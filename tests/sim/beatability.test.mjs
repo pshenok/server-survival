@@ -18,7 +18,7 @@
 //   L6     Replica     5/5          5/5        0/5         0/5
 //   L7     Search      5/5          5/5        0/5         0/5
 //   L8     NoSQL       5/5          5/5        0/5         0/5
-//   L9     API GW      0/5          0/5        0/5         0/5
+//   L9     API GW      5/5          0/5        0/5         0/5
 //   L12    2nd WAF     5/5          0/5        0/5         0/5
 //
 // L4 still passes on an untouched board. On three more (6, 7, 8) the taught
@@ -38,7 +38,13 @@
 // each lose 5/5. It got there by making its own briefing true — "your site
 // went viral" is a spike, and it did not have one.
 //
-// L9 is broken rather than hollow — no legal build wins it at all (#276).
+// L9 was BROKEN — no legal build won it — until its gateway was recalibrated
+// (#276): the tier-1 API Gateway limit sat at 30 req/s, above even a tier-3
+// Compute's 30 req/s ceiling, so the limiter never engaged and the burst
+// reached Compute intact. Dropped to 15 (src/config.js, campaign-tier only —
+// survival's upgraded tiers are untouched), the gateway now throttles the
+// burst instead of letting it hard-fail, and the level's own lesson finally
+// binds: reference build 5/5, gateway withheld 0/5.
 //
 // An earlier revision of this file recorded L5 as hollow and L9 as winnable.
 // Both were wrong for the same reason: `burstPattern` schedules its spawns on
@@ -46,10 +52,11 @@
 // levels were measured as if they had no bursts. campaign-play.mjs now
 // advances timers per frame, calibrated on L21.
 //
-// This file does not retune anything. Retuning shipped levels moves the
-// difficulty of a campaign people have already played, and that is a decision
-// to take deliberately. What it does is pin the table above so the hollow set
-// can only ever SHRINK, and prove the reference solutions still win.
+// The only shipped tuning this suite's history has touched is L3's spike
+// (#254) and L9's gateway limit (#276), each with its own reason recorded in
+// the level or the config. Everything else it pins rather than moves: the
+// hollow set can only ever SHRINK, and the reference solutions must keep
+// winning.
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { achievements } from "../../src/achievements/achievements.js";
 import { createConnection, deleteConnection } from "../../src/sim/topology.js";
@@ -173,10 +180,6 @@ const LEVELS = {
 // (#276) — broken is a different state from hollow, and it is asserted apart.
 const KNOWN_HOLLOW = new Set([4, 6, 7, 8]);
 
-// Winnable by nobody (#276). Kept out of the hollow set: a level that no build
-// can beat is a different defect from one that any build can.
-const BROKEN = 9;
-
 function winRate(id, build) {
     return SEEDS.filter((seed) => play(Number(id), seed, build).outcome === "win").length;
 }
@@ -189,7 +192,6 @@ afterEach(() => {
 
 describe("every reference solution wins the level it belongs to (#254)", () => {
     for (const [id, level] of Object.entries(LEVELS)) {
-        if (Number(id) === BROKEN) continue;
         it(`L${id} — ${level.teaches}, played as briefed`, () => {
             expect(winRate(id, () => {
                 level.taught();
@@ -197,21 +199,11 @@ describe("every reference solution wins the level it belongs to (#254)", () => {
             })).toBe(SEEDS.length);
         });
     }
-
-    it(`L${BROKEN} has no reference solution — it cannot be won (#276)`, () => {
-        // Asserted as a loss on purpose, so fixing #276 turns this red and the
-        // level rejoins the loop above. Its own burst puts ~29 requests into
-        // the peak second against a gateway limit of 30: the limiter never
-        // engages, a circuit breaker opens at t=8, and reputation crosses the
-        // floor by t=20. Measured across seven builds including auto-scaling.
-        expect(winRate(BROKEN, () => { LEVELS[BROKEN].taught(); tier(); })).toBe(0);
-    });
 });
 
 describe("and the level is LOST when its own mechanic is ignored", () => {
     for (const [id, level] of Object.entries(LEVELS)) {
         const n = Number(id);
-        if (n === BROKEN) continue;
         it(`L${id} — ${level.teaches} withheld, everything else the same`, () => {
             const wins = winRate(id, tier);
             if (KNOWN_HOLLOW.has(n)) {
@@ -228,7 +220,6 @@ describe("and the level is LOST when its own mechanic is ignored", () => {
     it("the hollow set never grows", () => {
         const measured = Object.keys(LEVELS)
             .map(Number)
-            .filter((id) => id !== BROKEN)
             .filter((id) => winRate(id, tier) > 0);
         const unexpected = measured.filter((id) => !KNOWN_HOLLOW.has(id));
         expect(
@@ -271,7 +262,8 @@ describe("the Compute tier is the lever chapter 2 actually turns on", () => {
         // Asserting the defect so the fix has something to turn red. When a
         // level here stops passing untouched, this list is what to edit — L3
         // just did. L5 and L9 are probed and expected to be absent: L5's burst
-        // makes its queue load-bearing, and L9 cannot be won by anyone.
+        // makes its queue load-bearing, and L9's recalibrated gateway (#276)
+        // means an untouched board drowns.
         expect(untouched).toEqual([4]);
     });
 });

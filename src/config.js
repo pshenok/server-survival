@@ -262,24 +262,39 @@ export const CONFIG = {
       },
     },
     apigw: {
-      // Rate limits and capacity bumped 2026-06 (#166): the previous ceiling
-      // (T3 rateLimit=80 RPS, capacity=80) throttled legit traffic at endgame
-      // load (~200 RPS). Players learned to remove the gateway to survive,
-      // inverting the intended lesson (throttle > hard-fail). New ceilings
-      // scale with the ×4 RPS milestone so the gateway stays useful late-game.
+      // Two audiences, two calibrations (#276, #274).
+      //
+      // Tier 2/3 serve SURVIVAL endgame, where a scaled-out fleet handles
+      // ~200 RPS and the gateway must not throttle traffic the fleet could
+      // serve — the #166 lesson: a limit set below real downstream capacity
+      // makes players remove the gateway to survive, inverting "throttle >
+      // hard-fail". So T2/T3 stay high (80/200), scaling with the ×4 RPS
+      // milestone. These are the tiers a survival player upgrades into.
+      //
+      // Tier 1 (the BASE rateLimit — a placed gateway reads this until its
+      // first upgrade; tiers[0] is never read at runtime) serves CAMPAIGN
+      // levels, where the gateway sits in front of a single un-scaled Compute
+      // (tier-1 = 6.7 req/s, tier-2 = 16.7). At the old 30 the limiter sat
+      // ABOVE even a tier-3 Compute's ceiling, so on L9 the burst reached
+      // Compute intact, tripped its breaker, and no build could win (#276 —
+      // reproduced by two players, #162/#295). At 15 the limiter binds just
+      // below a tier-2 Compute's throughput: the burst is throttled (a soft
+      // -0.2 rep hit) instead of hard-failing, which is exactly the lesson the
+      // level teaches. Measured: L9 reference build 0/10 -> 10/10, tier-only
+      // still 0/10.
       name: "API Gateway",
       cost: 70,
       type: "apigw",
       processingTime: 30,
       capacity: 60,
       upkeep: 8,
-      rateLimit: 30,
+      rateLimit: 15,
       tooltip: {
         upkeep: "Medium",
         desc: "<b>API Gateway.</b> Rate limits traffic. Throttled requests lose less reputation than failures.",
       },
       tiers: [
-        { level: 1, capacity: 60,  rateLimit: 30,  cost: 0 },
+        { level: 1, capacity: 60,  rateLimit: 15,  cost: 0 },
         { level: 2, capacity: 100, rateLimit: 80,  cost: 120 },
         { level: 3, capacity: 160, rateLimit: 200, cost: 200 },
       ],
