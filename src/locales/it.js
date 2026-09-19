@@ -777,7 +777,7 @@ export const IT_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputazione sopra il 90%",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Bufferizza i Picchi",
-    "level_5_scenario": "Il tuo traffico è a raffiche — 5 secondi di quiete, poi 15 richieste tutte insieme. Compute non tiene il passo e le richieste vanno perse.",
+    "level_5_scenario": "Il tuo traffico non si ferma mai — un flusso costante, e ogni 5 secondi altre 15 richieste tutte insieme. Compute non tiene il passo e le richieste vanno perse.",
     "level_5_learn": "La Coda di Messaggi (max 200) bufferizza le raffiche, così Compute le elabora al proprio ritmo. Ma una coda compra solo tempo — non aggiunge throughput. Qui il carico sostenuto supera un Compute di livello 1: aggiorna anche Compute, o prima o poi la coda si saturerà.",
     "level_5_debrief": "Le code attenuano i picchi ma aggiungono latenza. Non usarle per letture a bassa latenza.",
     "obj_5_survive_90s": "Sopravvivi 90 secondi",
