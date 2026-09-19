@@ -778,7 +778,7 @@ export const EN_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputation above 90%",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Buffer the Spikes",
-    "level_5_scenario": "Your traffic is bursty — quiet for 5 seconds, then 15 requests at once. Compute can't keep up and requests drop.",
+    "level_5_scenario": "Your traffic never lets up — a steady stream, with another 15 requests landing all at once every 5 seconds. Compute can't keep up and requests drop.",
     "level_5_learn": "Message Queue (max 200) buffers bursts so Compute processes them at its own pace. But a queue only buys time — it can't add throughput. Sustained load here exceeds Compute Tier 1, so upgrade Compute too, or the queue will eventually saturate.",
     "level_5_debrief": "Queues smooth peaks but add latency. Don't use them for low-latency reads.",
     "obj_5_survive_90s": "Survive 90 seconds",

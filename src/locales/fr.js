@@ -777,7 +777,7 @@ export const FR_TRANSLATIONS = {
     "obj_4_rep_above_90": "Réputation au-dessus de 90 %",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Tamponner les pics",
-    "level_5_scenario": "Votre trafic arrive en rafales — 5 secondes de calme, puis 15 requêtes d'un coup. Calcul ne suit pas et des requêtes sont perdues.",
+    "level_5_scenario": "Votre trafic ne faiblit jamais — un flux constant, et toutes les 5 secondes, 15 requêtes de plus arrivent d'un coup. Calcul ne suit pas et des requêtes sont perdues.",
     "level_5_learn": "La File d'attente (max 200) tamponne les rafales pour que Calcul les traite à son rythme. Mais une file n'achète que du temps — elle n'ajoute aucun débit. La charge soutenue ici dépasse un Calcul Niveau 1 : améliorez aussi Calcul, sinon la file finira par saturer.",
     "level_5_debrief": "Les files lissent les pics mais ajoutent de la latence. Ne les utilisez pas pour des lectures à faible latence.",
     "obj_5_survive_90s": "Survivre 90 secondes",
