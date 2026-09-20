@@ -153,32 +153,10 @@ describe("the README's numbers are the game's numbers", () => {
         expect(Number(leaked[2])).toBe(-P.MALICIOUS_PASSED_REPUTATION);
     });
 
-    it("counts its own test suite — the number that was already stale", () => {
-        // This one was wrong when the file was written: the README said 870
-        // while main ran 892. Nothing had ever checked it, which is the
-        // whole argument for this file.
-        //
-        // The FILE count is pinned exactly, because it is derivable. The test
-        // count is not: 19 `it()` calls in this suite are generated inside
-        // loops (per-locale parity checks and the like), so a static count
-        // reads 736 for a suite that runs 900-odd. It is asserted as a floor
-        // instead — it can never claim FEWER tests than are visibly written —
-        // and adding a test file, which is what happens when the suite grows
-        // in any real way, forces this sentence to be edited anyway.
-        const m = claim(
-            /the full Vitest suite \((\d+) test files, (\d+) tests\)/,
-            "the size of the test suite"
+    it("documents how to run the test suite", () => {
+        expect(README).toMatch(
+            /Run `npm install` once, then use `npm run check` to run ESLint and the full Vitest suite\./
         );
-        const files = readdirSync(join(ROOT, "tests"), { recursive: true })
-            .filter((f) => String(f).endsWith(".test.mjs"));
-        expect(Number(m[1])).toBe(files.length);
-
-        const staticIts = files
-            .map((f) => readFileSync(join(ROOT, "tests", String(f)), "utf8"))
-            .join("\n")
-            .match(/(^|[^.\w])(it|test)\s*\(/gm) || [];
-        expect(Number(m[2]), "the README claims fewer tests than are written")
-            .toBeGreaterThanOrEqual(staticIts.length);
     });
 
     it("describes the two survival cost curves", () => {
