@@ -1,3 +1,4 @@
+import { simulationRandom } from "../../lab/context.js";
 // CDN job handler (#155 PR 9). High cache hit rate for static content; on a
 // miss forwards to the connected origin (S3 or whatever is wired). Logic
 // lifted unchanged from the per-type if-chain in Service.update().
@@ -12,7 +13,7 @@ export function process(service, job) {
     const hitRate = service.config.cacheHitRate || 0.95;
 
     // CDN Cache Hit
-    if (Math.random() < hitRate) {
+    if (simulationRandom() < hitRate) {
       job.req.cached = true;
       STATE.sound.playSuccess();
       service.flashCacheHit();

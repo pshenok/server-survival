@@ -349,3 +349,63 @@ body {
     transform: translateX(0);
   }
 }
+
+/* Laboratory: two architectures share one set of experimental conditions. */
+#open-lab { width: 100%; margin-bottom: 12px; padding: 9px 12px; border: 1px solid #64748b; border-radius: 6px; color: #e2e8f0; background: #1e293b; }
+#lab-dialog { color-scheme: dark; width: min(1000px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 0; border: 1px solid #64748b; border-radius: 12px; color: #e2e8f0; background: #0f172a; overflow: auto; font: 14px/1.5 system-ui, sans-serif; }
+#lab-dialog::backdrop { background: rgb(0 0 0 / 75%); }
+#lab-dialog * { box-sizing: border-box; }
+#lab-dialog .lab-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 26px; border-bottom: 1px solid #334155; }
+#lab-dialog h2 { font-size: 25px; font-weight: 650; margin: 0 0 4px; }
+#lab-dialog h3 { font-size: 18px; font-weight: 650; margin: 20px 0 10px; }
+#lab-dialog h4 { margin: 15px 0 8px; font-weight: 600; }
+#lab-dialog p { margin: 8px 0 14px; max-width: 85ch; }
+#lab-dialog .lab-header p { margin: 0; color: #cbd5e1; }
+#lab-dialog .lab-body { padding: 10px 26px 24px; }
+#lab-dialog fieldset { border: 0; padding: 0; min-width: 0; }
+#lab-dialog button { border: 1px solid #64748b; border-radius: 6px; padding: 9px 13px; background: #1e293b; color: #f1f5f9; font: inherit; cursor: pointer; }
+#lab-dialog button:hover:enabled, #open-lab:hover { background: #334155; }
+#lab-dialog button:disabled { opacity: .45; cursor: default; }
+#lab-dialog :focus-visible, #open-lab:focus-visible { outline: 2px solid #bae6fd; outline-offset: 3px; }
+#lab-dialog .lab-primary { background: #075985; border-color: #38bdf8; }
+#lab-dialog .lab-secondary { margin-bottom: 14px; }
+#lab-dialog .lab-variants { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 18px 0; }
+#lab-dialog .lab-variant { border-top: 3px solid #7dd3fc; padding: 0 14px 14px; background: #172033; min-width: 0; }
+#lab-dialog .lab-B { border-top-color: #fdba74; }
+#lab-dialog .lab-variant h3 { margin: 10px 0 0; font-size: 22px; }
+#lab-dialog .lab-variant svg { width: 100%; display: block; }
+#lab-dialog .lab-variant p { color: #cbd5e1; }
+#lab-dialog .lab-empty { min-height: 105px; display: flex; align-items: center; }
+#lab-dialog .lab-settings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+#lab-dialog .lab-mix { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+#lab-dialog label { display: block; color: #cbd5e1; font-size: 13px; }
+#lab-dialog input, #lab-dialog select, #lab-dialog textarea { display: block; width: 100%; margin-top: 6px; padding: 9px; border: 1px solid #64748b; border-radius: 5px; background: #0b1220; color: #f1f5f9; font: inherit; }
+#lab-dialog textarea { resize: vertical; }
+#lab-dialog .lab-note { color: #94a3b8; font-size: 12px; }
+#lab-dialog .lab-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 10px; }
+#lab-dialog [hidden] { display: none !important; }
+#lab-dialog #lab-status { min-height: 22px; color: #bae6fd; }
+#lab-dialog progress { width: 100%; height: 8px; accent-color: #38bdf8; }
+#lab-dialog .lab-table-wrap { overflow-x: auto; }
+#lab-dialog table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+#lab-dialog th, #lab-dialog td { padding: 9px 12px; border-bottom: 1px solid #334155; }
+#lab-dialog th { text-align: left; font-weight: 400; }
+#lab-dialog thead th { font-weight: 650; background: #1e293b; }
+#lab-dialog td, #lab-dialog thead th:not(:first-child) { text-align: right; width: 22%; }
+#lab-dialog td:nth-child(2), #lab-dialog thead th:nth-child(2) { color: #7dd3fc; }
+#lab-dialog td:nth-child(3), #lab-dialog thead th:nth-child(3) { color: #fdba74; }
+#lab-dialog .lab-reflect { border-left: 3px solid #94a3b8; padding: 4px 14px; }
+#lab-dialog .lab-method { border-top: 1px solid #334155; padding-top: 15px; margin-top: 15px; color: #cbd5e1; }
+#lab-dialog summary { cursor: pointer; }
+@media (max-width: 650px) {
+    #lab-dialog .lab-header { padding: 16px; align-items: flex-start; }
+    #lab-dialog .lab-header h2 { font-size: 21px; }
+    #lab-dialog .lab-header button { max-width: 130px; flex-shrink: 0; }
+    #lab-dialog .lab-body { padding: 8px 16px 20px; }
+    #lab-dialog .lab-variants { grid-template-columns: 1fr; gap: 12px; }
+    #lab-dialog .lab-settings { grid-template-columns: 1fr 1fr; }
+    #lab-dialog .lab-mix { grid-template-columns: repeat(3, 1fr); }
+    #lab-dialog th, #lab-dialog td { padding: 8px 5px; }
+}
+/* Keep the lab entry and sandbox controls reachable on short displays. */
+#sandboxPanel { max-height: calc(100dvh - 120px); overflow-y: auto; }
