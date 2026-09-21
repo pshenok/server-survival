@@ -812,7 +812,7 @@ export const HI_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputation 90% से ऊपर",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Buffer the Spikes",
-    "level_5_scenario": "आपका traffic bursty है — 5 सेकंड शांति, फिर एक साथ 15 requests। Compute तालमेल नहीं बिठा पाता और requests गिरने लगती हैं।",
+    "level_5_scenario": "आपका traffic कभी थमता नहीं — एक लगातार धारा, और हर 5 सेकंड में साथ में 15 requests एक साथ आती हैं। Compute तालमेल नहीं बिठा पाता और requests गिरने लगती हैं।",
     "level_5_learn": "Message Queue (max 200) bursts को buffer करती है, ताकि Compute उन्हें अपनी रफ़्तार से process कर सके। पर queue सिर्फ़ समय खरीदती है — throughput नहीं जोड़ सकती। यहाँ sustained load Compute Tier 1 से ज़्यादा है, इसलिए Compute भी upgrade करें, वरना queue देर-सबेर भर जाएगी।",
     "level_5_debrief": "Queues peaks को शांत करती हैं, पर latency जोड़ती हैं। Low-latency reads के लिए इन्हें इस्तेमाल न करें।",
     "obj_5_survive_90s": "90s टिके रहें",

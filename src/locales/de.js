@@ -777,7 +777,7 @@ export const DE_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputation über 90%",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Puffere die Spitzen",
-    "level_5_scenario": "Dein Traffic kommt in Schüben — 5 Sekunden Ruhe, dann 15 Anfragen auf einmal. Compute kommt nicht hinterher, und Anfragen gehen verloren.",
+    "level_5_scenario": "Dein Traffic lässt nie nach — ein stetiger Strom, und alle 5 Sekunden kommen 15 Anfragen auf einmal obendrauf. Compute kommt nicht hinterher, und Anfragen gehen verloren.",
     "level_5_learn": "Die Message Queue (max. 200) puffert Bursts, damit Compute sie im eigenen Tempo abarbeitet. Aber eine Queue kauft nur Zeit — Durchsatz liefert sie nicht. Die Dauerlast hier übersteigt Compute Tier 1: Upgrade also auch Compute, sonst läuft die Queue irgendwann voll.",
     "level_5_debrief": "Queues glätten Spitzen, kosten aber Latenz. Nutze sie nicht für latenzkritische Reads.",
     "obj_5_survive_90s": "Überlebe 90 Sekunden",

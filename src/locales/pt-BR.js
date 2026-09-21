@@ -777,7 +777,7 @@ export const PT_BR_TRANSLATIONS = {
     "obj_4_rep_above_90": "Reputação acima de 90%",
     // -- Level 5: Buffer the Spikes --
     "level_5_title": "Amorteça os Picos",
-    "level_5_scenario": "Seu tráfego vem em rajadas — 5 segundos de silêncio, depois 15 requisições de uma vez. A Computação não acompanha e as requisições se perdem.",
+    "level_5_scenario": "Seu tráfego não dá trégua — um fluxo constante e, a cada 5 segundos, mais 15 requisições de uma vez. A Computação não acompanha e as requisições se perdem.",
     "level_5_learn": "A Fila de Mensagens (máx. 200) amortece as rajadas para que a Computação as processe no próprio ritmo. Mas uma fila só compra tempo — ela não adiciona throughput. A carga sustentada aqui excede o Tier 1 da Computação, então aprimore a Computação também, ou a fila vai acabar saturando.",
     "level_5_debrief": "Filas suavizam picos, mas adicionam latência. Não as use para leituras de baixa latência.",
     "obj_5_survive_90s": "Sobreviva 90 segundos",
