@@ -1055,4 +1055,11 @@ export const FR_TRANSLATIONS = {
     "lab_reflect": "Qu’est-ce qui a changé ? La baisse des pertes a-t-elle augmenté la latence ou les coûts ? Essaie un trafic régulier et une autre graine.",
     "lab_missing": "—",
     "lab_seconds": "s",
+    "lab_import": "Charger une expérience (JSON)",
+    "lab_importHint": "Le chargement remplace les variantes A/B, les conditions et l’hypothèse enregistrées. Ton plateau reste en place.",
+    "lab_importing": "Chargement de l’expérience…",
+    "lab_imported": "Données chargées. Relance la comparaison avec les règles actuelles du jeu ; les résultats enregistrés ne sont pas réutilisés.",
+    "lab_importInvalid": "Ce rapport de laboratoire est invalide. Ton expérience enregistrée est conservée.",
+    "lab_importVersion": "La version de l’expérience dans ce rapport n’est pas prise en charge. Ton expérience enregistrée est conservée.",
+    "lab_importTooLarge": "Le rapport est trop volumineux. Choisis un fichier JSON de 2 Mio maximum.",
 };

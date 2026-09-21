@@ -1056,4 +1056,11 @@ export const EN_TRANSLATIONS = {
     "lab_reflect": "What changed? Did fewer losses come at the expense of latency or cost? Try steady traffic and another seed.",
     "lab_missing": "—",
     "lab_seconds": "s",
+    "lab_import": "Load experiment (JSON)",
+    "lab_importHint": "Loading replaces the saved A/B variants, conditions and hypothesis. Your game board stays in place.",
+    "lab_importing": "Loading experiment…",
+    "lab_imported": "Inputs loaded. Run the comparison with the current game rules; saved results are not reused.",
+    "lab_importInvalid": "This is not a valid laboratory report. Your saved experiment was kept.",
+    "lab_importVersion": "This report uses an unsupported experiment version. Your saved experiment was kept.",
+    "lab_importTooLarge": "The report is too large. Choose a JSON file no larger than 2 MiB.",
 };

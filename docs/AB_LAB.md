@@ -13,6 +13,19 @@ The lab uses the shared translation dictionaries for all 11 game languages,
 with English as the default. Displayed numbers follow the selected locale;
 JSON and CSV keep stable English field names and numeric values for analysis.
 
+## Repeating a shared experiment
+
+Use **Load experiment (JSON)** to select a downloaded laboratory report (up to
+2 MiB). Loading replaces the lab’s saved A/B variants, conditions and hypothesis;
+it leaves the game board in place. Both variants are validated before anything
+is replaced. Invalid files leave the previous experiment and results intact.
+
+The import restores **inputs only**. Press **Run comparison** to obtain fresh
+measurements under the current game rules. A report does not contain a frozen
+engine: results may differ if the underlying game has changed. Unsupported
+schema or experiment-model versions are rejected. CSV is a metrics export and
+cannot restore an experiment.
+
 ## First laboratory exercise: can a queue save burst traffic?
 
 1. Use the queue example: A is Firewall → Load Balancer → Compute → SQL DB;
@@ -100,6 +113,6 @@ initialization contract changes. Changes to underlying game rules also affect
 results; retain the source revision with an archived teaching deployment.
 Exported reports contain inputs and results, not a frozen copy of the engine.
 
-Useful next extensions: report import/replay, multiple seeds with uncertainty
+Useful next extensions: multiple seeds with uncertainty
 intervals, controlled incident schedules, per-service attribution, and explicit
 completion rules for multi-subscriber workflows.

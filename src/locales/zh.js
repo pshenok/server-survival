@@ -1055,4 +1055,11 @@ export const ZH_TRANSLATIONS = {
     "lab_reflect": "发生了什么变化？请求丢失减少是否以延迟或成本增加为代价？尝试平稳流量和其他种子。",
     "lab_missing": "—",
     "lab_seconds": "秒",
+    "lab_import": "加载实验 (JSON)",
+    "lab_importHint": "加载将替换已保存的 A/B 方案、条件和假设。游戏布局保持不变。",
+    "lab_importing": "正在加载实验…",
+    "lab_imported": "实验输入已加载。请按当前游戏规则重新运行比较；不会复用文件中的结果。",
+    "lab_importInvalid": "这不是有效的实验室报告。已保存的实验保持不变。",
+    "lab_importVersion": "不支持此报告的实验版本。已保存的实验保持不变。",
+    "lab_importTooLarge": "报告过大。请选择不超过 2 MiB 的 JSON 文件。",
 };

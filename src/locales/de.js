@@ -1055,4 +1055,11 @@ export const DE_TRANSLATIONS = {
     "lab_reflect": "Was hat sich geändert? Wurden geringere Verluste mit höherer Latenz oder höheren Kosten bezahlt? Probiere gleichmäßigen Verkehr und einen anderen Startwert.",
     "lab_missing": "—",
     "lab_seconds": "s",
+    "lab_import": "Experiment laden (JSON)",
+    "lab_importHint": "Das Laden ersetzt die gespeicherten A/B-Varianten, Bedingungen und die Hypothese. Dein Spielfeld bleibt erhalten.",
+    "lab_importing": "Experiment wird geladen…",
+    "lab_imported": "Eingaben geladen. Starte den Vergleich mit den aktuellen Spielregeln; gespeicherte Ergebnisse werden nicht übernommen.",
+    "lab_importInvalid": "Dies ist kein gültiger Laborbericht. Dein gespeichertes Experiment bleibt erhalten.",
+    "lab_importVersion": "Die Experimentversion dieses Berichts wird nicht unterstützt. Dein gespeichertes Experiment bleibt erhalten.",
+    "lab_importTooLarge": "Der Bericht ist zu groß. Wähle eine JSON-Datei mit höchstens 2 MiB.",
 };

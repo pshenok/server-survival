@@ -4,6 +4,7 @@ import { i18n } from '../i18n.js';
 import { architectureCost, captureArchitecture, LAB_MODEL_VERSION, LAB_STORAGE_KEY,
     TYPES, validateArchitecture, validateScenario } from './scenario.js';
 import { runInFrame } from './transport.js';
+import { createReport, readReport, ReportImportError } from './report.js';
 
 const t = key => i18n.t('lab_' + key);
 const number = (value, options = {}) => new Intl.NumberFormat(i18n.currentLocale, options).format(value);
@@ -12,6 +13,8 @@ const $ = id => document.getElementById(id);
 const slots = { A: null, B: null };
 let results = null;
 let controller = null;
+let loadingReport = false;
+let importGeneration = 0;
 let hypothesis = '';
 let scenario = { seed: 42, duration: 60, profile: 'bursts', rps: 5,
     mix: Object.fromEntries(TYPES.map(type => [type, type === 'READ' ? 100 : 0])) };
@@ -87,7 +90,7 @@ function paintSlots() {
         const target = $(`lab-slot-${name}`);
         target.innerHTML = board ? `${diagram(board)}<p>${t('nodes')}: ${number(board.services.length)} · ${t('links')}: ${number(board.connections.length)} · ${format('buildCost', architectureCost(board))}</p>` : `<p class="lab-empty">${t('empty')}</p>`;
     }
-    $('lab-run').disabled = !slots.A || !slots.B;
+    $('lab-run').disabled = loadingReport || !slots.A || !slots.B;
     $('lab-sample').hidden = !!(slots.A || slots.B);
 }
 
@@ -95,7 +98,7 @@ function render() {
     dialog.lang = i18n.currentLocale;
     dialog.innerHTML = `<header class="lab-header"><div><h2 id="lab-title">${t('title')}</h2><p>${t('intro')}</p></div><button id="lab-close">${t('close')}</button></header>
     <div class="lab-body"><p>${t('instruction')}</p>
-    <fieldset id="lab-controls"><div class="lab-variants">${['A', 'B'].map(name => `<section class="lab-variant lab-${name}"><h3>${name}</h3><div id="lab-slot-${name}"></div><button id="lab-capture-${name}">${t('capture')} ${name}</button></section>`).join('')}</div>
+    <fieldset id="lab-controls"><button id="lab-import" class="lab-secondary">${t('import')}</button><input id="lab-import-file" type="file" accept=".json,application/json" hidden><p class="lab-note">${t('importHint')}</p><div class="lab-variants">${['A', 'B'].map(name => `<section class="lab-variant lab-${name}"><h3>${name}</h3><div id="lab-slot-${name}"></div><button id="lab-capture-${name}">${t('capture')} ${name}</button></section>`).join('')}</div>
     <button id="lab-sample" class="lab-secondary">${t('sample')}</button>
     <label class="lab-hypothesis" for="lab-hypothesis">${t('hypothesis')}</label><textarea id="lab-hypothesis" maxlength="1000" rows="2" placeholder="${escape(t('placeholder'))}">${escape(hypothesis)}</textarea>
     <h3>${t('setup')}</h3><div class="lab-settings">
@@ -134,12 +137,51 @@ function render() {
             try { scenario = readScenario(); persist(); } catch { /* show validation on Run */ }
         }
     });
+    $('lab-import').onclick = () => $('lab-import-file').click();
+    $('lab-import-file').onchange = event => {
+        const file = event.target.files?.[0];
+        event.target.value = ''; // Selecting the same file again should also fire change.
+        if (file) importReport(file);
+    };
     $('lab-run').onclick = compare;
     $('lab-cancel').onclick = () => controller?.abort();
     $('lab-export').onclick = () => download('json');
     $('lab-csv').onclick = () => download('csv');
-    paintSlots(); status(results ? 'done' : slots.A && slots.B ? 'prepared' : 'ready');
+    $('lab-controls').disabled = loadingReport;
+    paintSlots(); status(loadingReport ? 'importing' : results ? 'done' : slots.A && slots.B ? 'prepared' : 'ready');
     if (results) paintResults();
+}
+
+async function importReport(file) {
+    if (controller || loadingReport) return;
+    const generation = ++importGeneration;
+    loadingReport = true;
+    $('lab-controls').disabled = true;
+    $('lab-run').disabled = true;
+    status('importing');
+    try {
+        const imported = await readReport(file);
+        if (generation !== importGeneration || !dialog.open) return;
+        // Commit both validated snapshots together. Never display imported scores
+        // as results from this engine; the player explicitly reruns the inputs.
+        Object.assign(slots, imported.slots);
+        scenario = imported.scenario;
+        hypothesis = imported.hypothesis;
+        results = null;
+        persist();
+        render();
+        status(storageUnavailable ? 'storage' : 'imported');
+    } catch (error) {
+        if (generation === importGeneration && dialog.open) {
+            status(error instanceof ReportImportError ? error.code : 'importInvalid');
+        }
+    } finally {
+        if (generation === importGeneration) {
+            loadingReport = false;
+            $('lab-controls').disabled = false;
+            paintSlots();
+        }
+    }
 }
 
 function readScenario() {
@@ -151,7 +193,7 @@ function readScenario() {
 }
 
 async function compare() {
-    if (controller || !slots.A || !slots.B) return;
+    if (controller || loadingReport || !slots.A || !slots.B) return;
     try { scenario = readScenario(); } catch { status('invalid'); return; }
     persist(); invalidate();
     controller = new AbortController();
@@ -218,15 +260,7 @@ function paintResults() {
 }
 function download(kind) {
     if (!results) return;
-    const data = kind === 'json' ? JSON.stringify({ schemaVersion: 1, modelVersion: LAB_MODEL_VERSION,
-        hypothesis, conditions: { timestepSeconds: 1 / 60, drainSeconds: 30, mode: 'sandbox',
-            upkeep: true, autoRepair: false, degradation: false, randomIncidents: false,
-            responsePopulation: 'external legitimate requests; excludes scheduler jobs and fan-out copies',
-            fanoutCompletion: 'original delivery only; not atomic success of all subscribers',
-            latencyPopulation: 'completed external legitimate requests only',
-            costBasis: 'purchase plus all operating costs over load and drain; game dollars',
-            trafficSloSeconds: Object.fromEntries(TYPES.map(type => [type, CONFIG.trafficTypes[type].sloSec ?? null])),
-            inferenceDeadline: 'enforced by Inference Gateway when present' }, results }, null, 2) :
+    const data = kind === 'json' ? JSON.stringify(createReport(results, hypothesis), null, 2) :
         ['metric,A,B', ...REPORT_METRICS.map(key => `${key},${results.A[key] ?? ''},${results.B[key] ?? ''}`)].join('\r\n');
     const url = URL.createObjectURL(new Blob([data], { type: kind === 'json' ? 'application/json' : 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
@@ -239,6 +273,8 @@ function download(kind) {
 }
 
 function close() {
+    importGeneration++;
+    loadingReport = false;
     controller?.abort();
     dialog.close();
     openButton?.focus();

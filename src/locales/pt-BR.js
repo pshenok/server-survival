@@ -1055,4 +1055,11 @@ export const PT_BR_TRANSLATIONS = {
     "lab_reflect": "O que mudou? Menos perdas custaram mais latência ou dinheiro? Experimente tráfego constante e outra semente.",
     "lab_missing": "—",
     "lab_seconds": "s",
+    "lab_import": "Carregar experimento (JSON)",
+    "lab_importHint": "O carregamento substitui as variantes A/B, as condições e a hipótese salvas. Seu tabuleiro permanece intacto.",
+    "lab_importing": "Carregando experimento…",
+    "lab_imported": "Dados carregados. Execute a comparação com as regras atuais do jogo; os resultados salvos não serão reutilizados.",
+    "lab_importInvalid": "Este relatório de laboratório é inválido. Seu experimento salvo foi mantido.",
+    "lab_importVersion": "A versão do experimento neste relatório não é compatível. Seu experimento salvo foi mantido.",
+    "lab_importTooLarge": "O relatório é muito grande. Escolha um arquivo JSON de até 2 MiB.",
 };

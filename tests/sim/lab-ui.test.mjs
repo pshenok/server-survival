@@ -3,7 +3,9 @@ import { STATE, resetWorld } from '../helpers/sim-world.mjs';
 import { i18n } from '../../src/i18n.js';
 import { LOCALES } from '../helpers/load-globals.mjs';
 import { runInFrame } from '../../src/lab/transport.js';
-import { REPORT_METRICS } from '../../src/lab/ui.js';
+import { REPORT_METRICS, queueExample } from '../../src/lab/ui.js';
+import { createReport } from '../../src/lab/report.js';
+import { LAB_MODEL_VERSION, LAB_STORAGE_KEY, validateScenario } from '../../src/lab/scenario.js';
 
 vi.mock('../../src/lab/transport.js', () => ({ runInFrame: vi.fn() }));
 const get = id => document.getElementById(id);
@@ -12,12 +14,13 @@ function input(id, value) {
     get(id).dispatchEvent(new Event('input', { bubbles: true }));
 }
 function result(architecture, scenario) {
-    return { ...Object.fromEntries(REPORT_METRICS.map(key => [key, 0])),
+    return { ...Object.fromEntries(REPORT_METRICS.map(key => [key, 0])), modelVersion: LAB_MODEL_VERSION,
         architecture, scenario, goodput: 0.95, p95: 1234.5, totalCost: 45.65,
         horizon: scenario.duration + 30, series: [{ at: 1, queued: 2 }] };
 }
 beforeEach(() => {
     vi.useFakeTimers();
+    vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     resetWorld();
     STATE.animationId = -1;
@@ -85,5 +88,77 @@ describe('lab localization through the game language selector', () => {
         expect(get('lab-run').textContent).toBe(i18n.t('lab_run'));
         expect(get('lab-status').textContent).toBe(i18n.t('lab_done'));
         expect(get('lab-results').textContent).toContain(i18n.t('lab_results'));
+    });
+});
+
+
+function chooseReport(file) {
+    const field = get('lab-import-file');
+    Object.defineProperty(field, 'files', { configurable: true, value: [file] });
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+}
+function importedReport() {
+    const boards = queueExample();
+    const scenario = validateScenario({ seed: 77, rps: 3, duration: 30, profile: 'steady', mix: { READ: 100 } });
+    return createReport({ A: result(boards.A, scenario), B: result(boards.B, scenario) }, '<img src=x> My hypothesis');
+}
+
+describe('loading a laboratory report', () => {
+    it('restores both variants atomically and reruns their inputs without using the file scores', async () => {
+        const source = importedReport();
+        const gameBoard = STATE.services;
+        chooseReport(new File([JSON.stringify(source)], 'experiment.json', { type: 'application/json' }));
+        await vi.waitFor(() => expect(get('lab-status').textContent).toBe(i18n.t('lab_imported')));
+        expect(get('lab-hypothesis').value).toBe(source.hypothesis);
+        expect(get('lab-dialog').querySelector('img')).toBeNull();
+        expect(get('lab-seed').value).toBe('77');
+        expect(get('lab-profile').value).toBe('steady');
+        expect(get('lab-results').textContent).toBe('');
+        expect(get('lab-export').disabled).toBe(true);
+        expect(runInFrame).not.toHaveBeenCalled();
+        expect(STATE.services).toBe(gameBoard);
+        const saved = JSON.parse(localStorage.getItem(LAB_STORAGE_KEY));
+        expect(saved.slots.B).toEqual(source.results.B.architecture);
+        get('lab-run').click();
+        await vi.waitFor(() => expect(get('lab-export').disabled).toBe(false));
+        expect(runInFrame.mock.calls[0][0]).toEqual(source.results.A.architecture);
+        expect(runInFrame.mock.calls[1][0]).toEqual(source.results.B.architecture);
+        expect(runInFrame.mock.calls[0][1]).toEqual(source.results.A.scenario);
+    });
+    it('keeps snapshots, hypothesis and existing results when either imported variant is invalid', async () => {
+        get('lab-run').click();
+        await vi.waitFor(() => expect(get('lab-export').disabled).toBe(false));
+        const previous = { stored: localStorage.getItem(LAB_STORAGE_KEY), results: get('lab-results').innerHTML,
+            hypothesis: get('lab-hypothesis').value };
+        const source = importedReport();
+        source.results.B.architecture.connections = [[0, 99]];
+        chooseReport(new File([JSON.stringify(source)], 'invalid.json'));
+        await vi.waitFor(() => expect(get('lab-status').textContent).toBe(i18n.t('lab_importInvalid')));
+        expect(localStorage.getItem(LAB_STORAGE_KEY)).toBe(previous.stored);
+        expect(get('lab-results').innerHTML).toBe(previous.results);
+        expect(get('lab-hypothesis').value).toBe(previous.hypothesis);
+        expect(get('lab-export').disabled).toBe(false);
+    });
+    it('ignores a pending file read after closing and reopening the laboratory', async () => {
+        let finishRead;
+        chooseReport({ size: 100, text: () => new Promise(resolve => { finishRead = resolve; }) });
+        expect(get('lab-run').disabled).toBe(true);
+        get('lab-close').click();
+        get('open-lab').click();
+        const previous = get('lab-hypothesis').value;
+        finishRead(JSON.stringify(importedReport()));
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(get('lab-hypothesis').value).toBe(previous);
+        expect(get('lab-run').disabled).toBe(false);
+    });
+    it('translates import controls and rejection messages in every supported language', async () => {
+        for (const { code } of LOCALES) {
+            i18n.setLocale(code);
+            expect(get('lab-import').textContent).toBe(i18n.t('lab_import'));
+            chooseReport(new File(['broken JSON'], 'bad.json'));
+            await vi.waitFor(() => expect(get('lab-status').textContent).toBe(i18n.t('lab_importInvalid')));
+            expect(get('lab-import-file').value).toBe('');
+        }
     });
 });

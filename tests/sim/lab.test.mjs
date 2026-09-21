@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { STATE, resetWorld } from '../helpers/sim-world.mjs';
 import { runExperiment } from '../../src/lab/engine.js';
 import { runInFrame } from '../../src/lab/transport.js';
+import { createReport, parseReport } from '../../src/lab/report.js';
 import { inExperiment } from '../../src/lab/context.js';
 import { captureArchitecture } from '../../src/lab/scenario.js';
 
@@ -38,6 +39,11 @@ describe('laboratory using the real simulation', () => {
         expect(first.buildCost).toBe(300);
         expect(first.series).toHaveLength(60);
         expect(inExperiment()).toBe(false);
+    });
+    it('reproduces a downloaded experiment with the same game rules', () => {
+        const original = run();
+        const loaded = parseReport(JSON.stringify(createReport({ A: original, B: original }, 'Replay this workload')));
+        expect(run(loaded.slots.A, loaded.scenario)).toEqual(original);
     });
     it('shows a real trade-off when adding a queue to burst traffic', () => {
         const queued = { services: [node('waf', -24), node('alb', -12), node('sqs', 0), node('compute', 12), node('db', 24)],

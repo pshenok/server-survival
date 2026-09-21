@@ -1055,4 +1055,11 @@ export const KO_TRANSLATIONS = {
     "lab_reflect": "무엇이 달라졌나요? 손실 감소의 대가로 지연이나 비용이 늘었나요? 일정한 부하와 다른 시드로도 실험해 보세요.",
     "lab_missing": "—",
     "lab_seconds": "초",
+    "lab_import": "실험 불러오기 (JSON)",
+    "lab_importHint": "불러오면 저장된 A/B 구성, 조건, 가설이 바뀝니다. 게임 배치는 유지됩니다.",
+    "lab_importing": "실험 불러오는 중…",
+    "lab_imported": "입력을 불러왔습니다. 현재 게임 규칙으로 비교를 실행하세요. 저장된 결과는 재사용하지 않습니다.",
+    "lab_importInvalid": "유효한 실험실 보고서가 아닙니다. 저장된 실험은 유지됩니다.",
+    "lab_importVersion": "이 보고서의 실험 버전은 지원되지 않습니다. 저장된 실험은 유지됩니다.",
+    "lab_importTooLarge": "보고서가 너무 큽니다. 2 MiB 이하의 JSON 파일을 선택하세요.",
 };

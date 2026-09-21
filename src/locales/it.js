@@ -1055,4 +1055,11 @@ export const IT_TRANSLATIONS = {
     "lab_reflect": "Cosa è cambiato? La riduzione delle perdite ha aumentato latenza o costi? Prova traffico costante e un altro seed.",
     "lab_missing": "—",
     "lab_seconds": "s",
+    "lab_import": "Carica esperimento (JSON)",
+    "lab_importHint": "Il caricamento sostituisce le varianti A/B, le condizioni e l’ipotesi salvate. La mappa di gioco resta invariata.",
+    "lab_importing": "Caricamento dell’esperimento…",
+    "lab_imported": "Dati caricati. Avvia il confronto con le regole attuali del gioco; i risultati salvati non vengono riutilizzati.",
+    "lab_importInvalid": "Questo rapporto di laboratorio non è valido. L’esperimento salvato è stato conservato.",
+    "lab_importVersion": "La versione dell’esperimento in questo rapporto non è supportata. L’esperimento salvato è stato conservato.",
+    "lab_importTooLarge": "Il rapporto è troppo grande. Scegli un file JSON non superiore a 2 MiB.",
 };
