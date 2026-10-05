@@ -675,8 +675,9 @@
       <!-- Build tools: modes, not services, so they stay visible in every category -->
       <div class="flex gap-1 pr-2 border-r border-gray-700">
         <button id="tool-select"
-          class="service-btn active bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent"
+          class="service-btn active bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent relative overflow-hidden"
           onclick="setTool('select')">
+          <span class="key-hint absolute top-0 right-0 bg-gray-900/80 text-gray-400 text-[9px] px-1 rounded-bl font-mono" aria-hidden="true">V</span>
           <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122">
@@ -686,8 +687,9 @@
         </button>
 
         <button id="tool-connect"
-          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent"
+          class="service-btn bg-gray-800 text-gray-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent relative overflow-hidden"
           onclick="setTool('connect')">
+          <span class="key-hint absolute top-0 right-0 bg-gray-900/80 text-gray-400 text-[9px] px-1 rounded-bl font-mono" aria-hidden="true">C</span>
           <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
@@ -697,8 +699,9 @@
         </button>
 
         <button id="tool-delete"
-          class="service-btn bg-red-900/30 text-red-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent hover:bg-red-900/50"
+          class="service-btn bg-red-900/30 text-red-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent hover:bg-red-900/50 relative overflow-hidden"
           onclick="setTool('delete')">
+          <span class="key-hint absolute top-0 right-0 bg-gray-900/80 text-gray-400 text-[9px] px-1 rounded-bl font-mono" aria-hidden="true">X</span>
           <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
@@ -708,8 +711,9 @@
         </button>
 
         <button id="tool-unlink"
-          class="service-btn bg-orange-900/30 text-orange-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent hover:bg-orange-900/50"
+          class="service-btn bg-orange-900/30 text-orange-200 p-2 rounded-lg w-16 h-16 flex flex-col items-center justify-center border border-transparent hover:bg-orange-900/50 relative overflow-hidden"
           onclick="setTool('unlink')">
+          <span class="key-hint absolute top-0 right-0 bg-gray-900/80 text-gray-400 text-[9px] px-1 rounded-bl font-mono" aria-hidden="true">U</span>
           <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>

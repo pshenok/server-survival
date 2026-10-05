@@ -168,6 +168,7 @@ Built something you're proud of? The share panel exports your architecture two w
 - **Birds-Eye View:** Press `T` to switch between isometric and top-down view.
 - **Hide HUD:** Press `H` to toggle UI panels.
 - **Category Tabs:** The toolbar groups services into five tabs — Front Door, Compute, Data, Async, Ops. Keys `1-5` switch between them.
+- **Build Tools:** `V` Select, `C` Link, `X` Demolish, `U` Unlink. Each key is shown in the corner of its button.
 - **Connect Tool:** Click two nodes to create a connection (flow direction matters!).
   - _Valid Flows:_ Internet -> (GeoDNS/Firewall/CDN/API Gateway) -> Load Balancer -> Queue -> Compute -> Cache -> (Search Engine/Read Replica/SQL DB/NoSQL DB/Storage)
 - **Delete Tool:** Remove services to recover 50% of the cost.

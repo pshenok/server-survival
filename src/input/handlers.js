@@ -1107,6 +1107,11 @@ function isTypingTarget(el) {
     );
 }
 
+// Letters chosen around the camera keys (WASD, Q/E, R, T, H), which already
+// own the letters #70 proposed for Queue and the database. V is the select
+// tool in most design software; the other three are mnemonics.
+const TOOL_KEYS = { v: "select", c: "connect", x: "delete", u: "unlink" };
+
 document.addEventListener("keydown", (event) => {
     // Keys 1-5 switch service-palette categories. Bare digits only: Cmd/Ctrl+1
     // is the browser's own tab switch, and Alt-digits are OS shortcuts.
@@ -1120,6 +1125,19 @@ document.addEventListener("keydown", (event) => {
     ) {
         const category = SERVICE_CATEGORIES[Number(event.key) - 1];
         if (category) setToolbarCategory(category.id);
+        return;
+    }
+    // Build tools (#70). Same guards as the digits, and they matter more here:
+    // Cmd/Ctrl+C, +V and +X are copy, paste and cut.
+    const tool = TOOL_KEYS[event.key?.toLowerCase()];
+    if (
+        tool &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !isTypingTarget(event.target)
+    ) {
+        window.setTool(tool);
         return;
     }
     if (event.key === "Escape") {
@@ -1178,4 +1196,5 @@ export {
     orbitCamera,
     panCameraScreen,
     resetCamera,
+    TOOL_KEYS,
 };

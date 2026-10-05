@@ -435,3 +435,11 @@ body {
     display: none;
   }
 }
+
+/* Build-tool key hints (#70). A screen with no hover is almost always a touch
+   screen with no keyboard, where a letter in the corner is only clutter. */
+@media (hover: none) {
+  .key-hint {
+    display: none;
+  }
+}
