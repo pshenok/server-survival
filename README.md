@@ -174,6 +174,14 @@ Built something you're proud of? The share panel exports your architecture two w
 - **Delete Tool:** Remove services to recover 50% of the cost.
 - **Time Controls:** Pause, Play (1x), and Fast Forward (3x).
 
+#### On a phone or tablet
+
+- **Tap:** Works like a left click. It places the selected service, links two nodes, or demolishes and unlinks with those tools.
+- **One finger on a service:** Drag it to a new tile while the Select tool is active.
+- **Two fingers:** Drag to pan, pinch to zoom.
+- **HUD tabs:** On a phone-sized screen, in portrait or landscape, the panels open one at a time from the row of icons under the time controls. Tap the open one again to clear the board. The last icon resets the camera, standing in for `R`.
+- Rotating the view (`Q`/`E`) and the top-down toggle (`T`) are keyboard-only for now.
+
 ## Strategy Tips
 
 1.  **Block Attacks First:** Always place a Firewall immediately connected to the Internet. Malicious leaks destroy reputation fast (-5 per leak) and cost $50 per breach.
