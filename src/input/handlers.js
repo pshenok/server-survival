@@ -373,6 +373,7 @@ if (asgIndicator) {
 const keysPressed = {};
 
 window.addEventListener("keydown", (e) => {
+    if (isTypingTarget(e.target)) return;
     keysPressed[e.key] = true;
 });
 
@@ -1093,10 +1094,11 @@ window.addEventListener("resize", () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// True while the player is typing into one of the sandbox panel's fields —
-// the digit shortcuts below must not steal those keystrokes. (The older
-// Esc/H/R/T shortcuts have never had this guard; left exactly as they were,
-// widening them is not this change's business.)
+// True while the player is typing into one of the sandbox panel's fields.
+// Every letter and digit shortcut, and the held keys that move the camera,
+// must leave those keystrokes alone: a number field still fires keydown for a
+// letter it is about to reject, and its arrow keys step the value. Esc is the
+// exception on purpose — it is the way out, from a field as much as anywhere.
 function isTypingTarget(el) {
     if (!el || !el.tagName) return false;
     return (
@@ -1150,6 +1152,7 @@ document.addEventListener("keydown", (event) => {
         }
         return;
     }
+    if (isTypingTarget(event.target)) return;
     if (event.key === "H" || event.key === "h") {
         document.getElementById("statsPanel").classList.toggle("hidden");
         document.getElementById("detailsPanel").classList.toggle("hidden");
