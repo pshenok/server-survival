@@ -180,8 +180,38 @@ const LEVELS = {
 // (#276) — broken is a different state from hollow, and it is asserted apart.
 const KNOWN_HOLLOW = new Set([4, 6, 7, 8]);
 
+// Every test below asks one of four questions about a level, and several ask
+// the same one: "the hollow set never grows" replays every tier-only build the
+// per-level tests have just played, and the L5/L12 and Compute-tier blocks
+// repeat others. That was 114 full campaign plays for 69 distinct answers, and
+// the replaying test was the one that timed out on a busy machine.
+//
+// A play is a pure function of (level, seed, build) — the PRNG is pinned, the
+// timers are fake and play() resets the world first — so each answer is
+// computed once per file and reused. A test run on its own with -t simply
+// computes what it needs.
+const BUILDS = {
+    briefed: (id) => () => {
+        LEVELS[id].taught();
+        tier();
+    },
+    tierOnly: () => tier,
+    taughtOnly: (id) => LEVELS[id].taught,
+    untouched: () => () => {},
+};
+
+const answers = new Map();
+
 function winRate(id, build) {
-    return SEEDS.filter((seed) => play(Number(id), seed, build).outcome === "win").length;
+    const key = `${id}:${build}`;
+    if (!answers.has(key)) {
+        const recipe = BUILDS[build](Number(id));
+        answers.set(
+            key,
+            SEEDS.filter((seed) => play(Number(id), seed, recipe).outcome === "win").length
+        );
+    }
+    return answers.get(key);
 }
 
 afterEach(() => {
@@ -193,10 +223,7 @@ afterEach(() => {
 describe("every reference solution wins the level it belongs to (#254)", () => {
     for (const [id, level] of Object.entries(LEVELS)) {
         it(`L${id} — ${level.teaches}, played as briefed`, () => {
-            expect(winRate(id, () => {
-                level.taught();
-                tier();
-            })).toBe(SEEDS.length);
+            expect(winRate(id, "briefed")).toBe(SEEDS.length);
         });
     }
 });
@@ -205,7 +232,7 @@ describe("and the level is LOST when its own mechanic is ignored", () => {
     for (const [id, level] of Object.entries(LEVELS)) {
         const n = Number(id);
         it(`L${id} — ${level.teaches} withheld, everything else the same`, () => {
-            const wins = winRate(id, tier);
+            const wins = winRate(id, "tierOnly");
             if (KNOWN_HOLLOW.has(n)) {
                 // Recorded, not endorsed. The failure this guards against is a
                 // level QUIETLY joining the set — so the only thing asserted
@@ -220,7 +247,7 @@ describe("and the level is LOST when its own mechanic is ignored", () => {
     it("the hollow set never grows", () => {
         const measured = Object.keys(LEVELS)
             .map(Number)
-            .filter((id) => winRate(id, tier) > 0);
+            .filter((id) => winRate(id, "tierOnly") > 0);
         const unexpected = measured.filter((id) => !KNOWN_HOLLOW.has(id));
         expect(
             unexpected,
@@ -233,16 +260,16 @@ describe("and the level is LOST when its own mechanic is ignored", () => {
         // Withhold the queue and the level is lost however much Compute is
         // bought: a spike is not something a faster box absorbs. This is the
         // row that was recorded backwards before the harness ran the timers.
-        expect(winRate(5, tier)).toBe(0);
-        expect(winRate(5, () => { LEVELS[5].taught(); tier(); })).toBe(SEEDS.length);
+        expect(winRate(5, "tierOnly")).toBe(0);
+        expect(winRate(5, "briefed")).toBe(SEEDS.length);
     });
 
     it("L12 shows it too, against a malicious share instead of a spike", () => {
         // Kept explicit because it is the target, not a passing detail: what a
         // second WAF defends against cannot be absorbed by a faster box, so no
         // amount of vertical scaling substitutes for it.
-        expect(winRate(12, tier)).toBe(0);
-        expect(winRate(12, () => { LEVELS[12].taught(); tier(); })).toBe(SEEDS.length);
+        expect(winRate(12, "tierOnly")).toBe(0);
+        expect(winRate(12, "briefed")).toBe(SEEDS.length);
     });
 });
 
@@ -252,13 +279,13 @@ describe("the Compute tier is the lever chapter 2 actually turns on", () => {
     // exercise wearing an architecture briefing.
     for (const id of [6, 7, 8]) {
         it(`L${id} — ${LEVELS[id].teaches} alone loses, the tier alone wins`, () => {
-            expect(winRate(id, LEVELS[id].taught), `L${id} taught-only`).toBe(0);
-            expect(winRate(id, tier), `L${id} tier-only`).toBe(SEEDS.length);
+            expect(winRate(id, "taughtOnly"), `L${id} taught-only`).toBe(0);
+            expect(winRate(id, "tierOnly"), `L${id} tier-only`).toBe(SEEDS.length);
         });
     }
 
     it("one level still passes on a board the player never touched", () => {
-        const untouched = [3, 4, 5, 9].filter((id) => winRate(id, () => {}) > 0);
+        const untouched = [3, 4, 5, 9].filter((id) => winRate(id, "untouched") > 0);
         // Asserting the defect so the fix has something to turn red. When a
         // level here stops passing untouched, this list is what to edit — L3
         // just did. L5 and L9 are probed and expected to be absent: L5's burst
