@@ -118,10 +118,12 @@ import { applyToolbarGating, renderToolbar } from "./src/ui/toolbar.js";
 // from animate, and the Trophies panel handlers re-exposed on window below.
 import { achievements } from "./src/achievements/achievements.js";
 import { closeTrophies, showTrophies } from "./src/achievements/ui.js";
+import { initHudTabs } from "./src/ui/hud-tabs.js";
 
 STATE.sound = new SoundService();
 
 renderToolbar();
+initHudTabs({ onResetView: resetCamera });
 
 // ==================== UTILITY FUNCTIONS ====================
 

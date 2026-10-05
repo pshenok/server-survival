@@ -357,7 +357,7 @@
     </div>
 
     <!-- Time Control Panel (Top Center) -->
-    <div
+    <div id="timeControls"
       class="absolute top-4 left-1/2 transform -translate-x-1/2 glass-panel rounded-xl p-2 pointer-events-auto flex gap-2">
       <!-- Language Switcher -->
       <div class="flex items-center bg-gray-800 rounded-lg px-1 border border-gray-600 mr-1">
@@ -421,6 +421,57 @@
         class="time-btn w-10 h-10 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-400 flex items-center justify-center relative">
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
           <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Phone HUD tabs (#12). style.css hides them on any screen at least
+         768px wide and 501px tall, so desktop never sees them. On a phone, in
+         either orientation, the six panels cannot share the screen, so each
+         is opened one at a time from here; src/ui/hud-tabs.js owns the
+         toggling. Icon-only on purpose: the
+         titles reuse each panel's own heading key, so no new strings. -->
+    <div id="hudTabs" class="hud-tabs glass-panel rounded-xl p-1 pointer-events-auto gap-1">
+      <button data-hud-tab="stats" data-i18n-title="budget" title="BUDGET" aria-pressed="false" class="hud-tab">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      </button>
+      <button data-hud-tab="goals" data-i18n-title="objectives" title="OBJECTIVES" aria-pressed="false" class="hud-tab">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+        </svg>
+      </button>
+      <button data-hud-tab="score" data-i18n-title="traffic_score_details" title="Traffic Score Details" aria-pressed="false" class="hud-tab">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
+      <button data-hud-tab="health" data-i18n-title="service_health" title="Service Health" aria-pressed="false" class="hud-tab">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
+      </button>
+      <button data-hud-tab="metrics" data-i18n-title="metrics" title="Metrics" aria-pressed="false" class="hud-tab">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+        </svg>
+      </button>
+      <button data-hud-tab="finances" data-i18n-title="finances" title="Finances" aria-pressed="false" class="hud-tab">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
+      <div class="w-px bg-gray-700 mx-0.5"></div>
+      <!-- R resets the camera on a keyboard; a phone has no R. -->
+      <button id="btn-reset-view" data-i18n-title="view" title="View" class="hud-tab">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
         </svg>
       </button>
     </div>
