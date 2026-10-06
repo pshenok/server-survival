@@ -406,6 +406,18 @@ body {
     transform: translateX(-50%);
   }
 
+  /* Warnings and hints. Pinned at left:50% and shifted back by half its own
+     width, the container only ever had half the screen to lay out in, so on
+     a phone every message wrapped into a column ~190px wide. Spanning the
+     screen, its children still centre themselves. Below the tab row, not
+     behind it. */
+  #intervention-warnings {
+    top: 7.25rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    transform: none;
+  }
+
   #statsPanel,
   #objectivesPanel,
   #sandboxPanel,

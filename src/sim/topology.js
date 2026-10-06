@@ -27,6 +27,7 @@ import {
 // Failure badges (#156) are anchored to services; wiping the board must
 // dispose their textures too — see the note in ui/failure-badges.js.
 import { clearFailureBadges } from "../ui/failure-badges.js";
+import { showLinkRejected } from "../ui/link-feedback.js";
 // Runtime-only cycle (game.js ⇄ topology.js) — established pattern: these
 // are top-level consts in game.js (scene groups + raycasting singletons),
 // only dereferenced at runtime, long after both modules evaluate.
@@ -204,28 +205,38 @@ function isValidEdge(t1, t2) {
     return valid;
 }
 
+// Every service type a `fromType` node may send to, in CONFIG order. Derived
+// from isValidEdge rather than listed beside it, so the two cannot disagree.
+function validTargets(fromType) {
+    return Object.keys(CONFIG.services).filter((t) => isValidEdge(fromType, t));
+}
+
+// Returns { ok: true } for a new link, or { ok: false, reason } when nothing
+// was linked. Only "invalid" is explained to the player (src/ui/link-feedback.js);
+// the others are no-ops a player cannot mistake for a rule.
 function createConnection(fromId, toId) {
-    if (fromId === toId) return;
+    if (fromId === toId) return { ok: false, reason: "self" };
     const getEntity = (id) =>
         id === "internet"
             ? STATE.internetNode
             : STATE.services.find((s) => s.id === id);
     const from = getEntity(fromId),
         to = getEntity(toId);
-    if (!from || !to || from.connections.includes(toId)) return;
+    if (!from || !to) return { ok: false, reason: "missing" };
+    if (from.connections.includes(toId)) return { ok: false, reason: "exists" };
     // Reject the reverse edge of an existing link. ALB⇄SQS is the only pair valid
     // in both directions, and having both at once loops requests forever (SQS
     // pushes to ALB, ALB's generic forwarding pushes back) — they never reach
     // finishRequest/failRequest and leak. Either single direction stays legal.
-    if (to.connections && to.connections.includes(fromId)) return;
+    if (to.connections && to.connections.includes(fromId)) return { ok: false, reason: "reverse" };
 
     const t1 = from.type,
         t2 = to.type;
 
     if (!isValidEdge(t1, t2)) {
         new Audio("assets/sounds/click-9.mp3").play();
-        console.error(i18n.t('invalid_topology_detailed'));
-        return;
+        showLinkRejected(t1, t2, validTargets(t1));
+        return { ok: false, reason: "invalid", fromType: t1, toType: t2 };
     }
 
     new Audio("assets/sounds/click-5.mp3").play();
@@ -248,6 +259,7 @@ function createConnection(fromId, toId) {
             toType: t2,
         });
     }
+    return { ok: true };
 }
 
 function deleteConnection(fromId, toId) {
@@ -498,4 +510,5 @@ export {
     restoreService,
     snapToGrid,
     updateConnectionsForNode,
+    validTargets,
 };
