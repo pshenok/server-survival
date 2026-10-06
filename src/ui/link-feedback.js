@@ -10,7 +10,12 @@
 // warnings: it is a lesson, not an incident, and it stays out of
 // STATE.intervention, which tracks incidents.
 import { i18n } from "../i18n.js";
+import { STATE } from "../state.js";
 import { isTypeAllowed } from "./toolbar.js";
+// Runtime-only cycle (topology.js -> link-feedback.js -> topology.js), the
+// same established pattern as topology.js's own: function declarations,
+// dereferenced only when called.
+import { linkTargets } from "../sim/topology.js";
 
 const SHOW_MS = 6000;
 const ATTR = "data-link-rejected";
@@ -78,4 +83,23 @@ export function showLinkRejected(fromType, toType, targets) {
         hint.style.transform = "translateY(-20px)";
         setTimeout(() => hint.remove(), 300);
     }, SHOW_MS - 300);
+}
+
+/**
+ * Rings every node the picked Link source could connect to, before the player
+ * clicks, so the rule is visible rather than discovered one refusal at a time.
+ * Called once per frame from animate(), paused or not: players build while
+ * paused. Any tool but Link, or no source picked yet, clears every ring.
+ */
+export function showLinkTargets(now = 0) {
+    const sourceId = STATE.activeTool === "connect" ? STATE.selectedNodeId : null;
+    const targets = sourceId ? linkTargets(sourceId) : null;
+    // A slow pulse, so a ring reads as an offer rather than as a state.
+    const opacity = 0.55 + 0.35 * Math.sin(now / 250);
+    for (const s of STATE.services) {
+        if (!s.linkTargetRing) continue;
+        const on = targets !== null && targets.has(s.id);
+        s.linkTargetRing.visible = on;
+        if (on) s.linkTargetRing.material.opacity = opacity;
+    }
 }

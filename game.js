@@ -119,6 +119,7 @@ import { applyToolbarGating, renderToolbar } from "./src/ui/toolbar.js";
 import { achievements } from "./src/achievements/achievements.js";
 import { closeTrophies, showTrophies } from "./src/achievements/ui.js";
 import { initHudTabs } from "./src/ui/hud-tabs.js";
+import { showLinkTargets } from "./src/ui/link-feedback.js";
 
 STATE.sound = new SoundService();
 
@@ -1145,6 +1146,7 @@ function animate(time) {
     if (keysPressed["q"] || keysPressed["Q"]) orbitCamera(-orbitStep);
     if (keysPressed["e"] || keysPressed["E"]) orbitCamera(orbitStep);
 
+    showLinkTargets(performance.now());
     STATE.services.forEach((s) => s.update(dt));
     STATE.requests.forEach((r) => r.update(dt));
 

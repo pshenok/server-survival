@@ -211,33 +211,50 @@ function validTargets(fromType) {
     return Object.keys(CONFIG.services).filter((t) => isValidEdge(fromType, t));
 }
 
+const nodeById = (id) =>
+    id === "internet" ? STATE.internetNode : STATE.services.find((s) => s.id === id);
+
+// Why `from` may not link to `to`, or null if it may. createConnection enforces
+// it and the Link tool's target rings preview it (src/ui/link-feedback.js), so
+// what the board offers and what a click accepts are one rule, not two.
+function linkRefusal(from, to) {
+    if (from === to) return "self";
+    if (from.connections.includes(to.id)) return "exists";
+    // Reject the reverse edge of an existing link. ALB⇄SQS is the only pair valid
+    // in both directions, and having both at once loops requests forever (SQS
+    // pushes to ALB, ALB's generic forwarding pushes back) — they never reach
+    // finishRequest/failRequest and leak. Either single direction stays legal.
+    if (to.connections && to.connections.includes(from.id)) return "reverse";
+    if (!isValidEdge(from.type, to.type)) return "invalid";
+    return null;
+}
+
+// The ids of every service on the board that `sourceId` could link to now.
+function linkTargets(sourceId) {
+    const from = nodeById(sourceId);
+    if (!from) return new Set();
+    return new Set(STATE.services.filter((s) => linkRefusal(from, s) === null).map((s) => s.id));
+}
+
 // Returns { ok: true } for a new link, or { ok: false, reason } when nothing
 // was linked. Only "invalid" is explained to the player (src/ui/link-feedback.js);
 // the others are no-ops a player cannot mistake for a rule.
 function createConnection(fromId, toId) {
     if (fromId === toId) return { ok: false, reason: "self" };
-    const getEntity = (id) =>
-        id === "internet"
-            ? STATE.internetNode
-            : STATE.services.find((s) => s.id === id);
-    const from = getEntity(fromId),
-        to = getEntity(toId);
+    const from = nodeById(fromId),
+        to = nodeById(toId);
     if (!from || !to) return { ok: false, reason: "missing" };
-    if (from.connections.includes(toId)) return { ok: false, reason: "exists" };
-    // Reject the reverse edge of an existing link. ALB⇄SQS is the only pair valid
-    // in both directions, and having both at once loops requests forever (SQS
-    // pushes to ALB, ALB's generic forwarding pushes back) — they never reach
-    // finishRequest/failRequest and leak. Either single direction stays legal.
-    if (to.connections && to.connections.includes(fromId)) return { ok: false, reason: "reverse" };
 
     const t1 = from.type,
         t2 = to.type;
 
-    if (!isValidEdge(t1, t2)) {
+    const refusal = linkRefusal(from, to);
+    if (refusal === "invalid") {
         new Audio("assets/sounds/click-9.mp3").play();
         showLinkRejected(t1, t2, validTargets(t1));
         return { ok: false, reason: "invalid", fromType: t1, toType: t2 };
     }
+    if (refusal) return { ok: false, reason: refusal };
 
     new Audio("assets/sounds/click-5.mp3").play();
 
@@ -507,6 +524,7 @@ export {
     findSPOFs,
     getConnectionAtPoint,
     isValidEdge,
+    linkTargets,
     restoreService,
     snapToGrid,
     updateConnectionsForNode,

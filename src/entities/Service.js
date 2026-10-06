@@ -335,6 +335,23 @@ export class Service {
     this.loadRing.position.y = -this.mesh.position.y + 0.1;
     this.mesh.add(this.loadRing);
 
+    // Shown only while the Link tool has a source picked and this node would
+    // accept a link from it (src/ui/link-feedback.js). Its own ring, outside
+    // the load ring, because the load ring's colour already means load.
+    this.linkTargetRing = new THREE.Mesh(
+      new THREE.RingGeometry(3.0, 3.35, 32),
+      new THREE.MeshBasicMaterial({
+        color: 0x22d3ee,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.8,
+      })
+    );
+    this.linkTargetRing.rotation.x = -Math.PI / 2;
+    this.linkTargetRing.position.y = -this.mesh.position.y + 0.12;
+    this.linkTargetRing.visible = false;
+    this.mesh.add(this.linkTargetRing);
+
     this.tier = 1;
     this.tierRings = [];
     this.rrIndex = 0;
@@ -874,6 +891,10 @@ export class Service {
     if (this.healthBarFill) {
       this.healthBarFill.geometry.dispose();
       this.healthBarFill.material.dispose();
+    }
+    for (const ring of [this.loadRing, this.linkTargetRing]) {
+      ring.geometry.dispose();
+      ring.material.dispose();
     }
     this.mesh.geometry.dispose();
     this.mesh.material.dispose();
