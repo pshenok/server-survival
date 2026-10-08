@@ -179,8 +179,8 @@ Built something you're proud of? The share panel exports your architecture two w
 - **Tap:** Works like a left click. It places the selected service, links two nodes, or demolishes and unlinks with those tools.
 - **One finger on a service:** Drag it to a new tile while the Select tool is active.
 - **Two fingers:** Drag to pan, pinch to zoom.
-- **HUD tabs:** On a phone-sized screen, in portrait or landscape, the panels open one at a time from the row of icons under the time controls. Tap the open one again to clear the board. The last icon resets the camera, standing in for `R`.
-- Rotating the view (`Q`/`E`) and the top-down toggle (`T`) are keyboard-only for now.
+- **HUD tabs:** On a phone-sized screen, in portrait or landscape, the panels open one at a time from the row of icons under the time controls. Tap the open one again to clear the board. The last two icons reset the camera, standing in for `R`, and switch between the isometric and top-down views, standing in for `T`.
+- Rotating the view (`Q`/`E`) is keyboard-only for now.
 
 ## Strategy Tips
 

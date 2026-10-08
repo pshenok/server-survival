@@ -1199,5 +1199,6 @@ export {
     orbitCamera,
     panCameraScreen,
     resetCamera,
+    toggleView,
     TOOL_KEYS,
 };

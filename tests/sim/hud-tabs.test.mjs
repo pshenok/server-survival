@@ -14,6 +14,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resetGame, cameraTarget } from "../../game.js";
+import { isIsometric } from "../../src/input/handlers.js";
 import { HUD_TABS, getOpenHudTab, toggleHudTab } from "../../src/ui/hud-tabs.js";
 
 const tabButton = (name) => document.querySelector(`[data-hud-tab="${name}"]`);
@@ -78,6 +79,17 @@ describe("the reset-view button is R for a screen with no keyboard", () => {
     });
 });
 
+describe("the top-down button is T for a screen with no keyboard", () => {
+  it("switches between isometric and top-down, and back again", () => {
+    const before = isIsometric;
+
+    document.getElementById("btn-toggle-view").click();
+    expect(isIsometric).toBe(!before);
+
+    document.getElementById("btn-toggle-view").click();
+    expect(isIsometric).toBe(before);
+  });
+});
 const PHONE_QUERY = "@media (max-width: 767px), (max-height: 500px)";
 
 describe("index.html, hud-tabs.js and style.css agree on the panels", () => {
