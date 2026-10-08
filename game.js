@@ -811,10 +811,15 @@ function retryWithSameArchitecture() {
     // Reset game state but keep mode
     resetGame(STATE.gameMode);
 
-    // Deduct the architecture cost from starting budget (simulate buying services)
-    STATE.money -= totalArchitectureCost;
+    // Deduct the architecture cost from the starting budget (simulate buying
+    // services), but never below zero. A survival board is paid for out of a
+    // run's income, so it routinely costs more than the budget a retry starts
+    // with. Charged in full, a $1,500 board began the retry at -$1,000, which
+    // is the bankruptcy line, and the run was lost again on its first frame.
+    const charged = Math.min(totalArchitectureCost, Math.max(STATE.money, 0));
+    STATE.money -= charged;
     if (STATE.finances) {
-        STATE.finances.expenses.services = totalArchitectureCost;
+        STATE.finances.expenses.services = charged;
     }
 
     // Rebuild services in same order (bypass cost check since we already deducted)
