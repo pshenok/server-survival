@@ -12,7 +12,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { STATE } from "../../src/state.js";
 import { resetGame } from "../../game.js";
-import { createService, validTargets } from "../../src/sim/topology.js";
+import { createService, linkTargets, validTargets } from "../../src/sim/topology.js";
 import { applyToolbarGating } from "../../src/ui/toolbar.js";
 import { linkRejectionLines } from "../../src/ui/link-feedback.js";
 import { i18n } from "../../src/i18n.js";
@@ -112,7 +112,7 @@ describe("a refused link says why, and what would work", () => {
     });
 });
 
-describe("in a campaign level, the hint only offers what the level allows", () => {
+describe("in a campaign level, the hint only offers what the player can reach", () => {
     it("drops services the level forbids from the list", () => {
         const compute = place("compute", 0);
         const waf = place("waf", 10);
@@ -123,6 +123,42 @@ describe("in a campaign level, the hint only offers what the level allows", () =
         const text = hints()[0].textContent;
         expect(text).toContain("SQL Database");
         expect(text).not.toContain("Memory Cache");
+    });
+
+    // Real levels: most pre-build their nodes and enable only the button they
+    // teach. A pre-built node is reachable with no button at all, and the
+    // Link rings already offer it, so the hint has to name it too.
+    const svc = (type) => STATE.services.find((s) => s.type === type);
+    const startLevel = (id) => {
+        localStorage.setItem(
+            "serverSurvivalCampaignProgress",
+            JSON.stringify({ version: 1, completed: {}, highestUnlocked: 25 })
+        );
+        window.startCampaignLevel(id);
+        STATE.isRunning = true;
+        STATE.money = 999999;
+    };
+
+    it("Level 9: API Gateway -> SQL Database names the pre-built ALB and Compute the rings offer", () => {
+        startLevel(9);
+        const apigw = place("apigw", -15);
+        const rings = linkTargets(apigw.id);
+        expect(rings.has(svc("alb").id) && rings.has(svc("compute").id), "the rings offer both").toBe(true);
+
+        link(apigw, svc("db"));
+
+        const text = hints()[0].textContent;
+        expect(text).toContain("API Gateway can't send traffic to SQL Database.");
+        expect(text).toContain("Load Balancer");
+        expect(text).toContain("Compute");
+    });
+
+    it("Level 4: Compute -> Firewall names the pre-built SQL Database", () => {
+        startLevel(4);
+
+        link(svc("compute"), svc("waf"));
+
+        expect(hints()[0].textContent).toContain("SQL Database");
     });
 });
 

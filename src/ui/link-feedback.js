@@ -36,13 +36,18 @@ function listOf(names) {
 
 /**
  * The text for a refused fromType -> toType link. `targets` is every type
- * fromType may send to; a campaign level that forbids a service drops it, so
- * the hint never points at a button the player does not have.
+ * fromType may send to. A type is kept when the player can reach it: its
+ * toolbar button is enabled, or one already stands on the board. Campaign
+ * levels pre-build most of their nodes and enable only the button they teach,
+ * so the board, not the toolbar, is usually where a valid target is.
  */
 export function linkRejectionLines(fromType, toType, targets) {
     const from = i18n.t(fromType);
     const lines = [i18n.t("link_rejected", { from, to: i18n.t(toType) })];
-    const allowed = targets.filter(isTypeAllowed).map((t) => i18n.t(t));
+    const onBoard = new Set(STATE.services.map((s) => s.type));
+    const allowed = targets
+        .filter((t) => isTypeAllowed(t) || onBoard.has(t))
+        .map((t) => i18n.t(t));
     if (allowed.length) {
         lines.push(i18n.t("link_can_send_to", { from, targets: listOf(allowed) }));
     }
