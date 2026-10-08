@@ -350,6 +350,11 @@ export class Service {
     this.linkTargetRing.rotation.x = -Math.PI / 2;
     this.linkTargetRing.position.y = -this.mesh.position.y + 0.12;
     this.linkTargetRing.visible = false;
+    // Never a click target. three r128's Raycaster ignores .visible, and this
+    // ring lies wholly on the neighbouring tile, so a pickable ring turned a
+    // click on that empty tile into a click on this service: an upgrade, a
+    // demolish or a Link source instead of a placement.
+    this.linkTargetRing.raycast = () => {};
     this.mesh.add(this.linkTargetRing);
 
     this.tier = 1;
