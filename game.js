@@ -94,6 +94,7 @@ import {
     orbitCamera,
     panCameraScreen,
     resetCamera,
+    toggleView,
     endPointerInteraction,
 } from "./src/input/handlers.js";
 // Share Architecture (#157): the share modal, PNG export, and the ?arch=
@@ -124,7 +125,7 @@ import { showLinkTargets } from "./src/ui/link-feedback.js";
 STATE.sound = new SoundService();
 
 renderToolbar();
-initHudTabs({ onResetView: resetCamera });
+initHudTabs({ onResetView: resetCamera, onToggleView: toggleView });
 
 // ==================== UTILITY FUNCTIONS ====================
 

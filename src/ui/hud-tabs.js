@@ -38,11 +38,14 @@ export function toggleHudTab(name) {
     });
 }
 
-export function initHudTabs({ onResetView } = {}) {
+export function initHudTabs({ onResetView, onToggleView } = {}) {
     document.querySelectorAll("[data-hud-tab]").forEach((btn) => {
         btn.addEventListener("click", () => toggleHudTab(btn.dataset.hudTab));
     });
     if (onResetView) {
         document.getElementById("btn-reset-view")?.addEventListener("click", onResetView);
+    }
+    if (onToggleView) {
+        document.getElementById("btn-toggle-view")?.addEventListener("click", onToggleView);
     }
 }
