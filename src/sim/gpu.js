@@ -51,6 +51,7 @@ import { STATE } from "../state.js";
 import { failRequest, finishRequest } from "../core/actions.js";
 import { FAIL_REASONS, SOFT_BADGES } from "../core/failure-reasons.js";
 import { spawnServiceBadge } from "../ui/failure-badges.js";
+import { recordBreakerSuccess } from "./circuit-breaker.js";
 
 // Seeded from the Service constructor. A fresh GPU cold-starts: the model
 // load begins the moment it is placed — provisioning ahead of demand is the
@@ -151,6 +152,11 @@ export function tickGpu(service, dt) {
             const risk = service.config.qualityRisk || 0;
             for (const req of done) {
                 finishRequest(req, "gpu", service);
+                // A GPU never reaches Service.update()'s dispatch loop, the
+                // other success site, so without this its breaker heard only
+                // its overflows: eight of them tripped it however much it had
+                // served, and half-open probes could never close it.
+                recordBreakerSuccess(service);
                 if (Math.random() < risk) {
                     // A bad answer: completed and paid, but the user noticed.
                     // Success-side, so it must still be VISIBLE — the amber

@@ -127,14 +127,16 @@ function close(service) {
     achievements.onBreakerClose({ reputation: STATE.reputation });
 }
 
-// One recorded job outcome. Three call sites, all documented where they live:
+// One recorded job outcome. Four call sites, all documented where they live:
 //   failure  Service.update()'s load/health failure roll, and Request.update()
 //            when a node's queue is too full to accept an arrival. Both mean
 //            "this node dropped work it should have handled". Routing dead
 //            ends (no path to the destination, wrong service for the traffic
 //            type) are NOT failures here — see the note on failRequest().
 //   success  Service.update()'s dispatch loop, once a job left the node
-//            without being failed or throttled.
+//            without being failed or throttled; and tickGpu's completion
+//            loop (src/sim/gpu.js), since a GPU finishes its batches there
+//            and never reaches that dispatch loop.
 function recordOutcome(service, isError) {
     // Guards: the Internet node and any plain test double have no breaker.
     if (!service || !service.breakerState) return;
