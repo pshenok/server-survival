@@ -108,4 +108,14 @@ describe("index.html, hud-tabs.js and style.css agree on the panels", () => {
         const desktop = css.slice(0, css.indexOf(PHONE_QUERY));
         expect(desktop).toMatch(/\.hud-tabs\s*\{\s*display:\s*none;/);
     });
+
+    it("on a phone the strip is capped to the screen and scrolls inside itself", () => {
+        // Uncapped, a row of 40px tabs outgrew a 320px phone at seven buttons
+        // and a 360px one at eight, and pushed the whole page into sideways
+        // scroll. A rule, not a measured width: happy-dom does no layout.
+        const phone = css.slice(css.indexOf(PHONE_QUERY));
+        const strip = phone.match(/\.hud-tabs\s*\{([^}]*)\}/)?.[1] ?? "";
+        expect(strip).toMatch(/max-width:\s*calc\(100vw\s*-[^;]+\);/);
+        expect(strip).toMatch(/overflow-x:\s*auto;/);
+    });
 });

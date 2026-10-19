@@ -404,6 +404,16 @@ body {
     top: 4rem;
     left: 50%;
     transform: translateX(-50%);
+    /* Never wider than the screen. Wider, it pushed the page into sideways
+       scroll, which is the first thing this block exists to stop: seven
+       buttons already overran a 320px phone. Past the cap it scrolls inside
+       itself, as the time controls do. */
+    max-width: calc(100vw - 0.5rem);
+    overflow-x: auto;
+  }
+
+  .hud-tabs > * {
+    flex-shrink: 0;
   }
 
   /* Warnings and hints. Pinned at left:50% and shifted back by half its own
@@ -453,5 +463,15 @@ body {
 @media (hover: none) {
   .key-hint {
     display: none;
+  }
+}
+
+/* The narrowest phones (360px is the most common Android width) get slightly
+   smaller HUD tabs, so the whole row fits without scrolling. 36px still clears
+   the 34px the phone time controls use. */
+@media (max-width: 380px) {
+  .hud-tab {
+    width: 2.25rem;
+    height: 2.25rem;
   }
 }
