@@ -320,6 +320,8 @@ export const EN_TRANSLATIONS = {
     "hud_desc": "Press H for hiding HUD.",
     "view": "View",
     "view_desc": "Press R for reset view.",
+    "reset_view": "Reset view",
+    "top_down_view": "Top-down view",
     "rotate": "Rotate",
     "rotate_desc": "Press Q/E or drag with the middle mouse button to rotate the view.",
     "mechanics": "MECHANICS",

@@ -318,6 +318,8 @@ export const UK_TRANSLATIONS = {
     "hud_desc": "Натисни H, щоб сховати HUD.",
     "view": "Вигляд",
     "view_desc": "Натисни R, щоб скинути вигляд.",
+    "reset_view": "Скинути вигляд",
+    "top_down_view": "Вигляд згори",
     "rotate": "Обертання",
     "rotate_desc": "Натисни Q/E або тягни середньою кнопкою миші, щоб обертати вигляд.",
     "mechanics": "МЕХАНІКИ",

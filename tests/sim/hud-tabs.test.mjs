@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { resetGame, cameraTarget } from "../../game.js";
+import { resetGame, camera, cameraTarget } from "../../game.js";
 import { isIsometric } from "../../src/input/handlers.js";
 import { HUD_TABS, getOpenHudTab, toggleHudTab } from "../../src/ui/hud-tabs.js";
 
@@ -80,16 +80,60 @@ describe("the reset-view button is R for a screen with no keyboard", () => {
 });
 
 describe("the top-down button is T for a screen with no keyboard", () => {
-  it("switches between isometric and top-down, and back again", () => {
-    const before = isIsometric;
+    const toggle = () => document.getElementById("btn-toggle-view");
 
-    document.getElementById("btn-toggle-view").click();
-    expect(isIsometric).toBe(!before);
+    it("switches between isometric and top-down, and back again", () => {
+        const before = isIsometric;
 
-    document.getElementById("btn-toggle-view").click();
-    expect(isIsometric).toBe(before);
-  });
+        toggle().click();
+        expect(isIsometric).toBe(!before);
+
+        toggle().click();
+        expect(isIsometric).toBe(before);
+    });
+
+    it("moves the camera, not only the flag: straight down, then back to the angle", () => {
+        expect(isIsometric, "starts isometric").toBe(true);
+
+        toggle().click();
+        // Top-down looks straight down from above the centre, so its up
+        // vector lies flat. Isometric restores the world up vector.
+        expect([camera.position.x, camera.position.z]).toEqual([0, 0]);
+        expect(camera.up.y).toBe(0);
+
+        toggle().click();
+        expect(camera.up.y).toBe(1);
+    });
+
+    it("says which view is showing, whether the button or the T key switched it", () => {
+        expect(toggle().getAttribute("aria-pressed")).toBe("false");
+
+        toggle().click();
+        expect(toggle().getAttribute("aria-pressed")).toBe("true");
+
+        document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "t", bubbles: true }));
+        expect(isIsometric).toBe(true);
+        expect(toggle().getAttribute("aria-pressed")).toBe("false");
+    });
 });
+
+describe("the two camera buttons", () => {
+    const ids = ["btn-reset-view", "btn-toggle-view"];
+
+    it("sit inside the phone tab strip, the only place the phone CSS shows them", () => {
+        // .hud-tab is display:flex everywhere; only the strip is hidden on a
+        // desktop. A camera button outside it would show on every screen.
+        for (const id of ids) {
+            expect(document.getElementById(id).closest("#hudTabs"), id).not.toBeNull();
+        }
+    });
+
+    it("have different names, so a tooltip or a screen reader can tell them apart", () => {
+        const keys = ids.map((id) => document.getElementById(id).getAttribute("data-i18n-title"));
+        expect(new Set(keys).size).toBe(ids.length);
+    });
+});
+
 const PHONE_QUERY = "@media (max-width: 767px), (max-height: 500px)";
 
 describe("index.html, hud-tabs.js and style.css agree on the panels", () => {

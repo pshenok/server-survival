@@ -1173,6 +1173,7 @@ let isIsometric = true;
 
 function toggleView() {
     isIsometric = !isIsometric;
+    document.getElementById("btn-toggle-view")?.setAttribute("aria-pressed", String(!isIsometric));
     resetCamera();
 }
 

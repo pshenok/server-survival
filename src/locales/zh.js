@@ -320,6 +320,8 @@ export const ZH_TRANSLATIONS = {
     "hud_desc": "按 H 键隐藏/显示界面 (HUD)。",
     "view": "视角",
     "view_desc": "按 R 键重置视角。",
+    "reset_view": "重置视角",
+    "top_down_view": "俯视视角",
     "rotate": "旋转",
     "rotate_desc": "按 Q/E 键或按住鼠标中键拖动来旋转视角。",
     "mechanics": "游戏机制",

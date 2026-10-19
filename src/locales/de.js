@@ -320,6 +320,8 @@ export const DE_TRANSLATIONS = {
     "hud_desc": "Drücke H, um das HUD auszublenden.",
     "view": "Ansicht",
     "view_desc": "Drücke R, um die Ansicht zurückzusetzen.",
+    "reset_view": "Ansicht zurücksetzen",
+    "top_down_view": "Draufsicht",
     "rotate": "Drehen",
     "rotate_desc": "Drücke Q/E oder ziehe mit der mittleren Maustaste, um die Ansicht zu drehen.",
     "mechanics": "MECHANIKEN",

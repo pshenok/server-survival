@@ -320,6 +320,8 @@ export const IT_TRANSLATIONS = {
     "hud_desc": "Premi H per nascondere l'HUD.",
     "view": "Visualizza",
     "view_desc": "Premi R per reimpostare la visualizzazione.",
+    "reset_view": "Reimposta la visuale",
+    "top_down_view": "Visuale dall'alto",
     "rotate": "Rotazione",
     "rotate_desc": "Premi Q/E o trascina con il tasto centrale del mouse per ruotare la visuale.",
     "mechanics": "MECCANICHE",

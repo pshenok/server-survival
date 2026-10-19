@@ -354,6 +354,8 @@ export const HI_TRANSLATIONS = {
     "hud_desc": "HUD छिपाने के लिए H दबाएँ।",
     "view": "View",
     "view_desc": "View reset करने के लिए R दबाएँ।",
+    "reset_view": "View reset करें",
+    "top_down_view": "Top-down view",
     "rotate": "Rotate",
     "rotate_desc": "View घुमाने के लिए Q/E दबाएँ या middle mouse button से drag करें।",
     "mechanics": "MECHANICS",

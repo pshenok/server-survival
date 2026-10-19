@@ -320,6 +320,8 @@ export const PT_BR_TRANSLATIONS = {
     "hud_desc": "Pressione H para ocultar/mostrar interface (HUD).",
     "view": "Visão",
     "view_desc": "Pressione R para resetar a visão.",
+    "reset_view": "Resetar a visão",
+    "top_down_view": "Visão de cima",
     "rotate": "Girar",
     "rotate_desc": "Pressione Q/E ou arraste com o botão do meio do mouse para girar a visão.",
     "mechanics": "Mecânicas do Jogo",

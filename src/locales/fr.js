@@ -320,6 +320,8 @@ export const FR_TRANSLATIONS = {
     "hud_desc": "Appuyez sur H pour masquer le HUD.",
     "view": "Vue",
     "view_desc": "Appuyez sur R pour réinitialiser la vue.",
+    "reset_view": "Réinitialiser la vue",
+    "top_down_view": "Vue de dessus",
     "rotate": "Rotation",
     "rotate_desc": "Appuyez sur Q/E ou faites glisser avec le bouton du milieu de la souris pour faire pivoter la vue.",
     "mechanics": "MÉCANIQUES",
