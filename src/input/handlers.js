@@ -139,10 +139,10 @@ function topDownSpin() {
     return DEFAULT_AZIMUTH - cameraAzimuth;
 }
 
-// Q/E and drag-orbit both land here. In isometric view the eye orbits the
-// target; in top-down the grid spins in place (up-vector rotation) — same
-// azimuth state, so T toggles between the two without losing the angle,
-// and R resets both.
+// Q/E, drag-orbit and the two-finger twist all land here. In isometric view
+// the eye orbits the target; in top-down the grid spins in place (up-vector
+// rotation) — same azimuth state, so T toggles between the two without
+// losing the angle, and R resets both.
 function orbitCamera(deltaRadians) {
     cameraAzimuth += deltaRadians;
     applyCameraOrbit();
@@ -1012,22 +1012,54 @@ export function endPointerInteraction() {
 // once, the way every touch map app combines them. A pinch starting while a
 // node is held drops the node rather than dragging it AND zooming, since a
 // service half-dragged, half-zoomed has no sensible position to land on.
+// Twisting the two fingers rotates the view as well (#314), standing in for
+// Q/E: the angle of the line between them drives orbitCamera.
+//
+// Every two-finger move is measured against a baseline (midpoint, spacing,
+// angle) that only armTwoFinger() sets. A move with no baseline, from fingers
+// that never had a two-finger touchstart on the board (one of them landed on
+// a HUD panel), takes one as it comes instead of comparing against whatever
+// the previous gesture left behind, which used to jump the view: up to 180
+// degrees for a twist.
 function touchMidpoint(t0, t1) {
     return { x: (t0.clientX + t1.clientX) / 2, y: (t0.clientY + t1.clientY) / 2 };
 }
 function touchDistance(t0, t1) {
     return Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
 }
-
 function touchAngle(t0, t1) {
     return Math.atan2(t1.clientY - t0.clientY, t1.clientX - t0.clientX);
 }
+
+let twoFingerArmed = false;
 let pinchStartDist = 0;
 let pinchStartZoom = 1;
+// An angle the fingers must turn through, summed with its sign so a wobble
+// cancels out, before a twist starts rotating. Below it a pan or a pinch with
+// a little drift stays a pan or a pinch.
 const TWIST_DEAD_ZONE = (4 * Math.PI) / 180;
 let twistLastAngle = 0;
 let twistTotal = 0;
-let twisting = false;
+let isTwisting = false;
+
+function armTwoFinger(t0, t1) {
+    const mid = touchMidpoint(t0, t1);
+    lastMouseX = mid.x;
+    lastMouseY = mid.y;
+    pinchStartDist = touchDistance(t0, t1);
+    pinchStartZoom = currentZoom;
+    twistLastAngle = touchAngle(t0, t1);
+    twistTotal = 0;
+    isTwisting = false;
+    twoFingerArmed = true;
+}
+
+function disarmTwoFinger() {
+    twoFingerArmed = false;
+    isPanning = false;
+    pinchStartDist = 0;
+    isTwisting = false;
+}
 
 container.addEventListener("touchstart", (e) => {
     if (!STATE.isRunning) return;
@@ -1038,14 +1070,7 @@ container.addEventListener("touchstart", (e) => {
             draggedNode = null;
         }
         isPanning = true;
-        const mid = touchMidpoint(e.touches[0], e.touches[1]);
-        lastMouseX = mid.x;
-        lastMouseY = mid.y;
-        pinchStartDist = touchDistance(e.touches[0], e.touches[1]);
-        pinchStartZoom = currentZoom;
-        twistLastAngle = touchAngle(e.touches[0], e.touches[1]);
-        twistTotal = 0;
-        twisting = false;
+        armTwoFinger(e.touches[0], e.touches[1]);
         e.preventDefault();
         return;
     }
@@ -1064,6 +1089,14 @@ container.addEventListener("touchstart", (e) => {
 
 container.addEventListener("touchmove", (e) => {
     if (e.touches.length >= 2) {
+        e.preventDefault();
+        // touchstart ignores the board outside a running game; so does this.
+        if (!STATE.isRunning) return;
+        if (!twoFingerArmed) {
+            isPanning = true;
+            armTwoFinger(e.touches[0], e.touches[1]);
+            return;
+        }
         const mid = touchMidpoint(e.touches[0], e.touches[1]);
         panByScreenDelta(mid.x - lastMouseX, mid.y - lastMouseY);
         lastMouseX = mid.x;
@@ -1075,13 +1108,16 @@ container.addEventListener("touchmove", (e) => {
         }
         const angle = touchAngle(e.touches[0], e.touches[1]);
         let dAngle = angle - twistLastAngle;
+        // atan2 jumps from +180 to -180 degrees; fold the step back across it.
         if (dAngle > Math.PI) dAngle -= 2 * Math.PI;
         else if (dAngle < -Math.PI) dAngle += 2 * Math.PI;
         twistLastAngle = angle;
         twistTotal += dAngle;
-        if (!twisting && Math.abs(twistTotal) > TWIST_DEAD_ZONE) twisting = true;
-        if (twisting) orbitCamera(-dAngle);
-        e.preventDefault();
+        if (!isTwisting && Math.abs(twistTotal) > TWIST_DEAD_ZONE) isTwisting = true;
+        // Screen y grows downward, so a clockwise twist gives dAngle > 0, and
+        // a lower azimuth turns the board clockwise in both views (#323):
+        // the board follows the fingers, as in a map.
+        if (isTwisting) orbitCamera(-dAngle);
         return;
     }
 
@@ -1097,8 +1133,11 @@ container.addEventListener("touchmove", (e) => {
 
 container.addEventListener("touchend", (e) => {
     if (e.touches.length < 2) {
-        isPanning = false;
-        pinchStartDist = 0;
+        disarmTwoFinger();
+    } else {
+        // A third finger lifted. touches[0] and [1] may now be a different
+        // pair, so measure the next move against them, not the old pair.
+        armTwoFinger(e.touches[0], e.touches[1]);
     }
     if (e.touches.length === 0) {
         finishNodeDrag();
@@ -1111,8 +1150,7 @@ container.addEventListener("touchend", (e) => {
 // deserves the same answer: give up whatever the pointer was holding rather
 // than leave it armed for the next touch to inherit.
 container.addEventListener("touchcancel", () => {
-    isPanning = false;
-    pinchStartDist = 0;
+    disarmTwoFinger();
     endPointerInteraction();
 });
 

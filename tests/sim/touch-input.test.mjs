@@ -14,7 +14,13 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { STATE } from "../../src/state.js";
 import { resetGame } from "../../game.js";
-import { camera } from "../../game.js";
+import { camera, cameraTarget } from "../../game.js";
+import {
+    isIsometric,
+    orbitCamera,
+    resetCamera,
+    toggleView,
+} from "../../src/input/handlers.js";
 import { raycastHits, resetRaycastHits } from "../helpers/three-stub.mjs";
 
 const container = () => document.getElementById("canvas-container");
@@ -145,47 +151,167 @@ describe("two fingers pan and zoom the camera together", () => {
         expect(internetPos()).toEqual(before);
     });
 });
-// Fingers 200px apart, centred on (400, 300), their line tilted by `deg` degrees.
-// Only the angle changes between calls, so pan and zoom stay put.
-function fingersAt(deg) {
+
+// Fingers 200px apart (or `spread`), centred on (400, 300), their line tilted
+// by `deg` degrees. Screen y grows downward, so a rising angle is a CLOCKWISE
+// twist on screen.
+function fingersAt(deg, spread = 200, ids = [1, 2]) {
     const rad = (deg * Math.PI) / 180;
-    const dx = Math.cos(rad) * 100;
-    const dy = Math.sin(rad) * 100;
-    return [touch(1, 400 - dx, 300 - dy), touch(2, 400 + dx, 300 + dy)];
+    const dx = (Math.cos(rad) * spread) / 2;
+    const dy = (Math.sin(rad) * spread) / 2;
+    return [touch(ids[0], 400 - dx, 300 - dy), touch(ids[1], 400 + dx, 300 + dy)];
+}
+
+// The ground direction shown as "up" on screen: the isometric line of sight,
+// or the top-down camera's up vector (see orbit-sense.test.mjs). The board
+// turns on screen exactly opposite to how this direction turns in the world.
+const screenUpOnGround = () =>
+    isIsometric
+        ? { x: cameraTarget.x - camera.position.x, z: cameraTarget.z - camera.position.z }
+        : { x: camera.up.x, z: camera.up.z };
+
+// Signed degrees the screen-up direction turned between two readings.
+function turned(a, b) {
+    const cross = a.x * b.z - a.z * b.x;
+    const dot = a.x * b.x + a.z * b.z;
+    return (Math.atan2(cross, dot) * 180) / Math.PI;
+}
+
+function twist(from, to, opts) {
+    container().dispatchEvent(touchEvent("touchstart", fingersAt(from, opts?.spread)));
+    container().dispatchEvent(touchEvent("touchmove", fingersAt(to, opts?.spread)));
+    container().dispatchEvent(touchEvent("touchend", []));
 }
 
 describe("twisting two fingers rotates the view, like Q and E (#314)", () => {
-    it("a twist orbits the camera", () => {
-        const before = { x: camera.position.x, z: camera.position.z };
-
-        container().dispatchEvent(touchEvent("touchstart", fingersAt(0)));
-        container().dispatchEvent(touchEvent("touchmove", fingersAt(45)));
-
-        expect(camera.position.x !== before.x || camera.position.z !== before.z).toBe(true);
+    afterEach(() => {
+        if (!isIsometric) toggleView();
+        resetCamera();
     });
 
-    it("a plain pinch does not rotate it", () => {
-        const before = { x: camera.position.x, z: camera.position.z };
+    it("a clockwise twist turns the board by the same angle, the way Q does", () => {
+        resetCamera();
+        const before = screenUpOnGround();
+        twist(0, 45);
+        const byTwist = turned(before, screenUpOnGround());
 
-        container().dispatchEvent(
-            touchEvent("touchstart", [touch(1, 350, 300), touch(2, 450, 300)])
-        );
-        container().dispatchEvent(
-            touchEvent("touchmove", [touch(1, 250, 300), touch(2, 550, 300)])
-        );
+        resetCamera();
+        orbitCamera((-45 * Math.PI) / 180);
+        const byQ = turned(before, screenUpOnGround());
 
-        expect(camera.position.x).toBeCloseTo(before.x, 5);
-        expect(camera.position.z).toBeCloseTo(before.z, 5);
+        expect(Math.abs(byTwist)).toBeCloseTo(45, 4);
+        expect(byTwist).toBeCloseTo(byQ, 4);
     });
 
-    it("a wobble inside the dead zone does not rotate it", () => {
-        const before = { x: camera.position.x, z: camera.position.z };
+    it("turns the top-down board the same way and by the same angle", () => {
+        resetCamera();
+        const iso0 = screenUpOnGround();
+        twist(0, 45);
+        const iso = turned(iso0, screenUpOnGround());
 
-        container().dispatchEvent(touchEvent("touchstart", fingersAt(0)));
-        container().dispatchEvent(touchEvent("touchmove", fingersAt(2)));
+        toggleView();
+        const top0 = screenUpOnGround();
+        twist(0, 45);
+        const top = turned(top0, screenUpOnGround());
 
-        expect(camera.position.x).toBeCloseTo(before.x, 5);
-        expect(camera.position.z).toBeCloseTo(before.z, 5);
+        expect(top).toBeCloseTo(iso, 4);
+    });
+
+    it("crossing the line where the angle wraps turns the short way", () => {
+        resetCamera();
+        const before = screenUpOnGround();
+        twist(170, 200);
+        expect(Math.abs(turned(before, screenUpOnGround()))).toBeCloseTo(30, 4);
+    });
+
+    it("a wobble inside the dead zone does not rotate it, even across that line", () => {
+        resetCamera();
+        const before = screenUpOnGround();
+        twist(0, 2);
+        twist(179, 181);
+        expect(turned(before, screenUpOnGround())).toBeCloseTo(0, 6);
+    });
+
+    it("every gesture starts inside the dead zone again", () => {
+        resetCamera();
+        twist(0, 45);
+        const after = screenUpOnGround();
+        twist(0, 2);
+        expect(turned(after, screenUpOnGround())).toBeCloseTo(0, 6);
+    });
+
+    it("a pinch with a little drift zooms without rotating", () => {
+        resetCamera();
+        const zoom0 = camera.zoom;
+        const before = screenUpOnGround();
+        // Pinch in (earlier tests leave the zoom at its cap) with 3 degrees of
+        // drift, under the dead zone.
+        container().dispatchEvent(touchEvent("touchstart", fingersAt(0, 200)));
+        container().dispatchEvent(touchEvent("touchmove", fingersAt(3, 120)));
+        container().dispatchEvent(touchEvent("touchend", []));
+
+        expect(camera.zoom).toBeLessThan(zoom0);
+        expect(turned(before, screenUpOnGround())).toBeCloseTo(0, 6);
+    });
+});
+
+describe("a two-finger move never measures against a stale baseline", () => {
+    afterEach(resetCamera);
+
+    const snapshot = () => ({
+        x: camera.position.x,
+        z: camera.position.z,
+        zoom: camera.zoom,
+        up: screenUpOnGround(),
+    });
+    function expectUnmoved(before) {
+        expect(camera.position.x).toBeCloseTo(before.x, 6);
+        expect(camera.position.z).toBeCloseTo(before.z, 6);
+        expect(camera.zoom).toBeCloseTo(before.zoom, 6);
+        expect(turned(before.up, screenUpOnGround())).toBeCloseTo(0, 6);
+    }
+
+    it("fingers that never had a two-finger touchstart on the board take a baseline instead of jumping", () => {
+        // One finger rests on a HUD panel: its touchstart never reaches the
+        // board, but the board's touchmove still carries both touches.
+        resetCamera();
+        twist(0, 30);
+        const before = snapshot();
+
+        container().dispatchEvent(touchEvent("touchmove", fingersAt(-90, 150)));
+
+        expectUnmoved(before);
+    });
+
+    it("does nothing once the game is no longer running", () => {
+        resetCamera();
+        twist(0, 30);
+        STATE.isRunning = false;
+        const before = snapshot();
+
+        // Two moves: the first would only take a baseline anyway, so it is
+        // the second that shows whether a stopped game still turns the view.
+        container().dispatchEvent(touchEvent("touchstart", fingersAt(-90)));
+        container().dispatchEvent(touchEvent("touchmove", fingersAt(-60)));
+        container().dispatchEvent(touchEvent("touchmove", fingersAt(-20, 120)));
+
+        expectUnmoved(before);
+    });
+
+    it("when a third finger lifts, the next move is measured on the pair that remains", () => {
+        resetCamera();
+        const [a, b] = fingersAt(0);
+        const c = touch(3, 400, 450);
+        container().dispatchEvent(touchEvent("touchstart", [a, b]));
+        container().dispatchEvent(touchEvent("touchstart", [a, b, c]));
+        // Finger a lifts: b and c are now touches[0] and [1], a pair at a
+        // different angle, spacing and midpoint from a and b.
+        container().dispatchEvent(touchEvent("touchend", [b, c]));
+        const before = snapshot();
+
+        container().dispatchEvent(touchEvent("touchmove", [b, c]));
+
+        expectUnmoved(before);
     });
 });
 
