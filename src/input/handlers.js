@@ -120,11 +120,23 @@ function applyCameraOrbit() {
         // Top-down rotation (#231 follow-up): looking straight down, azimuth
         // can't move the eye — it spins the camera's UP vector instead, which
         // rotates the grid on screen. delta = 0 reproduces the pre-rotation
-        // orientation (screen-up = -z, "north up") exactly.
-        const delta = cameraAzimuth - DEFAULT_AZIMUTH;
+        // orientation (screen-up = -z, "north up") exactly. topDownSpin()
+        // gives the angle the sign that turns the board the same way on
+        // screen as the isometric orbit does.
+        const delta = topDownSpin();
         camera.up.set(-Math.sin(delta), 0, -Math.cos(delta));
         camera.lookAt(camera.position.x, 0, camera.position.z);
     }
+}
+
+// How far the top-down grid is spun from north-up. Negated against the
+// azimuth on purpose: the isometric eye orbiting by +d turns the board one way
+// on screen, and spinning the up vector by +d turns it the other way, so with
+// the same sign E turned the board counter-clockwise in one view and clockwise
+// in the other. The up vector and the top-down pan basis must both read this,
+// or panning in a spun view slides along the wrong axes.
+function topDownSpin() {
+    return DEFAULT_AZIMUTH - cameraAzimuth;
 }
 
 // Q/E and drag-orbit both land here. In isometric view the eye orbits the
@@ -154,7 +166,7 @@ function panCameraScreen(rightUnits, upUnits) {
         // Same idea top-down: the pan basis rotates with the spun grid, so
         // "up" always slides the board toward the top of the SCREEN. At
         // delta = 0 this is the old (+x, -z) mapping exactly.
-        const delta = cameraAzimuth - DEFAULT_AZIMUTH;
+        const delta = topDownSpin();
         const cos = Math.cos(delta);
         const sin = Math.sin(delta);
         camera.position.x += cos * rightUnits - sin * upUnits;
