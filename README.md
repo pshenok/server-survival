@@ -223,6 +223,17 @@ cd server-survival
 python3 -m http.server 8000    # then open http://localhost:8000
 ```
 
+### Host your own copy
+
+[![Deploy to Wasmer](https://img.shields.io/badge/Deploy%20to-Wasmer-171717?logo=wasmer&logoColor=white)](https://wasmer.io/apps/create?github=pshenok%2Fserver-survival)
+
+To put a fork online, fork this repository first, then import your fork on
+Wasmer (in the link, swap `pshenok%2Fserver-survival` for your own
+`owner%2Frepo`). Importing builds from the repository you pick; it does not copy
+this one into your account, and only a repository you own and connect
+redeploys when you push. There is still no build step: Wasmer serves the folder
+as static files, the same way GitHub Pages does.
+
 ## For Contributors
 
 There is still **zero build step** — the dev tooling is optional and for contributors only:
