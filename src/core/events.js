@@ -550,11 +550,14 @@ function showActiveEventBar(eventType) {
     icon.textContent = config.icon;
     text.textContent = config.text;
     bar.classList.remove("hidden");
+    // Moves the HUD below the banner (--hud-top in style.css).
+    document.body.classList.add("event-active");
 }
 
 function hideActiveEventBar() {
     const bar = document.getElementById("active-event-bar");
     if (bar) bar.classList.add("hidden");
+    document.body.classList.remove("event-active");
 }
 
 function updateActiveEventTimer() {

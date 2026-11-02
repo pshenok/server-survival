@@ -54,158 +54,349 @@
 
 <body>
   <!-- UI Overlay: Top Bar -->
-  <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
-    <!-- Stats Panel (Top Left) -->
-    <div id="statsPanel" class="absolute top-4 left-4 glass-panel rounded-xl p-5 w-80 pointer-events-auto">
-      <div class="flex justify-between items-end mb-3 border-b border-gray-700 pb-2">
-        <h1 data-i18n="survival" class="text-2xl font-bold text-red-500 tracking-widest animate-pulse">
-          SURVIVAL
-        </h1>
-        <span class="text-xs text-gray-500 font-mono">v3.0</span>
+  <div id="hudRoot" class="absolute top-0 left-0 w-full h-full pointer-events-none">
+    <!-- Left HUD column: stats on top, objectives (or the sandbox controls)
+         pinned to the bottom. See .hud-col in style.css. -->
+    <div id="hudLeft" class="hud-col hud-col-left">
+      <!-- Stats Panel (Top Left) -->
+      <div id="statsPanel" class="glass-panel rounded-xl p-5 w-80 pointer-events-auto">
+        <div class="flex justify-between items-end mb-3 border-b border-gray-700 pb-2">
+          <h1 data-i18n="survival" class="text-2xl font-bold text-red-500 tracking-widest animate-pulse">
+            SURVIVAL
+          </h1>
+          <span class="text-xs text-gray-500 font-mono">v3.0</span>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span data-i18n="budget" class="text-gray-400 text-sm">BUDGET</span>
+            <span id="money-display"
+              class="text-green-400 font-mono text-xl font-bold transition-colors duration-300">$500</span>
+          </div>
+          <div class="flex justify-between items-center text-xs">
+            <span data-i18n="upkeep_cost" class="text-gray-500">Upkeep Cost</span>
+            <span id="upkeep-display" class="text-red-400 font-mono">-$0.00/s</span>
+          </div>
+          <div class="flex justify-between items-center text-xs">
+            <span data-i18n="elapsed_time" class="text-gray-500">Elapsed Time</span>
+            <span id="elapsed-time" class="text-gray-400 font-mono">00:00</span>
+          </div>
+          <!-- Power grid (#87): shown only once a GPU or Substation exists -->
+          <div id="power-row" class="flex justify-between items-center text-xs hidden">
+            <span class="flex items-center gap-1 text-gray-500">
+              <svg viewBox="0 0 16 16" class="w-3 h-3 text-yellow-400" fill="none" stroke="currentColor"
+                stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 1.5 3.5 9h3L7 14.5 12.5 7h-3Z" />
+              </svg>
+              <span data-i18n="power_label">Power</span>
+            </span>
+            <span id="power-display" class="text-yellow-300 font-mono">0/8 kW</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span data-i18n="reputation" class="text-gray-400 text-sm">REPUTATION</span>
+            <div class="flex items-center gap-2">
+              <div class="w-24 h-3 bg-gray-800 rounded-full overflow-hidden relative">
+                <div id="rep-bar" class="h-full bg-yellow-500 transition-all duration-500" style="width: 100%"></div>
+              </div>
+              <span id="rep-display" class="text-yellow-400 font-mono text-sm w-10 text-right">100%</span>
+            </div>
+          </div>
+          <div class="flex justify-between items-center pt-1">
+            <span data-i18n="load_rps" class="text-gray-400 text-sm">LOAD (RPS)</span>
+            <span id="rps-display" class="text-blue-300 font-mono text-sm">0.0 req/s</span>
+          </div>
+          <div class="flex justify-between items-center text-xs" id="rps-milestone-row">
+            <span data-i18n="next_rps_surge" class="text-gray-500">Next RPS Surge</span>
+            <div class="flex items-center gap-2 font-mono">
+              <span id="rps-next" class="text-orange-400">×1.0</span>
+            <span data-i18n="in" class="text-gray-600">in</span>
+            <span id="rps-countdown" class="text-cyan-400">0:00</span>
+            </div>
+          </div>
+          <div class="flex justify-between items-center pt-1">
+            <span data-i18n="traffic" class="text-gray-400 text-sm">TRAFFIC</span>
+            <div class="flex gap-1 text-[10px] font-mono">
+              <span class="text-green-400" id="mix-static" data-i18n-title="traffic_static" title="Static GET">ST</span>
+              <span class="text-blue-400" id="mix-read" data-i18n-title="traffic_read" title="Read GET">RD</span>
+              <span class="text-orange-400" id="mix-write" data-i18n-title="traffic_write" title="Write POST">WR</span>
+              <span class="text-yellow-400" id="mix-upload" data-i18n-title="traffic_upload" title="Upload">UP</span>
+              <span class="text-cyan-400" id="mix-search" data-i18n-title="traffic_search" title="Search">SR</span>
+              <span class="text-fuchsia-400" id="mix-inference" data-i18n-title="traffic_inference" title="Inference">AI</span>
+              <span class="text-red-400" id="mix-malicious" data-i18n-title="traffic_malicious" title="Malicious">⚠️</span>
+            </div>
+          </div>
+
+          <!-- Failures Table -->
+          <div id="failures-panel" class="mt-2 pt-2 border-t border-gray-700/50 hidden">
+            <div class="flex justify-between items-center mb-2">
+              <span data-i18n="failures" class="text-gray-500 text-xs uppercase">Failures</span>
+              <span id="failures-total" class="text-red-400 font-mono text-xs">0 <span data-i18n="total">total</span></span>
+              <button id="clear-all" class="text-gray-500 hover:text-white text-[10px] font-mono transition" title="Clear all failures" > Clear </button>
+            </div>
+            <table class="w-full text-[10px] font-mono">
+              <thead>
+                <tr class="text-gray-500">
+                  <th data-i18n="type" class="text-left font-normal">Type</th>
+                  <th data-i18n="count" class="text-right font-normal">Count</th>
+                  <th data-i18n="rep_loss" class="text-right font-normal">Rep Loss</th>
+                </tr>
+              </thead>
+              <tbody id="failures-tbody">
+                <tr class="text-purple-400" id="fail-row-malicious">
+                  <td data-i18n="fraud_leak">🛡️ Fraud Leak</td>
+                  <td class="text-right" id="fail-malicious">0</td>
+                  <td class="text-right text-red-400" id="fail-malicious-rep">
+                    0
+                  </td>
+                </tr>
+                <tr class="text-green-400" id="fail-row-static">
+                  <td data-i18n="fail_static">ST Static</td>
+                  <td class="text-right" id="fail-static">0</td>
+                  <td class="text-right text-red-400" id="fail-static-rep">
+                    0
+                  </td>
+                </tr>
+                <tr class="text-blue-400" id="fail-row-read">
+                  <td data-i18n="fail_read">RD Read</td>
+                  <td class="text-right" id="fail-read">0</td>
+                  <td class="text-right text-red-400" id="fail-read-rep">0</td>
+                </tr>
+                <tr class="text-orange-400" id="fail-row-write">
+                  <td data-i18n="fail_write">WR Write</td>
+                  <td class="text-right" id="fail-write">0</td>
+                  <td class="text-right text-red-400" id="fail-write-rep">0</td>
+                </tr>
+                <tr class="text-yellow-400" id="fail-row-upload">
+                  <td data-i18n="fail_upload">UP Upload</td>
+                  <td class="text-right" id="fail-upload">0</td>
+                  <td class="text-right text-red-400" id="fail-upload-rep">
+                    0
+                  </td>
+                </tr>
+                <tr class="text-cyan-400" id="fail-row-search">
+                  <td data-i18n="fail_search">SR Search</td>
+                  <td class="text-right" id="fail-search">0</td>
+                  <td class="text-right text-red-400" id="fail-search-rep">
+                    0
+                  </td>
+                </tr>
+                <tr class="text-fuchsia-400" id="fail-row-inference">
+                  <td data-i18n="fail_inference">AI Inference</td>
+                  <td class="text-right" id="fail-inference">0</td>
+                  <td class="text-right text-red-400" id="fail-inference-rep">
+                    0
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex justify-between items-center pt-3 border-t border-gray-700 mt-2">
+            <span data-i18n="total_score" class="text-gray-300 font-bold text-lg">TOTAL SCORE</span>
+            <span id="total-score-display" class="text-white font-mono text-2xl font-bold">0</span>
+          </div>
+          <!-- Rolling goodput (#261): a BOUNDED ratio over the last 30 game
+               seconds, unlike reputation which is an unbounded integral pinned
+               at 100 for most of a run. Shows "--" until the window has data:
+               an idle board has no goodput, and printing 100% for "nothing
+               happened" is the exact lie reputation already tells. -->
+          <div class="flex justify-between items-center pt-2">
+            <span data-i18n="goodput_label" data-i18n-title="goodput_hint" class="text-gray-400 text-sm"
+                  title="Share of the last 30 seconds of demand answered while someone still wanted it.">GOODPUT (30s)</span>
+            <span id="goodput-display" class="text-gray-500 font-mono text-lg font-bold">--</span>
+          </div>
+        </div>
       </div>
 
-      <div class="space-y-2">
-        <div class="flex justify-between items-center">
-          <span data-i18n="budget" class="text-gray-400 text-sm">BUDGET</span>
-          <span id="money-display"
-            class="text-green-400 font-mono text-xl font-bold transition-colors duration-300">$500</span>
+      <!-- Sandbox Control Panel (Bottom Left - replaces objectives in sandbox mode) -->
+      <div id="sandboxPanel" class="hidden glass-panel rounded-xl p-4 pointer-events-auto w-80">
+        <div class="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
+          <h3 data-i18n="sandbox" class="text-sm font-bold text-purple-400">SANDBOX</h3>
+          <button onclick="clearAllServices()"
+            class="text-xs text-red-400 hover:text-red-300 px-2 py-1 border border-red-900 rounded"
+            data-i18n="clear_all">
+            Clear All
+          </button>
         </div>
-        <div class="flex justify-between items-center text-xs">
-          <span data-i18n="upkeep_cost" class="text-gray-500">Upkeep Cost</span>
-          <span id="upkeep-display" class="text-red-400 font-mono">-$0.00/s</span>
-        </div>
-        <div class="flex justify-between items-center text-xs">
-          <span data-i18n="elapsed_time" class="text-gray-500">Elapsed Time</span>
-          <span id="elapsed-time" class="text-gray-400 font-mono">00:00</span>
-        </div>
-        <!-- Power grid (#87): shown only once a GPU or Substation exists -->
-        <div id="power-row" class="flex justify-between items-center text-xs hidden">
-          <span class="flex items-center gap-1 text-gray-500">
-            <svg viewBox="0 0 16 16" class="w-3 h-3 text-yellow-400" fill="none" stroke="currentColor"
-              stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M9 1.5 3.5 9h3L7 14.5 12.5 7h-3Z" />
-            </svg>
-            <span data-i18n="power_label">Power</span>
-          </span>
-          <span id="power-display" class="text-yellow-300 font-mono">0/8 kW</span>
-        </div>
-        <div class="flex justify-between items-center">
-          <span data-i18n="reputation" class="text-gray-400 text-sm">REPUTATION</span>
+
+        <!-- BUDGET -->
+        <div class="mb-3">
+          <div data-i18n="budget" class="text-xs text-gray-400 mb-1">Budget ($)</div>
           <div class="flex items-center gap-2">
-            <div class="w-24 h-3 bg-gray-800 rounded-full overflow-hidden relative">
-              <div id="rep-bar" class="h-full bg-yellow-500 transition-all duration-500" style="width: 100%"></div>
-            </div>
-            <span id="rep-display" class="text-yellow-400 font-mono text-sm w-10 text-right">100%</span>
+            <input type="range" id="budget-slider" min="0" max="10000" step="100" value="2000"
+              oninput="setSandboxBudget(this.value)" class="flex-1 h-2 bg-gray-700 rounded-lg accent-green-500" />
+            <input type="number" id="budget-input" value="2000" min="0" onchange="setSandboxBudget(this.value)"
+              class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-green-400 text-sm text-center font-mono" />
           </div>
-        </div>
-        <div class="flex justify-between items-center pt-1">
-          <span data-i18n="load_rps" class="text-gray-400 text-sm">LOAD (RPS)</span>
-          <span id="rps-display" class="text-blue-300 font-mono text-sm">0.0 req/s</span>
-        </div>
-        <div class="flex justify-between items-center text-xs" id="rps-milestone-row">
-          <span data-i18n="next_rps_surge" class="text-gray-500">Next RPS Surge</span>
-          <div class="flex items-center gap-2 font-mono">
-            <span id="rps-next" class="text-orange-400">×1.0</span>
-          <span data-i18n="in" class="text-gray-600">in</span>
-          <span id="rps-countdown" class="text-cyan-400">0:00</span>
-          </div>
-        </div>
-        <div class="flex justify-between items-center pt-1">
-          <span data-i18n="traffic" class="text-gray-400 text-sm">TRAFFIC</span>
-          <div class="flex gap-1 text-[10px] font-mono">
-            <span class="text-green-400" id="mix-static" data-i18n-title="traffic_static" title="Static GET">ST</span>
-            <span class="text-blue-400" id="mix-read" data-i18n-title="traffic_read" title="Read GET">RD</span>
-            <span class="text-orange-400" id="mix-write" data-i18n-title="traffic_write" title="Write POST">WR</span>
-            <span class="text-yellow-400" id="mix-upload" data-i18n-title="traffic_upload" title="Upload">UP</span>
-            <span class="text-cyan-400" id="mix-search" data-i18n-title="traffic_search" title="Search">SR</span>
-            <span class="text-fuchsia-400" id="mix-inference" data-i18n-title="traffic_inference" title="Inference">AI</span>
-            <span class="text-red-400" id="mix-malicious" data-i18n-title="traffic_malicious" title="Malicious">⚠️</span>
+          <div class="flex gap-2 mt-2">
+            <button onclick="resetBudget()"
+              class="flex-1 text-xs py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded"
+              data-i18n="reset_budget">
+              Reset $
+            </button>
+            <button onclick="toggleUpkeep()" id="upkeep-toggle"
+              class="flex-1 text-xs py-1.5 bg-green-900/50 text-gray-300 rounded border border-gray-600">
+              <span data-i18n="upkeep_toggle">Upkeep</span>: <span data-i18n="off">OFF</span>
+            </button>
           </div>
         </div>
 
-        <!-- Failures Table -->
-        <div id="failures-panel" class="mt-2 pt-2 border-t border-gray-700/50 hidden">
-          <div class="flex justify-between items-center mb-2">
-            <span data-i18n="failures" class="text-gray-500 text-xs uppercase">Failures</span>
-            <span id="failures-total" class="text-red-400 font-mono text-xs">0 <span data-i18n="total">total</span></span>
-            <button id="clear-all" class="text-gray-500 hover:text-white text-[10px] font-mono transition" title="Clear all failures" > Clear </button>
+        <!-- RPS -->
+        <div class="mb-3">
+          <div data-i18n="traffic_rate" class="text-xs text-gray-400 mb-1">Traffic Rate (req/s)</div>
+          <div class="flex items-center gap-2">
+            <input type="range" id="rps-slider" min="0" max="50" step="0.5" value="1" oninput="setSandboxRPS(this.value)"
+              class="flex-1 h-2 bg-gray-700 rounded-lg accent-blue-500" />
+            <input type="number" id="rps-input" value="1" min="0" step="0.5" onchange="setSandboxRPS(this.value)"
+              class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-blue-400 text-sm text-center font-mono" />
           </div>
-          <table class="w-full text-[10px] font-mono">
-            <thead>
-              <tr class="text-gray-500">
-                <th data-i18n="type" class="text-left font-normal">Type</th>
-                <th data-i18n="count" class="text-right font-normal">Count</th>
-                <th data-i18n="rep_loss" class="text-right font-normal">Rep Loss</th>
-              </tr>
-            </thead>
-            <tbody id="failures-tbody">
-              <tr class="text-purple-400" id="fail-row-malicious">
-                <td data-i18n="fraud_leak">🛡️ Fraud Leak</td>
-                <td class="text-right" id="fail-malicious">0</td>
-                <td class="text-right text-red-400" id="fail-malicious-rep">
-                  0
-                </td>
-              </tr>
-              <tr class="text-green-400" id="fail-row-static">
-                <td data-i18n="fail_static">ST Static</td>
-                <td class="text-right" id="fail-static">0</td>
-                <td class="text-right text-red-400" id="fail-static-rep">
-                  0
-                </td>
-              </tr>
-              <tr class="text-blue-400" id="fail-row-read">
-                <td data-i18n="fail_read">RD Read</td>
-                <td class="text-right" id="fail-read">0</td>
-                <td class="text-right text-red-400" id="fail-read-rep">0</td>
-              </tr>
-              <tr class="text-orange-400" id="fail-row-write">
-                <td data-i18n="fail_write">WR Write</td>
-                <td class="text-right" id="fail-write">0</td>
-                <td class="text-right text-red-400" id="fail-write-rep">0</td>
-              </tr>
-              <tr class="text-yellow-400" id="fail-row-upload">
-                <td data-i18n="fail_upload">UP Upload</td>
-                <td class="text-right" id="fail-upload">0</td>
-                <td class="text-right text-red-400" id="fail-upload-rep">
-                  0
-                </td>
-              </tr>
-              <tr class="text-cyan-400" id="fail-row-search">
-                <td data-i18n="fail_search">SR Search</td>
-                <td class="text-right" id="fail-search">0</td>
-                <td class="text-right text-red-400" id="fail-search-rep">
-                  0
-                </td>
-              </tr>
-              <tr class="text-fuchsia-400" id="fail-row-inference">
-                <td data-i18n="fail_inference">AI Inference</td>
-                <td class="text-right" id="fail-inference">0</td>
-                <td class="text-right text-red-400" id="fail-inference-rep">
-                  0
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
 
-        <div class="flex justify-between items-center pt-3 border-t border-gray-700 mt-2">
-          <span data-i18n="total_score" class="text-gray-300 font-bold text-lg">TOTAL SCORE</span>
-          <span id="total-score-display" class="text-white font-mono text-2xl font-bold">0</span>
+        <!-- TRAFFIC MIX -->
+        <div class="mb-3">
+          <div data-i18n="traffic_mix" class="text-xs text-gray-400 mb-1">Traffic Mix (%)</div>
+          <!-- STATIC -->
+          <div class="flex items-center gap-2 mb-1">
+            <span data-i18n="traffic_static" class="text-xs text-green-400 truncate max-w-[6rem]">STATIC</span>
+            <input type="range" id="static-slider" min="0" max="100" value="30"
+              oninput="setTrafficMix('STATIC',this.value)" class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-green-500" />
+            <input type="number" id="static-input" value="30" min="0" max="100"
+              onchange="setTrafficMix('STATIC',this.value)"
+              class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-green-400 text-xs text-center font-mono" />
+          </div>
+          <!-- READ -->
+          <div class="flex items-center gap-2 mb-1">
+            <span data-i18n="traffic_read" class="text-xs text-blue-400 truncate max-w-[6rem]">READ</span>
+            <input type="range" id="read-slider" min="0" max="100" value="20" oninput="setTrafficMix('READ',this.value)"
+              class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-blue-500" />
+            <input type="number" id="read-input" value="20" min="0" max="100" onchange="setTrafficMix('READ',this.value)"
+              class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-blue-400 text-xs text-center font-mono" />
+          </div>
+          <!-- WRITE -->
+          <div class="flex items-center gap-2 mb-1">
+            <span data-i18n="traffic_write" class="text-xs text-orange-400 truncate max-w-[6rem]">WRITE</span>
+            <input type="range" id="write-slider" min="0" max="100" value="15" oninput="setTrafficMix('WRITE',this.value)"
+              class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-orange-500" />
+            <input type="number" id="write-input" value="15" min="0" max="100"
+              onchange="setTrafficMix('WRITE',this.value)"
+              class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-orange-400 text-xs text-center font-mono" />
+          </div>
+          <!-- UPLOAD -->
+          <div class="flex items-center gap-2 mb-1">
+            <span data-i18n="traffic_upload" class="text-xs text-yellow-400 truncate max-w-[6rem]">UPLOAD</span>
+            <input type="range" id="upload-slider" min="0" max="100" value="5"
+              oninput="setTrafficMix('UPLOAD',this.value)"
+              class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-yellow-500" />
+            <input type="number" id="upload-input" value="5" min="0" max="100"
+              onchange="setTrafficMix('UPLOAD',this.value)"
+              class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-yellow-400 text-xs text-center font-mono" />
+          </div>
+          <!-- SEARCH -->
+          <div class="flex items-center gap-2 mb-1">
+            <span data-i18n="traffic_search" class="text-xs text-cyan-400 truncate max-w-[6rem]">SEARCH</span>
+            <input type="range" id="search-slider" min="0" max="100" value="10"
+              oninput="setTrafficMix('SEARCH',this.value)" class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-cyan-500" />
+            <input type="number" id="search-input" value="10" min="0" max="100"
+              onchange="setTrafficMix('SEARCH',this.value)"
+              class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-cyan-400 text-xs text-center font-mono" />
+          </div>
+          <!-- INFERENCE (#87) -->
+          <div class="flex items-center gap-2 mb-1">
+            <span data-i18n="traffic_inference" class="text-xs text-fuchsia-400 truncate max-w-[6rem]">INFERENCE</span>
+            <input type="range" id="inference-slider" min="0" max="100" value="0"
+              oninput="setTrafficMix('INFERENCE',this.value)"
+              class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-fuchsia-500" />
+            <input type="number" id="inference-input" value="0" min="0" max="100"
+              onchange="setTrafficMix('INFERENCE',this.value)"
+              class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-fuchsia-400 text-xs text-center font-mono" />
+          </div>
+          <!-- MALICIOUS -->
+          <div class="flex items-center gap-2">
+            <span data-i18n="traffic_attack" class="text-xs text-red-400 truncate max-w-[6rem]">ATTACK</span>
+            <input type="range" id="malicious-slider" min="0" max="100" value="20"
+              oninput="setTrafficMix('MALICIOUS',this.value)"
+              class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-red-500" />
+            <input type="number" id="malicious-input" value="20" min="0" max="100"
+              onchange="setTrafficMix('MALICIOUS',this.value)"
+              class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-red-400 text-xs text-center font-mono" />
+          </div>
         </div>
-        <!-- Rolling goodput (#261): a BOUNDED ratio over the last 30 game
-             seconds, unlike reputation which is an unbounded integral pinned
-             at 100 for most of a run. Shows "--" until the window has data:
-             an idle board has no goodput, and printing 100% for "nothing
-             happened" is the exact lie reputation already tells. -->
-        <div class="flex justify-between items-center pt-2">
-          <span data-i18n="goodput_label" data-i18n-title="goodput_hint" class="text-gray-400 text-sm"
-                title="Share of the last 30 seconds of demand answered while someone still wanted it.">GOODPUT (30s)</span>
-          <span id="goodput-display" class="text-gray-500 font-mono text-lg font-bold">--</span>
+
+        <!-- BURST -->
+        <div class="border-t border-gray-700 pt-2">
+          <div class="flex items-center gap-2 mb-2">
+            <span data-i18n="burst_label" class="text-xs text-gray-400">Burst:</span>
+            <input type="number" id="burst-input" value="10" min="1" onchange="setBurstCount(this.value)"
+              class="w-16 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs text-center font-mono" />
+          </div>
+          <div class="flex gap-1 flex-wrap">
+            <button onclick="spawnBurst('STATIC')"
+              data-i18n="traffic_static"
+              class="flex-1 bg-green-900/50 hover:bg-green-800 text-green-400 text-xs py-1.5 rounded border border-green-700/50">
+              STATIC
+            </button>
+            <button onclick="spawnBurst('READ')"
+              data-i18n="traffic_read"
+              class="flex-1 bg-blue-900/50 hover:bg-blue-800 text-blue-400 text-xs py-1.5 rounded border border-blue-700/50">
+              READ
+            </button>
+            <button onclick="spawnBurst('WRITE')"
+              data-i18n="traffic_write"
+              class="flex-1 bg-orange-900/50 hover:bg-orange-800 text-orange-400 text-xs py-1.5 rounded border border-orange-700/50">
+              WRITE
+            </button>
+          </div>
+          <div class="flex gap-1 flex-wrap mt-1">
+            <button onclick="spawnBurst('UPLOAD')"
+              data-i18n="traffic_upload"
+              class="flex-1 bg-yellow-900/50 hover:bg-yellow-800 text-yellow-400 text-xs py-1.5 rounded border border-yellow-700/50">
+              UPLOAD
+            </button>
+            <button onclick="spawnBurst('SEARCH')"
+              data-i18n="traffic_search"
+              class="flex-1 bg-cyan-900/50 hover:bg-cyan-800 text-cyan-400 text-xs py-1.5 rounded border border-cyan-700/50">
+              SEARCH
+            </button>
+            <button onclick="spawnBurst('MALICIOUS')"
+              data-i18n="traffic_ddos"
+              class="flex-1 bg-red-900/50 hover:bg-red-800 text-red-400 text-xs py-1.5 rounded border border-red-700/50">
+              DDoS
+            </button>
+          </div>
         </div>
+      </div>
+
+      <!-- Objective Panel (Bottom Left) -->
+      <div id="objectivesPanel" class="glass-panel rounded-xl p-4 pointer-events-auto max-w-xs">
+        <div class="flex justify-between items-center mb-2">
+          <h3 data-i18n="current_objectives" class="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            Current Objectives
+          </h3>
+          <span data-i18n="live"
+            class="text-[10px] bg-red-900/50 px-2 py-0.5 rounded text-red-400 border border-red-800 animate-pulse">LIVE</span>
+        </div>
+        <ul class="text-xs text-gray-300 space-y-2 font-mono">
+          <li class="flex items-center">
+            <span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span>
+            <span data-i18n="survive_endless">Survive Endless Traffic</span>
+          </li>
+          <li id="goal-storage" class="flex items-center">
+            <span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
+            <span data-i18n="route_storage">Route STATIC/UPLOAD → Storage</span>
+          </li>
+          <li id="goal-db" class="flex items-center">
+            <span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+            <span data-i18n="route_db">Route READ/WRITE/SEARCH → Database</span>
+          </li>
+          <li id="goal-waf" class="flex items-center">
+            <span class="w-2 h-2 rounded-full bg-purple-500 mr-2"></span>
+            <span data-i18n="block_malicious">Block MALICIOUS with Firewall</span>
+          </li>
+        </ul>
       </div>
     </div>
 
-    <div class="absolute top-4 right-4 flex flex-col gap-3 items-end pointer-events-none">
+    <div id="hudRight" class="hud-col hud-col-right">
       <!-- Score Details Panel (Top Right) -->
       <div id="detailsPanel" class="glass-panel rounded-xl p-4 w-60 pointer-events-auto">
         <h3 data-i18n="traffic_score_details" class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 border-b border-gray-700 pb-1">
@@ -483,193 +674,6 @@
             d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
         </svg>
       </button>
-    </div>
-
-    <!-- Sandbox Control Panel (Bottom Left - replaces objectives in sandbox mode) -->
-    <div id="sandboxPanel" class="hidden absolute bottom-24 left-4 glass-panel rounded-xl p-4 pointer-events-auto w-80">
-      <div class="flex justify-between items-center mb-3 border-b border-gray-700 pb-2">
-        <h3 data-i18n="sandbox" class="text-sm font-bold text-purple-400">SANDBOX</h3>
-        <button onclick="clearAllServices()"
-          class="text-xs text-red-400 hover:text-red-300 px-2 py-1 border border-red-900 rounded"
-          data-i18n="clear_all">
-          Clear All
-        </button>
-      </div>
-
-      <!-- BUDGET -->
-      <div class="mb-3">
-        <div data-i18n="budget" class="text-xs text-gray-400 mb-1">Budget ($)</div>
-        <div class="flex items-center gap-2">
-          <input type="range" id="budget-slider" min="0" max="10000" step="100" value="2000"
-            oninput="setSandboxBudget(this.value)" class="flex-1 h-2 bg-gray-700 rounded-lg accent-green-500" />
-          <input type="number" id="budget-input" value="2000" min="0" onchange="setSandboxBudget(this.value)"
-            class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-green-400 text-sm text-center font-mono" />
-        </div>
-        <div class="flex gap-2 mt-2">
-          <button onclick="resetBudget()"
-            class="flex-1 text-xs py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded"
-            data-i18n="reset_budget">
-            Reset $
-          </button>
-          <button onclick="toggleUpkeep()" id="upkeep-toggle"
-            class="flex-1 text-xs py-1.5 bg-green-900/50 text-gray-300 rounded border border-gray-600">
-            <span data-i18n="upkeep_toggle">Upkeep</span>: <span data-i18n="off">OFF</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- RPS -->
-      <div class="mb-3">
-        <div data-i18n="traffic_rate" class="text-xs text-gray-400 mb-1">Traffic Rate (req/s)</div>
-        <div class="flex items-center gap-2">
-          <input type="range" id="rps-slider" min="0" max="50" step="0.5" value="1" oninput="setSandboxRPS(this.value)"
-            class="flex-1 h-2 bg-gray-700 rounded-lg accent-blue-500" />
-          <input type="number" id="rps-input" value="1" min="0" step="0.5" onchange="setSandboxRPS(this.value)"
-            class="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-blue-400 text-sm text-center font-mono" />
-        </div>
-      </div>
-
-      <!-- TRAFFIC MIX -->
-      <div class="mb-3">
-        <div data-i18n="traffic_mix" class="text-xs text-gray-400 mb-1">Traffic Mix (%)</div>
-        <!-- STATIC -->
-        <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_static" class="text-xs text-green-400 truncate max-w-[6rem]">STATIC</span>
-          <input type="range" id="static-slider" min="0" max="100" value="30"
-            oninput="setTrafficMix('STATIC',this.value)" class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-green-500" />
-          <input type="number" id="static-input" value="30" min="0" max="100"
-            onchange="setTrafficMix('STATIC',this.value)"
-            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-green-400 text-xs text-center font-mono" />
-        </div>
-        <!-- READ -->
-        <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_read" class="text-xs text-blue-400 truncate max-w-[6rem]">READ</span>
-          <input type="range" id="read-slider" min="0" max="100" value="20" oninput="setTrafficMix('READ',this.value)"
-            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-blue-500" />
-          <input type="number" id="read-input" value="20" min="0" max="100" onchange="setTrafficMix('READ',this.value)"
-            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-blue-400 text-xs text-center font-mono" />
-        </div>
-        <!-- WRITE -->
-        <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_write" class="text-xs text-orange-400 truncate max-w-[6rem]">WRITE</span>
-          <input type="range" id="write-slider" min="0" max="100" value="15" oninput="setTrafficMix('WRITE',this.value)"
-            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-orange-500" />
-          <input type="number" id="write-input" value="15" min="0" max="100"
-            onchange="setTrafficMix('WRITE',this.value)"
-            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-orange-400 text-xs text-center font-mono" />
-        </div>
-        <!-- UPLOAD -->
-        <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_upload" class="text-xs text-yellow-400 truncate max-w-[6rem]">UPLOAD</span>
-          <input type="range" id="upload-slider" min="0" max="100" value="5"
-            oninput="setTrafficMix('UPLOAD',this.value)"
-            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-yellow-500" />
-          <input type="number" id="upload-input" value="5" min="0" max="100"
-            onchange="setTrafficMix('UPLOAD',this.value)"
-            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-yellow-400 text-xs text-center font-mono" />
-        </div>
-        <!-- SEARCH -->
-        <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_search" class="text-xs text-cyan-400 truncate max-w-[6rem]">SEARCH</span>
-          <input type="range" id="search-slider" min="0" max="100" value="10"
-            oninput="setTrafficMix('SEARCH',this.value)" class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-cyan-500" />
-          <input type="number" id="search-input" value="10" min="0" max="100"
-            onchange="setTrafficMix('SEARCH',this.value)"
-            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-cyan-400 text-xs text-center font-mono" />
-        </div>
-        <!-- INFERENCE (#87) -->
-        <div class="flex items-center gap-2 mb-1">
-          <span data-i18n="traffic_inference" class="text-xs text-fuchsia-400 truncate max-w-[6rem]">INFERENCE</span>
-          <input type="range" id="inference-slider" min="0" max="100" value="0"
-            oninput="setTrafficMix('INFERENCE',this.value)"
-            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-fuchsia-500" />
-          <input type="number" id="inference-input" value="0" min="0" max="100"
-            onchange="setTrafficMix('INFERENCE',this.value)"
-            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-fuchsia-400 text-xs text-center font-mono" />
-        </div>
-        <!-- MALICIOUS -->
-        <div class="flex items-center gap-2">
-          <span data-i18n="traffic_attack" class="text-xs text-red-400 truncate max-w-[6rem]">ATTACK</span>
-          <input type="range" id="malicious-slider" min="0" max="100" value="20"
-            oninput="setTrafficMix('MALICIOUS',this.value)"
-            class="flex-1 min-w-0 h-1.5 bg-gray-700 rounded-lg accent-red-500" />
-          <input type="number" id="malicious-input" value="20" min="0" max="100"
-            onchange="setTrafficMix('MALICIOUS',this.value)"
-            class="w-14 flex-shrink-0 px-1 py-0.5 bg-gray-800 border border-gray-600 rounded text-red-400 text-xs text-center font-mono" />
-        </div>
-      </div>
-
-      <!-- BURST -->
-      <div class="border-t border-gray-700 pt-2">
-        <div class="flex items-center gap-2 mb-2">
-          <span data-i18n="burst_label" class="text-xs text-gray-400">Burst:</span>
-          <input type="number" id="burst-input" value="10" min="1" onchange="setBurstCount(this.value)"
-            class="w-16 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs text-center font-mono" />
-        </div>
-        <div class="flex gap-1 flex-wrap">
-          <button onclick="spawnBurst('STATIC')"
-            data-i18n="traffic_static"
-            class="flex-1 bg-green-900/50 hover:bg-green-800 text-green-400 text-xs py-1.5 rounded border border-green-700/50">
-            STATIC
-          </button>
-          <button onclick="spawnBurst('READ')"
-            data-i18n="traffic_read"
-            class="flex-1 bg-blue-900/50 hover:bg-blue-800 text-blue-400 text-xs py-1.5 rounded border border-blue-700/50">
-            READ
-          </button>
-          <button onclick="spawnBurst('WRITE')"
-            data-i18n="traffic_write"
-            class="flex-1 bg-orange-900/50 hover:bg-orange-800 text-orange-400 text-xs py-1.5 rounded border border-orange-700/50">
-            WRITE
-          </button>
-        </div>
-        <div class="flex gap-1 flex-wrap mt-1">
-          <button onclick="spawnBurst('UPLOAD')"
-            data-i18n="traffic_upload"
-            class="flex-1 bg-yellow-900/50 hover:bg-yellow-800 text-yellow-400 text-xs py-1.5 rounded border border-yellow-700/50">
-            UPLOAD
-          </button>
-          <button onclick="spawnBurst('SEARCH')"
-            data-i18n="traffic_search"
-            class="flex-1 bg-cyan-900/50 hover:bg-cyan-800 text-cyan-400 text-xs py-1.5 rounded border border-cyan-700/50">
-            SEARCH
-          </button>
-          <button onclick="spawnBurst('MALICIOUS')"
-            data-i18n="traffic_ddos"
-            class="flex-1 bg-red-900/50 hover:bg-red-800 text-red-400 text-xs py-1.5 rounded border border-red-700/50">
-            DDoS
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Objective Panel (Bottom Left) -->
-    <div id="objectivesPanel" class="absolute bottom-24 left-4 glass-panel rounded-xl p-4 pointer-events-auto max-w-xs">
-      <div class="flex justify-between items-center mb-2">
-        <h3 data-i18n="current_objectives" class="text-xs font-bold text-gray-400 uppercase tracking-wider">
-          Current Objectives
-        </h3>
-        <span data-i18n="live"
-          class="text-[10px] bg-red-900/50 px-2 py-0.5 rounded text-red-400 border border-red-800 animate-pulse">LIVE</span>
-      </div>
-      <ul class="text-xs text-gray-300 space-y-2 font-mono">
-        <li class="flex items-center">
-          <span class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span>
-          <span data-i18n="survive_endless">Survive Endless Traffic</span>
-        </li>
-        <li id="goal-storage" class="flex items-center">
-          <span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-          <span data-i18n="route_storage">Route STATIC/UPLOAD → Storage</span>
-        </li>
-        <li id="goal-db" class="flex items-center">
-          <span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-          <span data-i18n="route_db">Route READ/WRITE/SEARCH → Database</span>
-        </li>
-        <li id="goal-waf" class="flex items-center">
-          <span class="w-2 h-2 rounded-full bg-purple-500 mr-2"></span>
-          <span data-i18n="block_malicious">Block MALICIOUS with Firewall</span>
-        </li>
-      </ul>
     </div>
   </div>
 
