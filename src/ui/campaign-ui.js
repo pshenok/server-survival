@@ -248,6 +248,12 @@ function startCampaignLevel(levelId) {
         setTimeout(() => window.tutorial.start(), 500);
     }
 
+    // The objectives are otherwise drawn only by the campaign's evaluation
+    // tick, which does not run until Play, so the paused start kept showing
+    // survival's checklist. Drawn unticked: evaluating now would run checks
+    // that latch (Level 22's profit floor) before the level has been played.
+    renderCampaignObjectives(level, {}, {});
+
     // Start PAUSED — like Survival mode. Player surveys the situation
     // (pre-built architecture, allowed services, objectives panel) and
     // presses Play when ready. resetGame already set timeScale=0 and put
