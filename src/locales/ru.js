@@ -314,7 +314,7 @@ export const RU_TRANSLATIONS = {
     "storage_desc_short": "Хранит веб‑данные ($25)",
     "tools_controls": "ИНСТРУМЕНТЫ И УПРАВЛЕНИЕ",
     "tool_select_desc": "Осматривайте сервисы. Нажмите на Compute/DB для улучшения.",
-    "tool_connect_desc": "Соединяйте узлы. Нажмите <span class=\"text-green-400\">Источник</span> → <span class=\"text-blue-400\">Назначение</span>.",
+    "tool_connect_desc": "Соединяйте узлы. Нажмите <span class=\"text-green-400\">Источник</span> → <span class=\"text-blue-400\">Назначение</span>. Удерживайте Shift при клике на назначение, чтобы продолжать соединять из того же источника.",
     "tool_delete_desc": "Удаляйте компоненты или связи. Возвращается 50% стоимости компонента.",
     "tool_unlink": "РАЗОРВАТЬ",
     "tool_unlink_desc": "Удалить соединение. Нажмите на линию связи.",

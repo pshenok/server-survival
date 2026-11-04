@@ -410,8 +410,8 @@ container.addEventListener("contextmenu", (e) => e.preventDefault());
 // listener, since touch has no equivalent "other button" to check.
 // `preventDefault` defaults to a no-op: it is only ever called from the
 // drag-grab branch (to stop text-selection drag on desktop), and the touch
-// listener passes the real one.
-function handlePrimaryDown(clientX, clientY, preventDefault = () => {}) {
+// listener passes the real one. Touch has no Shift, so `shiftKey` stays false.
+function handlePrimaryDown(clientX, clientY, preventDefault = () => {}, shiftKey = false) {
     if (!STATE.isRunning) return;
 
     const i = getIntersect(clientX, clientY);
@@ -463,7 +463,8 @@ function handlePrimaryDown(clientX, clientY, preventDefault = () => {}) {
     ) {
         if (STATE.selectedNodeId) {
             createConnection(STATE.selectedNodeId, i.id);
-            STATE.selectedNodeId = null;
+            // Shift keeps the source, to wire one node to several (#89).
+            if (!shiftKey) STATE.selectedNodeId = null;
         } else {
             STATE.selectedNodeId = i.id;
             new Audio("assets/sounds/click-5.mp3").play();
@@ -519,7 +520,7 @@ container.addEventListener("mousedown", (e) => {
         return;
     }
 
-    handlePrimaryDown(e.clientX, e.clientY, () => e.preventDefault());
+    handlePrimaryDown(e.clientX, e.clientY, () => e.preventDefault(), e.shiftKey);
 });
 
 // Last known pointer position over the canvas — lets the animate loop

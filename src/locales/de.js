@@ -314,7 +314,7 @@ export const DE_TRANSLATIONS = {
     "storage_desc_short": "Speichert Web-Daten ($25)",
     "tools_controls": "WERKZEUGE & STEUERUNG",
     "tool_select_desc": "Inspiziere Dienste für Last und Statistiken. Klicke Compute/DB zum Upgraden.",
-    "tool_connect_desc": "Verbinde Knoten. Klicke <span class=\"text-green-400\">Quelle</span> dann <span class=\"text-blue-400\">Ziel</span>.",
+    "tool_connect_desc": "Verbinde Knoten. Klicke <span class=\"text-green-400\">Quelle</span> dann <span class=\"text-blue-400\">Ziel</span>. Halte Shift beim Klick auf das Ziel, um von derselben Quelle weiter zu verbinden.",
     "tool_delete_desc": "Entferne Komponenten oder Verbindungen. Komponenten erstatten 50% der Kosten.",
     "tool_unlink": "TRENNEN",
     "tool_unlink_desc": "Entferne Verbindungen zwischen Diensten. Klicke auf eine Verbindung, um sie zu löschen.",

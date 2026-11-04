@@ -348,7 +348,7 @@ export const HI_TRANSLATIONS = {
     "storage_desc_short": "Web data store करता है ($25)",
     "tools_controls": "TOOLS और CONTROLS",
     "tool_select_desc": "Services inspect करके load और stats देखें। Upgrade के लिए Compute/DB पर क्लिक करें।",
-    "tool_connect_desc": "Nodes को आपस में link करें। पहले <span class=\"text-green-400\">Source</span> पर क्लिक करें, फिर <span class=\"text-blue-400\">Destination</span> पर।",
+    "tool_connect_desc": "Nodes को आपस में link करें। पहले <span class=\"text-green-400\">Source</span> पर क्लिक करें, फिर <span class=\"text-blue-400\">Destination</span> पर। Destination पर क्लिक करते समय Shift दबाए रखें, ताकि उसी Source से आगे भी link कर सकें।",
     "tool_delete_desc": "Components या links हटाएँ। Components की 50% लागत वापस मिलती है।",
     "tool_unlink": "UNLINK",
     "tool_unlink_desc": "Services के बीच के connections हटाएँ। Link पर क्लिक करके उसे delete करें।",
