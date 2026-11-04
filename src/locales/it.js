@@ -608,6 +608,8 @@ export const IT_TRANSLATIONS = {
     "share_link_copied": "Link copiato negli appunti!",
     "share_too_large": "Questa costruzione è troppo grande per stare in un link.",
     "share_copy_failed": "Copia non riuscita — il browser ha bloccato l'accesso agli appunti.",
+    "share_test_sandbox": "Prova in sandbox (nuova scheda)",
+    "share_tab_blocked": "Il browser ha bloccato la nuova scheda. Consenti i pop-up per questa pagina o copia il link.",
 
     // The AI Wave (#87)
     "gpu": "Cluster GPU",

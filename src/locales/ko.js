@@ -608,6 +608,8 @@ export const KO_TRANSLATIONS = {
     "share_link_copied": "링크가 클립보드에 복사되었습니다!",
     "share_too_large": "이 빌드는 링크에 담기에는 너무 큽니다.",
     "share_copy_failed": "복사 실패 — 브라우저가 클립보드 접근을 차단했습니다.",
+    "share_test_sandbox": "샌드박스에서 테스트 (새 탭)",
+    "share_tab_blocked": "브라우저가 새 탭을 차단했습니다. 이 페이지의 팝업을 허용하거나 링크를 복사하세요.",
 
     // The AI Wave (#87)
     "gpu": "GPU 클러스터",

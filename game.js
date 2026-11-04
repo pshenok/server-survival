@@ -108,6 +108,7 @@ import {
     downloadArchitecturePNG,
     rebuildSharedArch,
     showShareModal,
+    testInSandbox,
 } from "./src/ui/share.js";
 // Service palette (toolbar categories, 2026-07-24): index.html ships only the
 // empty shell, so the tab strip and the active category's buttons are drawn
@@ -1796,6 +1797,7 @@ window.showShareModal = showShareModal;
 window.closeShareModal = closeShareModal;
 window.copyShareLink = copyShareLink;
 window.downloadArchitecturePNG = downloadArchitecturePNG;
+window.testInSandbox = testInSandbox;
 
 // #155 PR 7: the build/wire/demolish cluster now lives in src/sim/topology.js;
 // index.html's sandbox "Clear All" button still resolves this on window.

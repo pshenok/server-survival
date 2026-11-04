@@ -608,6 +608,8 @@ export const ZH_TRANSLATIONS = {
     "share_link_copied": "链接已复制到剪贴板！",
     "share_too_large": "该架构太大，无法放入链接。",
     "share_copy_failed": "复制失败——浏览器阻止了剪贴板访问。",
+    "share_test_sandbox": "在沙盒模式中测试（新标签页）",
+    "share_tab_blocked": "浏览器阻止了新标签页。请允许此页面弹出窗口，或复制链接。",
 
     // The AI Wave (#87)
     "gpu": "GPU 集群",

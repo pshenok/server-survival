@@ -639,6 +639,8 @@ export const UK_TRANSLATIONS = {
     "share_link_copied": "Посилання скопійовано в буфер!",
     "share_too_large": "Ця збірка завелика, щоб уміститися в посилання.",
     "share_copy_failed": "Не вдалося скопіювати — браузер заблокував доступ до буфера обміну.",
+    "share_test_sandbox": "Перевірити в Пісочниці (нова вкладка)",
+    "share_tab_blocked": "Браузер заблокував нову вкладку. Дозволь спливні вікна для цієї сторінки або скопіюй посилання.",
 
     // Achievements (#158): Trophies panel + unlock toasts.
     "trophies": "Трофеї",

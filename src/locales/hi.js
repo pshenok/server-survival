@@ -691,6 +691,8 @@ export const HI_TRANSLATIONS = {
     "share_link_copied": "Link clipboard पर copy हो गया!",
     "share_too_large": "यह build इतना बड़ा है कि link में नहीं समाता।",
     "share_copy_failed": "Copy नहीं हो पाया — आपके browser ने clipboard access रोक दिया।",
+    "share_test_sandbox": "Sandbox में test करें (नया tab)",
+    "share_tab_blocked": "आपके browser ने नया tab रोक दिया। इस page के लिए pop-ups allow करें, या link copy करें।",
 
     // Achievements (#158): Trophies panel + unlock toasts.
     "trophies": "ट्रॉफ़ी",

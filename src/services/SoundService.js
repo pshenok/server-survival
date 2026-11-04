@@ -64,6 +64,14 @@ export class SoundService {
         };
         window.addEventListener('click', resumeAudio);
         window.addEventListener('keydown', resumeAudio);
+
+        // Two tabs of the game (Test in Sandbox opens one) would otherwise play
+        // their music over each other.
+        document.addEventListener('visibilitychange', () => {
+            if (!this.currentBgm) return;
+            if (document.hidden) this.currentBgm.pause();
+            else if (!this.musicMuted) this.currentBgm.play().catch(() => { });
+        });
     }
 
     playMenuBGM() {
