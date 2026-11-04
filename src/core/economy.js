@@ -323,22 +323,27 @@ function updateFinancesDisplay() {
     }
 }
 
+// The label's key moves with the state: a language switch re-renders every
+// data-i18n element, so a fixed key would overwrite ON/OFF with its own text.
+function renderAutoRepairToggle() {
+    const btn = document.getElementById("auto-repair-toggle");
+    if (!btn) return;
+    const on = !!STATE.autoRepairEnabled;
+    const key = on ? "auto_repair_on_msg" : "auto_repair_off_msg";
+    btn.setAttribute("data-i18n", key);
+    btn.textContent = i18n.t(key);
+    btn.classList.toggle("text-green-400", on);
+    btn.classList.toggle("text-gray-400", !on);
+}
+
 function toggleAutoRepair() {
     STATE.autoRepairEnabled = !STATE.autoRepairEnabled;
-    const btn = document.getElementById("auto-repair-toggle");
-    if (btn) {
-        if (STATE.autoRepairEnabled) {
-            btn.textContent = i18n.t('upkeep_on');
-            btn.classList.remove("text-gray-400");
-            btn.classList.add("text-green-400");
-            addInterventionWarning(i18n.t('auto_repair_hint'), "info", 2000);
-        } else {
-            btn.textContent = i18n.t('upkeep_off');
-            btn.classList.remove("text-green-400");
-            btn.classList.add("text-gray-400");
-            addInterventionWarning(i18n.t('event_ended'), "info", 2000);
-        }
-    }
+    renderAutoRepairToggle();
+    addInterventionWarning(
+        i18n.t(STATE.autoRepairEnabled ? "auto_repair_hint" : "auto_repair_disabled"),
+        "info",
+        2000
+    );
     updateRepairCostTable();
 }
 
@@ -377,6 +382,7 @@ function getAutoRepairUpkeep() {
 export {
     getAutoRepairUpkeep,
     processAutoRepair,
+    renderAutoRepairToggle,
     toggleAutoRepair,
     updateFinancesDisplay,
     updateRepairCostTable,

@@ -27,6 +27,8 @@ export const ZH_TRANSLATIONS = {
     "auto_repair_min": "自动修复/分",
     "manual_repair_hint": "🔧 点击受损服务进行手动修复",
     "auto_repair_hint": "启用自动维护！服务现在将自动修复，但会收取额外费用。",
+    "auto_repair_disabled": "自动修复已关闭",
+    "auto_repair_desc": "自动修复会收费修复服务：每分钟收取各服务成本的 10%。",
     "finances": "财务",
     "income_by_type": "各类请求收益",
     "expenses_breakdown": "支出明细",

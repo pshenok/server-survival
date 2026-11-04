@@ -61,6 +61,8 @@ export const HI_TRANSLATIONS = {
     "auto_repair_min": "Auto Repair/min",
     "manual_repair_hint": "🔧 Damaged services पर क्लिक करके उन्हें खुद repair करें",
     "auto_repair_hint": "Auto-repair चालू! अब services अतिरिक्त शुल्क पर अपने आप repair होती रहेंगी।",
+    "auto_repair_disabled": "Auto-repair बंद",
+    "auto_repair_desc": "Auto-repair शुल्क लेकर services ठीक करता है: हर service की cost का 10% प्रति मिनट।",
     "finances": "वित्त",
     "income_by_type": "Request type के अनुसार आय",
     "expenses_breakdown": "खर्च का विवरण",
