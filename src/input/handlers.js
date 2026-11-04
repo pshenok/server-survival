@@ -19,6 +19,7 @@ import {
     warmingCount,
 } from "../sim/autoscaling.js";
 import { SERVICE_CATEGORIES, setToolbarCategory } from "../ui/toolbar.js";
+import { selectedLinksLine } from "../ui/link-feedback.js";
 import {
     createConnection,
     createService,
@@ -416,6 +417,7 @@ function handlePrimaryDown(clientX, clientY, preventDefault = () => {}) {
     const i = getIntersect(clientX, clientY);
     if (STATE.activeTool === "select") {
         const i = getIntersect(clientX, clientY);
+        STATE.selectedNodeId = i.type === "ground" ? null : i.id;
         if (i.type === "service") {
             const svc = STATE.services.find((s) => s.id === i.id);
             // Use criticalHealth from config for consistency
@@ -743,6 +745,10 @@ function handlePointerMove(clientX, clientY) {
                 }
             }
             content += `</div>`;
+
+            if (STATE.activeTool === "select" && STATE.selectedNodeId === s.id) {
+                content += `<div class="mt-1 border-t border-gray-700 pt-1">${selectedLinksLine(s.id)}</div>`;
+            }
 
             // Show upgrade option for upgradeable services
             if (

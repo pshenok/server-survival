@@ -9,6 +9,7 @@
 // Styled like the smart hints (src/core/hints.js), not like the alarm
 // warnings: it is a lesson, not an incident, and it stays out of
 // STATE.intervention, which tracks incidents.
+import { CONFIG } from "../config.js";
 import { i18n } from "../i18n.js";
 import { STATE } from "../state.js";
 import { isTypeAllowed } from "./toolbar.js";
@@ -107,4 +108,45 @@ export function showLinkTargets(now = 0) {
         s.linkTargetRing.visible = on;
         if (on) s.linkTargetRing.material.opacity = opacity;
     }
+}
+
+// Whether showSelectedLinks() has recoloured the links and owes them a reset.
+let linksPainted = false;
+
+function selectedNode() {
+    if (STATE.activeTool !== "select" || !STATE.selectedNodeId) return null;
+    if (STATE.selectedNodeId === "internet") return "internet";
+    return STATE.services.some((s) => s.id === STATE.selectedNodeId) ? STATE.selectedNodeId : null;
+}
+
+/**
+ * Colours the links of the node the Select tool has picked: what it sends to,
+ * what it receives from, and the rest dimmed so those two stand out.
+ *
+ * Called from animate() last before the render, paused or not, because the
+ * hover path in handlers.js resets every link on every pointer move. With
+ * nothing selected it writes nothing, or the Unlink tool's red hover would not
+ * last a frame, apart from the one reset a cleared selection is owed.
+ */
+export function showSelectedLinks() {
+    const id = selectedNode();
+    if (!id && !linksPainted) return;
+    linksPainted = id !== null;
+    const { line, lineActive, lineIncoming, lineDim } = CONFIG.colors;
+    for (const c of STATE.connections) {
+        if (!c.mesh?.material) continue;
+        let color = line;
+        if (id) color = c.from === id ? lineActive : c.to === id ? lineIncoming : lineDim;
+        c.mesh.material.color.setHex(color);
+    }
+}
+
+/**
+ * The key to those colours, for the selected node's tooltip. Arrows and counts,
+ * so it needs no translating.
+ */
+export function selectedLinksLine(id) {
+    const out = STATE.connections.filter((c) => c.from === id).length;
+    const into = STATE.connections.filter((c) => c.to === id).length;
+    return `<span class="text-cyan-400">→ ${out}</span> <span class="text-fuchsia-400">← ${into}</span>`;
 }
