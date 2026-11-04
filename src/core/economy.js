@@ -36,8 +36,8 @@ function updateRepairCostTable() {
                         : "text-green-400";
 
             return `
-            <div class="grid grid-cols-3 gap-1 text-gray-300">
-                <span class="${healthColor}">${i18n.t(s.type).substring(0, 10).toUpperCase()}</span>
+            <div class="repair-grid text-gray-300">
+                <span class="${healthColor}">${i18n.t(s.type)}</span>
                 <span class="text-center text-yellow-400">$${repairCost}</span>
                 <span class="text-right text-orange-400" title="${i18n.t('repair_formula_hint', { cost: '$' + s.config.cost })}">$${autoRepairCost}</span>
             </div>

@@ -409,6 +409,19 @@ body.event-active {
   align-items: flex-end;
 }
 
+/* Repair table: the header and each row are separate grids, so the number
+   columns have fixed widths to line up. 3.75rem holds the widest Repair header
+   (German, 57px); the auto-repair header wraps to two lines inside 5rem. */
+.repair-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3.75rem 5rem;
+  column-gap: 0.25rem;
+}
+
+.repair-grid > * {
+  overflow-wrap: anywhere;
+}
+
 #sandboxPanel,
 #objectivesPanel {
   margin-top: auto;
