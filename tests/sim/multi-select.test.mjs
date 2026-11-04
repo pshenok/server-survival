@@ -432,6 +432,16 @@ describe("Delete removes the selection", () => {
         expect(STATE.services.length).toBe(3);
     });
 
+    it.each(["share-modal", "faq-modal", "save-modal", "trophies-modal"])("not behind the %s", (id) => {
+        const dialog = document.getElementById(id);
+        dialog.classList.remove("hidden");
+
+        press("Delete");
+
+        dialog.classList.add("hidden");
+        expect(STATE.services.length).toBe(3);
+    });
+
     it("not during the tutorial", () => {
         window.tutorial.isActive = true;
 
