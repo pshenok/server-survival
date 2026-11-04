@@ -1285,13 +1285,14 @@ document.addEventListener("keydown", (event) => {
         return;
     }
     if (isTypingTarget(event.target)) return;
-    // Backspace is what a Mac keyboard calls its Delete key.
+    // Backspace is what a Mac keyboard calls its Delete key. Not behind a dialog:
+    // the player can't see what it would remove.
     if (
         (event.key === "Delete" || event.key === "Backspace") &&
         STATE.activeTool === "select" &&
         STATE.isRunning &&
         !window.tutorial?.isActive &&
-        document.getElementById("main-menu-modal").classList.contains("hidden")
+        !document.querySelector('[id$="-modal"]:not(.hidden)')
     ) {
         [...STATE.selection].forEach(deleteObject);
         STATE.selection.clear();
