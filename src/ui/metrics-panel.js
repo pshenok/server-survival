@@ -1,8 +1,9 @@
 // METRICS dashboard panel (#194): the collapsible right-column panel between
 // SERVICE HEALTH and FINANCES. Locked until a Monitoring service is placed;
 // unlocked it shows one row per service (the monitor itself is excluded — it
-// never receives traffic, so its lines would be flat noise) with four mini
-// sparklines drawn straight from the ring buffers in core/metrics.js.
+// never receives traffic, so its lines would be flat noise): a line with its
+// name, tier and health over four mini sparklines drawn straight from the ring
+// buffers in core/metrics.js.
 //
 // Wiring: game.js calls renderMetricsPanel() every animate() frame right
 // after metricsTick(). The call is cheap by construction — the lock state and
@@ -22,7 +23,8 @@ import {
 } from "../core/metrics.js";
 import { instanceCount } from "../sim/autoscaling.js";
 
-const SPARK_W = 46;
+// Four of these and their 4px gaps fill the panel's 254px of inner width.
+const SPARK_W = 60;
 const SPARK_H = 16;
 
 const LINE_COLOR = "#2dd4bf"; // teal-400
@@ -65,6 +67,12 @@ let lastSignature = null;
 let lastDrawnSample = -1;
 // "serviceId:columnKey" -> canvas element of the current row set.
 const canvases = new Map();
+// serviceId -> { el, shown } for the health figure of the current row set.
+const healthFigures = new Map();
+
+function healthColor(health) {
+    return health < 40 ? "text-red-400" : health < 70 ? "text-yellow-400" : "text-green-400";
+}
 
 function renderMetricsPanel() {
     const lockedEl = document.getElementById("metrics-locked");
@@ -86,13 +94,26 @@ function renderMetricsPanel() {
     // scaling event — those are rare (cooldown-gated), so this stays cheap.
     // The breaker state joins the signature too (#196): a trip has to repaint
     // the badge immediately, and trips are rare enough to keep this cheap.
-    const signature = services
-        .map((s) => (s.asgEnabled ? `${s.id}*${instanceCount(s)}` : s.id) + "!" + s.breakerState)
+    // So do the tier, which an upgrade changes while paused, and the language.
+    const signature = i18n.currentLocale + ":" + services
+        .map((s) => (s.asgEnabled ? `${s.id}*${instanceCount(s)}` : s.id) + "!" + s.breakerState + "T" + s.tier)
         .join(",");
     if (signature !== lastSignature) {
         buildRows(services, rowsEl);
         lastSignature = signature;
         lastDrawnSample = -1;
+    }
+
+    // Health moves on its own and a click repairs it while paused, so it is
+    // checked every frame, and the DOM only touched when the figure changes.
+    for (const s of services) {
+        const figure = healthFigures.get(s.id);
+        const shown = Math.round(s.health);
+        if (figure && figure.shown !== shown) {
+            figure.shown = shown;
+            figure.el.textContent = `${shown}%`;
+            figure.el.className = `flex-shrink-0 ${healthColor(shown)}`;
+        }
     }
 
     // Redraw canvases only when a new sample landed (2 Hz).
@@ -106,35 +127,39 @@ function renderMetricsPanel() {
 function buildRows(services, rowsEl) {
     rowsEl.innerHTML = "";
     canvases.clear();
+    healthFigures.clear();
 
     const header = document.createElement("div");
-    header.className = "flex items-center gap-1 text-[9px] text-gray-500 uppercase";
-    header.innerHTML =
-        `<span class="w-12 flex-shrink-0"></span>` +
-        COLUMNS.map(
-            (c) =>
-                `<span class="text-center" style="width:${SPARK_W}px">${i18n.t(c.label)}</span>`
-        ).join("");
+    header.setAttribute("data-metrics-header", "");
+    header.className = "flex gap-1 text-[9px] text-gray-500 uppercase";
+    header.innerHTML = COLUMNS.map(
+        (c) =>
+            `<span class="text-center" style="width:${SPARK_W}px">${i18n.t(c.label)}</span>`
+    ).join("");
     rowsEl.appendChild(header);
 
     for (const s of services) {
         const row = document.createElement("div");
-        row.className = "flex items-center gap-1";
+        row.setAttribute("data-metrics-row", s.id);
+
+        const info = document.createElement("div");
+        info.className = "flex items-center gap-1 text-[10px] font-mono";
 
         const name = document.createElement("span");
-        name.className = "w-12 flex-shrink-0 text-[9px] font-mono text-gray-300 truncate";
-        name.textContent = i18n.t(s.type).substring(0, 10).toUpperCase();
+        name.setAttribute("data-metrics-name", "");
+        name.className = "min-w-0 truncate text-gray-300";
+        name.textContent = i18n.t(s.type);
         name.title = i18n.t(s.type);
+        info.appendChild(name);
+
         if (s.asgEnabled) {
             // ASG fleet badge (#195): the whole point of the epic's "scaling
             // is visible through metrics" goal — util drops as ×n climbs.
-            const n = instanceCount(s);
-            name.textContent = name.textContent.substring(0, 7);
             const badge = document.createElement("span");
-            badge.className = "text-teal-400";
-            badge.textContent = `×${n}`;
+            badge.className = "flex-shrink-0 text-teal-400";
+            badge.textContent = `×${instanceCount(s)}`;
             badge.title = i18n.t("asg_label");
-            name.appendChild(badge);
+            info.appendChild(badge);
         }
         // Circuit-breaker badge (#196): nothing while closed (the normal
         // state should be invisible), red OPEN while traffic is being skipped,
@@ -142,24 +167,46 @@ function buildRows(services, rowsEl) {
         if (s.breakerState === "open" || s.breakerState === "half-open") {
             const open = s.breakerState === "open";
             const badge = document.createElement("span");
-            badge.className = open ? "text-red-400 font-bold" : "text-amber-400 font-bold";
+            badge.className = `flex-shrink-0 font-bold ${open ? "text-red-400" : "text-amber-400"}`;
             badge.textContent = open ? i18n.t("breaker_open") : i18n.t("breaker_half");
             badge.title = i18n.t("breaker_label");
-            // The name column is a fixed 48px of 9px mono — trim hard enough
-            // that "OPEN"/"HALF" is never the part that gets clipped.
-            name.textContent = name.textContent.substring(0, 4);
-            name.appendChild(badge);
+            info.appendChild(badge);
         }
-        row.appendChild(name);
 
+        const spacer = document.createElement("span");
+        spacer.className = "flex-1";
+        info.appendChild(spacer);
+
+        // Only where tiers exist: on anything else "T1" would mean nothing.
+        if (CONFIG.services[s.type]?.tiers) {
+            const tier = document.createElement("span");
+            tier.setAttribute("data-metrics-tier", "");
+            tier.className = "flex-shrink-0 text-yellow-400";
+            tier.textContent = `T${s.tier}`;
+            info.appendChild(tier);
+        }
+
+        const shown = Math.round(s.health);
+        const health = document.createElement("span");
+        health.setAttribute("data-metrics-health", "");
+        health.className = `flex-shrink-0 ${healthColor(shown)}`;
+        health.textContent = `${shown}%`;
+        info.appendChild(health);
+        healthFigures.set(s.id, { el: health, shown });
+
+        row.appendChild(info);
+
+        const sparks = document.createElement("div");
+        sparks.className = "flex gap-1";
         for (const col of COLUMNS) {
             const canvas = document.createElement("canvas");
             canvas.width = SPARK_W;
             canvas.height = SPARK_H;
             canvas.className = "bg-gray-800/60 rounded-sm";
-            row.appendChild(canvas);
+            sparks.appendChild(canvas);
             canvases.set(s.id + ":" + col.key, canvas);
         }
+        row.appendChild(sparks);
 
         rowsEl.appendChild(row);
     }
