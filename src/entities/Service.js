@@ -802,30 +802,31 @@ export class Service {
     // teaching one colour language in the campaign and another in survival
     // would be worse than the bug.
     const ringLoad = this.smoothedLoad;
+    const selected = STATE.selectedNodeId === this.id || STATE.selection.has(this.id);
     if (ringLoad > CONFIG.load.ringRed) {
       this.loadRing.material.color.setHex(0xff0000);
-      if (STATE.selectedNodeId === this.id) {
+      if (selected) {
         this.loadRing.material.opacity = 1.0;
       } else {
         this.loadRing.material.opacity = 0.8;
       }
     } else if (ringLoad > CONFIG.load.ringOrange) {
       this.loadRing.material.color.setHex(0xffaa00);
-      if (STATE.selectedNodeId === this.id) {
+      if (selected) {
         this.loadRing.material.opacity = 1.0;
       } else {
         this.loadRing.material.opacity = 0.6;
       }
     } else if (ringLoad > CONFIG.load.ringYellow) {
       this.loadRing.material.color.setHex(0xffff00);
-      if (STATE.selectedNodeId === this.id) {
+      if (selected) {
         this.loadRing.material.opacity = 1.0;
       } else {
         this.loadRing.material.opacity = 0.4;
       }
     } else {
       this.loadRing.material.color.setHex(0x00ff00);
-      if (STATE.selectedNodeId === this.id) {
+      if (selected) {
         this.loadRing.material.opacity = 1.0;
       } else {
         this.loadRing.material.opacity = 0.3;

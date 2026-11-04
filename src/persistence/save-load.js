@@ -244,6 +244,7 @@ function loadGameState(saveData = null) {
         };
         STATE.activeTool = saveData.activeTool || "select";
         STATE.selectedNodeId = saveData.selectedNodeId || null;
+        STATE.selection.clear();
         STATE.lastTime = performance.now(); // Reset timing
         STATE.spawnTimer = saveData.spawnTimer || 0;
         STATE.currentRPS = saveData.currentRPS || 0.5;

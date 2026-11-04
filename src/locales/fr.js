@@ -313,7 +313,7 @@ export const FR_TRANSLATIONS = {
     "cache_desc_short": "Couche de cache ($60)",
     "storage_desc_short": "Stocke les données web ($25)",
     "tools_controls": "OUTILS & CONTRÔLES",
-    "tool_select_desc": "Inspectez les services pour voir la charge et les statistiques. Cliquez sur Calcul/DB pour améliorer.",
+    "tool_select_desc": "Cliquez sur un nœud pour voir ses liens : <span class=\"text-cyan-400\">sortants</span> et <span class=\"text-fuchsia-400\">entrants</span>. Faites-le glisser pour le déplacer. Maj+clic en sélectionne plusieurs : déplacez-les ensemble, utilisez Lien ou Délier puis cliquez sur un nœud pour agir sur tous, ou appuyez sur Suppr.",
     "tool_connect_desc": "Liez les nœuds ensemble. Cliquez sur <span class=\"text-green-400\">Source</span> puis <span class=\"text-blue-400\">Destination</span>. Maintenez Maj en cliquant sur la destination pour continuer à lier depuis la même source.",
     "tool_delete_desc": "Supprimez les composants ou les liens. Les composants remboursent 50% de leur coût.",
     "tool_unlink": "DÉLIER",

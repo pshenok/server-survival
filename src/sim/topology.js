@@ -364,6 +364,7 @@ function deleteObject(id) {
         return;
     }
 
+    STATE.selection.delete(id);
     STATE.services.forEach(
         (s) => (s.connections = s.connections.filter((c) => c !== id))
     );
@@ -499,6 +500,7 @@ function findSPOFs(state = STATE) {
 }
 
 function clearAllServices() {
+    STATE.selection.clear();
     STATE.services.forEach((s) => s.destroy());
     STATE.services = [];
     recomputePower();
@@ -516,6 +518,7 @@ function clearAllServices() {
 }
 
 export {
+    nodeById,
     clearAllServices,
     createConnection,
     createService,

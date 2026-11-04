@@ -169,7 +169,9 @@ Built something you're proud of? The share panel exports your architecture two w
 - **Hide HUD:** Press `H` to toggle UI panels.
 - **Category Tabs:** The toolbar groups services into five tabs — Front Door, Compute, Data, Async, Ops. Keys `1-5` switch between them.
 - **Build Tools:** `V` Select, `C` Link, `X` Demolish, `U` Unlink. Each key is shown in the corner of its button.
-- **Connect Tool:** Click two nodes to create a connection (flow direction matters!).
+- **Select Tool:** Click a node to see its links, outgoing in cyan and incoming in magenta. Drag it to move it.
+  - _Several at once:_ `Shift`+click adds a node to the selection. Drag any of them to move the group, press `Delete` to remove them, or choose Link or Unlink and click a node to apply it to all of them.
+- **Connect Tool:** Click two nodes to create a connection (flow direction matters!). Hold `Shift` while clicking the destination to keep linking from the same source.
   - _Valid Flows:_ Internet -> (GeoDNS/Firewall/CDN/API Gateway) -> Load Balancer -> Queue -> Compute -> Cache -> (Search Engine/Read Replica/SQL DB/NoSQL DB/Storage)
 - **Delete Tool:** Remove services to recover 50% of the cost.
 - **Time Controls:** Pause, Play (1x), and Fast Forward (3x).
