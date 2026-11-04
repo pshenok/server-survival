@@ -434,9 +434,9 @@
           <div class="flex items-center gap-2">
             <button id="auto-repair-toggle" onclick="toggleAutoRepair()"
               class="px-2 py-0.5 rounded text-xs font-mono bg-gray-700 text-gray-400 hover:bg-gray-600 transition"
-              title="Auto-repair services (+10% upkeep)"
-              data-i18n="auto_repair"
-              data-i18n-title="auto_repair_hint">
+              title="Auto-repair heals services for a fee: 10% of each service's cost per minute."
+              data-i18n="auto_repair_off_msg"
+              data-i18n-title="auto_repair_desc">
               Auto-Repair: OFF
             </button>
             <button onclick="togglePanel('health-panel-content', 'health-panel-icon')"
@@ -459,7 +459,7 @@
           </div>
           <div class="text-xs text-gray-500 mt-2 pt-2 border-t border-gray-700 space-y-1">
             <div data-i18n="manual_repair_hint">🔧 Click damaged services to repair manually</div>
-            <div data-i18n="auto_repair_hint">⚡ Auto-Repair: Heals services at 10% of service cost/min</div>
+            <div data-i18n="auto_repair_desc">Auto-repair heals services for a fee: 10% of each service's cost per minute.</div>
           </div>
         </div>
       </div>

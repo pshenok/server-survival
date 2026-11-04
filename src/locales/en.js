@@ -27,6 +27,8 @@ export const EN_TRANSLATIONS = {
     "auto_repair_min": "Auto Repair/min",
     "manual_repair_hint": "🔧 Click damaged services to repair manually",
     "auto_repair_hint": "Auto-repair enabled! Services will now be repaired automatically for an extra fee.",
+    "auto_repair_disabled": "Auto-repair disabled",
+    "auto_repair_desc": "Auto-repair heals services for a fee: 10% of each service's cost per minute.",
     "finances": "Finances",
     "income_by_type": "Income by Request Type",
     "expenses_breakdown": "Expenses Breakdown",

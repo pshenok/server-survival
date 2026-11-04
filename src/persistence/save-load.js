@@ -13,7 +13,7 @@ import { i18n } from "../i18n.js";
 // every time/cleanliness benchmark with zero live play.
 import { achievements } from "../achievements/achievements.js";
 import { updateScoreUI } from "../core/actions.js";
-import { updateRepairCostTable } from "../core/economy.js";
+import { renderAutoRepairToggle, updateRepairCostTable } from "../core/economy.js";
 import { recomputePower } from "../sim/power.js";
 import { createConnection, restoreService } from "../sim/topology.js";
 // Runtime-only cycle (game.js ⇄ save-load.js) — established pattern: these
@@ -353,18 +353,7 @@ function loadGameState(saveData = null) {
         // call site (restoreServices does it too; the recompute is idempotent).
         recomputePower();
 
-        const autoRepairBtn = document.getElementById("auto-repair-toggle");
-        if (autoRepairBtn) {
-            if (STATE.autoRepairEnabled) {
-                autoRepairBtn.textContent = i18n.t('upkeep_on');
-                autoRepairBtn.classList.remove("text-gray-400");
-                autoRepairBtn.classList.add("text-green-400");
-            } else {
-                autoRepairBtn.textContent = i18n.t('upkeep_off');
-                autoRepairBtn.classList.remove("text-green-400");
-                autoRepairBtn.classList.add("text-gray-400");
-            }
-        }
+        renderAutoRepairToggle();
         updateRepairCostTable();
 
         restoreConnections(

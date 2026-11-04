@@ -27,6 +27,8 @@ export const FR_TRANSLATIONS = {
     "auto_repair_min": "Réparation auto/min",
     "manual_repair_hint": "🔧 Cliquez sur les services endommagés pour réparer manuellement",
     "auto_repair_hint": "Réparation automatique activée ! Les services seront maintenant réparés automatiquement moyennant des frais supplémentaires.",
+    "auto_repair_disabled": "Réparation automatique désactivée",
+    "auto_repair_desc": "La réparation automatique répare les services contre un supplément : 10 % du coût de chaque service par minute.",
     "finances": "Finances",
     "income_by_type": "Revenus par type de requête",
     "expenses_breakdown": "Répartition des dépenses",

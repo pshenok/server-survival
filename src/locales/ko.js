@@ -27,6 +27,8 @@ export const KO_TRANSLATIONS = {
     "auto_repair_min": "자동 수리/분",
     "manual_repair_hint": "🔧 손상된 서비스를 클릭해 수동으로 수리하세요",
     "auto_repair_hint": "자동 수리 활성화! 서비스가 추가 비용으로 자동 수리됩니다.",
+    "auto_repair_disabled": "자동 수리 비활성화",
+    "auto_repair_desc": "자동 수리는 요금을 받고 서비스를 수리합니다: 분당 각 서비스 비용의 10%.",
     "finances": "재정",
     "income_by_type": "요청 유형별 수입",
     "expenses_breakdown": "지출 내역",

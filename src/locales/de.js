@@ -27,6 +27,8 @@ export const DE_TRANSLATIONS = {
     "auto_repair_min": "Auto-Reparatur/Min",
     "manual_repair_hint": "🔧 Klicke beschädigte Dienste für manuelle Reparatur",
     "auto_repair_hint": "Auto-Reparatur aktiviert! Dienste werden nun automatisch gegen Gebühr repariert.",
+    "auto_repair_disabled": "Auto-Reparatur deaktiviert",
+    "auto_repair_desc": "Auto-Reparatur repariert Dienste gegen Gebühr: 10 % der Kosten jedes Dienstes pro Minute.",
     "finances": "Finanzen",
     "income_by_type": "Einkommen nach Anfragetyp",
     "expenses_breakdown": "Ausgabenrechnung",

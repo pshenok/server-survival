@@ -31,6 +31,7 @@ import {
 import {
     getAutoRepairUpkeep,
     processAutoRepair,
+    renderAutoRepairToggle,
     toggleAutoRepair,
     updateFinancesDisplay,
     updateRepairCostTable,
@@ -663,13 +664,7 @@ function resetGame(mode = "survival") {
         },
     };
 
-    // Reset auto-repair toggle UI
-    const autoRepairBtn = document.getElementById("auto-repair-toggle");
-    if (autoRepairBtn) {
-        autoRepairBtn.textContent = i18n.t('upkeep_off');
-        autoRepairBtn.classList.remove("text-green-400");
-        autoRepairBtn.classList.add("text-gray-400");
-    }
+    renderAutoRepairToggle();
 
     // Reset repair cost table
     const repairTable = document.getElementById("repair-cost-table");
