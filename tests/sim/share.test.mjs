@@ -12,6 +12,7 @@ import {
   encodeArch,
   rebuildSharedArch,
 } from "../../src/ui/share.js";
+import { toggleAutoscaling } from "../../src/sim/autoscaling.js";
 import { createConnection, createService } from "../../src/sim/topology.js";
 import { STATE, CONFIG, resetWorld } from "../helpers/sim-world.mjs";
 
@@ -304,5 +305,155 @@ describe("rebuild security (allowlist + guards)", () => {
     expect(STATE.internetNode.connections).toHaveLength(1);
     // The dropped duplicate's edges vanish with it — only waf[0] → alb remains.
     expect(STATE.connections).toHaveLength(2);
+  });
+});
+
+// A link used to drop upgrades and autoscaling, so a T3 Compute arrived as a
+// T1 and a build that held its traffic could fall over in the receiver's
+// sandbox. Additive fields on the same version: links made before them still
+// load, and a build with neither makes the same link it always did.
+describe("upgrades and autoscaling travel with the link", () => {
+  function tiered() {
+    const compute = placeAt("compute", 0, 0);
+    const db = placeAt("db", 8, 0);
+    const waf = placeAt("waf", 16, 0);
+    STATE.money = 100000;
+    compute.upgrade();
+    compute.upgrade();
+    db.upgrade();
+    return { compute, db, waf };
+  }
+
+  function roundTrip() {
+    return decodeArchParam(buildShareUrl().split("?arch=")[1]);
+  }
+
+  it("a build with neither makes the same link as before", () => {
+    placeAt("compute", 0, 0);
+
+    const encoded = encodeArch();
+
+    expect(encoded).not.toHaveProperty("u");
+    expect(encoded).not.toHaveProperty("a");
+  });
+
+  it("a link from before these fields still loads", () => {
+    const arch = decodeArchParam(payload({
+      v: 1, b: 500, t: ["compute"], p: [0, 0], c: [], i: [],
+    }));
+
+    resetWorld({ money: 0 });
+    rebuildSharedArch(arch);
+
+    expect(STATE.services[0].tier).toBe(1);
+    expect(STATE.services[0].asgEnabled).toBe(false);
+  });
+
+  it("tiers survive the round trip, with the capacity they buy", () => {
+    tiered();
+    const arch = roundTrip();
+
+    resetWorld({ money: 0 });
+    rebuildSharedArch(arch);
+
+    const by = (type) => STATE.services.find((s) => s.type === type);
+    expect(by("compute").tier).toBe(3);
+    expect(by("compute").config.capacity).toBe(CONFIG.services.compute.tiers[2].capacity);
+    expect(by("db").tier).toBe(2);
+    expect(by("waf").tier).toBe(1);
+  });
+
+  it("autoscaling survives the round trip", () => {
+    const compute = placeAt("compute", 0, 0);
+    placeAt("compute", 8, 0);
+    toggleAutoscaling(compute);
+    const arch = roundTrip();
+
+    resetWorld({ money: 0 });
+    rebuildSharedArch(arch);
+
+    expect(STATE.services.map((s) => s.asgEnabled)).toEqual([true, false]);
+  });
+
+  it("upgrades are charged against the budget like the services", () => {
+    tiered();
+    const arch = roundTrip();
+    arch.budget = 100000;
+    const { compute, db, waf } = CONFIG.services;
+    const cost =
+      compute.cost + compute.tiers[1].cost + compute.tiers[2].cost +
+      db.cost + db.tiers[1].cost +
+      waf.cost;
+
+    resetWorld({ money: 0 });
+    rebuildSharedArch(arch);
+
+    expect(STATE.money).toBe(100000 - cost);
+  });
+
+  it("a budget too small for the upgrades still builds them", () => {
+    tiered();
+    const arch = roundTrip();
+    arch.budget = 10;
+
+    resetWorld({ money: 0 });
+    rebuildSharedArch(arch);
+
+    expect(STATE.services.find((s) => s.type === "compute").tier).toBe(3);
+    expect(STATE.money).toBe(0);
+  });
+
+  it("the indices follow the power-first reorder", () => {
+    const compute = placeAt("compute", 0, 0);
+    placeAt("power", 8, 0);
+    STATE.money = 100000;
+    compute.upgrade();
+    const arch = roundTrip();
+
+    resetWorld({ money: 0 });
+    rebuildSharedArch(arch);
+
+    expect(STATE.services.find((s) => s.type === "compute").tier).toBe(2);
+    expect(STATE.services.find((s) => s.type === "power").tier).toBe(1);
+  });
+
+  describe("hostile values are dropped, and the build still loads", () => {
+    const base = { v: 1, b: 500, t: ["compute", "waf"], p: [0, 0, 8, 0], c: [], i: [] };
+
+    it.each([
+      ["a tier past the top", { u: [0, 99] }],
+      ["tier 1, which is not an upgrade", { u: [0, 1] }],
+      ["a fractional tier", { u: [0, 2.5] }],
+      ["a string tier", { u: [0, "3"] }],
+      ["an index out of range", { u: [7, 2] }],
+      ["a service with no tiers", { u: [1, 2] }],
+    ])("%s", (_name, extra) => {
+      const arch = decodeArchParam(payload({ ...base, ...extra }));
+
+      expect(arch.services).toHaveLength(2);
+      expect(arch.services.every((s) => !s.tier)).toBe(true);
+    });
+
+    it.each([
+      ["an index out of range", { a: [7] }],
+      ["a service that cannot autoscale", { a: [1] }],
+      ["a non-number", { a: ["0"] }],
+    ])("autoscale on %s", (_name, extra) => {
+      const arch = decodeArchParam(payload({ ...base, ...extra }));
+
+      expect(arch.services.every((s) => !s.autoscale)).toBe(true);
+    });
+
+    it("an unpaired tier list or an oversized one rejects the link, as for connections", () => {
+      expect(decodeArchParam(payload({ ...base, u: [0] }))).toBeNull();
+      expect(decodeArchParam(payload({ ...base, u: Array(200).fill(0) }))).toBeNull();
+      expect(decodeArchParam(payload({ ...base, a: Array(100).fill(0) }))).toBeNull();
+    });
+
+    it("fields of the wrong type are ignored", () => {
+      const arch = decodeArchParam(payload({ ...base, u: "x", a: {} }));
+
+      expect(arch.services).toHaveLength(2);
+    });
   });
 });

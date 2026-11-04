@@ -5,8 +5,9 @@
 //      read back from the WebGL canvas right after a synchronous re-render
 //      (the renderer runs without preserveDrawingBuffer, which is the right
 //      trade: that flag costs every frame, this feature runs once in a while).
-//   2. "Copy Link"    — the architecture ONLY (service types + positions +
-//      connections + sandbox budget; no score, reputation or save-state),
+//   2. "Copy Link"    — the architecture ONLY (service types + positions + tiers
+//      + autoscaling + connections + sandbox budget; no score, reputation or
+//      save-state),
 //      compact JSON → base64url → ?arch= on the current origin+path.
 //
 // SECURITY: the ?arch= param is untrusted input — anyone can hand-craft a
@@ -21,6 +22,7 @@
 import { CONFIG } from "../config.js";
 import { STATE } from "../state.js";
 import { i18n } from "../i18n.js";
+import { canAutoscale, toggleAutoscaling } from "../sim/autoscaling.js";
 import { createConnection, createService, isValidEdge } from "../sim/topology.js";
 // Runtime-only cycle (game.js ⇄ share.js) — established pattern: these are
 // top-level consts / hoisted declarations in game.js, only dereferenced at
@@ -53,7 +55,9 @@ const round2 = (n) => Math.round(n * 100) / 100;
 //   t — service types, POWER-FIRST (see below), otherwise placement order,
 //   p — positions as [x0, z0, x1, z1, ...] (y is always 0 on the grid),
 //   c — service→service edges as flat index pairs [from0, to0, from1, ...],
-//   i — internet→service edges as indices into t.
+//   i — internet→service edges as indices into t,
+//   u — upgraded services as flat [index, tier] pairs, left out when empty,
+//   a — indices of services with autoscaling on, left out when empty.
 //
 // POWER-FIRST (#87): the rebuild places services in payload order through
 // createService, whose GPU placement gate needs the substations' capacity
@@ -90,7 +94,12 @@ function encodeArch() {
             if (from !== undefined) c.push(from, to);
         }
     }
-    return { v: ARCH_VERSION, b: Math.round(STATE.sandboxBudget) || 0, t, p, c, i: inet };
+    const arch = { v: ARCH_VERSION, b: Math.round(STATE.sandboxBudget) || 0, t, p, c, i: inet };
+    const u = ordered.flatMap((s, idx) => (s.tier > 1 ? [idx, s.tier] : []));
+    const a = ordered.flatMap((s, idx) => (s.asgEnabled ? [idx] : []));
+    if (u.length) arch.u = u;
+    if (a.length) arch.a = a;
+    return arch;
 }
 
 function toBase64Url(str) {
@@ -135,6 +144,11 @@ function decodeArchParam(raw) {
         if (t.length > MAX_SERVICES || p.length !== t.length * 2) throw new Error("bad counts");
         if (c.length > MAX_CONNECTIONS * 2 || c.length % 2 !== 0) throw new Error("bad counts");
         if (inet.length > MAX_SERVICES) throw new Error("bad counts");
+        // Absent from links made before them, so anything but an array is none.
+        const u = Array.isArray(data.u) ? data.u : [];
+        const a = Array.isArray(data.a) ? data.a : [];
+        if (u.length > MAX_SERVICES * 2 || u.length % 2 !== 0) throw new Error("bad counts");
+        if (a.length > MAX_SERVICES) throw new Error("bad counts");
 
         // Services: type must be a key CONFIG.services OWNS (hasOwnProperty, so
         // "toString"/"__proto__" don't sneak through), position finite and on
@@ -173,6 +187,19 @@ function decodeArchParam(raw) {
             return ok;
         });
 
+        for (let k = 0; k < u.length; k += 2) {
+            const service = isIndex(u[k], services.length) ? services[u[k]] : null;
+            const top = service ? CONFIG.services[service.type].tiers?.length || 0 : 0;
+            const tier = u[k + 1];
+            if (Number.isInteger(tier) && tier >= 2 && tier <= top) service.tier = tier;
+            else dropped++;
+        }
+        for (const idx of a) {
+            const service = isIndex(idx, services.length) ? services[idx] : null;
+            if (service && canAutoscale(service)) service.autoscale = true;
+            else dropped++;
+        }
+
         const budget = Number.isFinite(data.b)
             ? Math.min(1_000_000, Math.max(0, Math.round(data.b)))
             : CONFIG.sandbox.defaultBudget;
@@ -202,16 +229,19 @@ function consumeSharedArchParam() {
 
 // ==================== REBUILD ====================
 
+// What a service and its upgrades cost, up to the tier it was shared at.
+function builtCost({ type, tier = 1 }) {
+    const { cost, tiers = [] } = CONFIG.services[type];
+    return tiers.slice(1, tier).reduce((sum, t) => sum + t.cost, cost);
+}
+
 // Places a decoded architecture into the (already reset) sandbox. Services go
-// through createService — which charges full price, so grant exactly the
-// build's cost up front and settle against the shared budget afterwards —
-// and edges through createConnection, whose allowlist and reverse-edge guard
-// make the final call on every wire.
+// through createService and upgrade() — which charge full price, so grant
+// exactly the build's cost up front and settle against the shared budget
+// afterwards — and edges through createConnection, whose allowlist and
+// reverse-edge guard make the final call on every wire.
 function rebuildSharedArch(arch) {
-    const totalCost = arch.services.reduce(
-        (sum, s) => sum + (s ? CONFIG.services[s.type].cost : 0),
-        0
-    );
+    const totalCost = arch.services.reduce((sum, s) => sum + (s ? builtCost(s) : 0), 0);
     STATE.money = totalCost;
 
     // Original payload index → live service id (null when createService
@@ -222,9 +252,11 @@ function rebuildSharedArch(arch) {
         // playerPlaced false (#158): this is someone else's build arriving
         // via link — it must not grant architecture-variety achievements.
         createService(s.type, new THREE.Vector3(s.x, 0, s.z), { playerPlaced: false });
-        return STATE.services.length > before
-            ? STATE.services[STATE.services.length - 1].id
-            : null;
+        if (STATE.services.length === before) return null;
+        const service = STATE.services[STATE.services.length - 1];
+        for (let tier = 1; tier < (s.tier || 1); tier++) service.upgrade();
+        if (s.autoscale) toggleAutoscaling(service);
+        return service.id;
     });
     const spent = totalCost - STATE.money;
 
