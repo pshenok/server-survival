@@ -122,6 +122,7 @@ import { achievements } from "./src/achievements/achievements.js";
 import { closeTrophies, showTrophies } from "./src/achievements/ui.js";
 import { initHudTabs } from "./src/ui/hud-tabs.js";
 import { showLinkTargets } from "./src/ui/link-feedback.js";
+import { renderModeTitle } from "./src/ui/mode-title.js";
 
 STATE.sound = new SoundService();
 
@@ -405,6 +406,7 @@ function resetGame(mode = "survival") {
     STATE.sound.init();
     STATE.sound.playGameBGM();
     STATE.gameMode = mode;
+    renderModeTitle();
 
     // Campaign gating is applied when a level starts but nothing ever cleared
     // it, so leaving a level for sandbox or survival left most of the toolbar
