@@ -314,7 +314,7 @@ export const KO_TRANSLATIONS = {
     "storage_desc_short": "웹 데이터 저장 ($25)",
     "tools_controls": "도구 및 컨트롤",
     "tool_select_desc": "서비스를 검사해 부하와 통계를 확인하세요. 컴퓨트/DB를 클릭해 업그레이드하세요.",
-    "tool_connect_desc": "노드를 연결합니다. <span class=\"text-green-400\">출발지</span>를 클릭한 다음 <span class=\"text-blue-400\">목적지</span>를 클릭하세요.",
+    "tool_connect_desc": "노드를 연결합니다. <span class=\"text-green-400\">출발지</span>를 클릭한 다음 <span class=\"text-blue-400\">목적지</span>를 클릭하세요. 목적지를 클릭할 때 Shift 키를 누르고 있으면 같은 출발지에서 계속 연결할 수 있습니다.",
     "tool_delete_desc": "구성 요소 또는 연결을 제거합니다. 구성 요소는 비용의 50%를 환불합니다.",
     "tool_unlink": "연결 해제",
     "tool_unlink_desc": "서비스 간 연결을 제거합니다. 연결선을 클릭해 삭제하세요.",

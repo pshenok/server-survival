@@ -314,7 +314,7 @@ export const IT_TRANSLATIONS = {
     "storage_desc_short": "Memorizza Dati Web ($25)",
     "tools_controls": "STRUMENTI E CONTROLLI",
     "tool_select_desc": "Ispeziona i servizi per vedere carico e statistiche. Fai clic su Compute/DB per aggiornare.",
-    "tool_connect_desc": "Collega i nodi tra loro. Fai clic su <span class=\"text-green-400\">Origine</span> e poi su <span class=\"text-blue-400\">Destinazione</span>.",
+    "tool_connect_desc": "Collega i nodi tra loro. Fai clic su <span class=\"text-green-400\">Origine</span> e poi su <span class=\"text-blue-400\">Destinazione</span>. Tieni premuto Maiusc mentre fai clic sulla destinazione per continuare a collegare dalla stessa origine.",
     "tool_delete_desc": "Rimuovi componenti o collegamenti. I componenti rimborsano il 50% del costo.",
     "tool_unlink": "SCOLLEGA",
     "tool_unlink_desc": "Rimuovi le connessioni tra i servizi. Fai clic su un collegamento per eliminarlo.",
