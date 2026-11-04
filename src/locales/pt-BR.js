@@ -313,7 +313,7 @@ export const PT_BR_TRANSLATIONS = {
     "cache_desc_short": "Camada de cache ($60)",
     "storage_desc_short": "Armazena dados do site ($25)",
     "tools_controls": "Ferramentas e Controles",
-    "tool_select_desc": "Selecione para ver carga e estatísticas de serviços. Clique em nós de computação/banco de dados para atualizar.",
+    "tool_select_desc": "Clique em um nó para ver seus links: <span class=\"text-cyan-400\">de saída</span> e <span class=\"text-fuchsia-400\">de entrada</span>. Arraste para movê-lo. Shift+clique seleciona vários: arraste-os juntos, use Conectar ou Desconectar e clique em um nó para agir em todos, ou pressione Delete.",
     "tool_connect_desc": "Conecte nós. Clique em <span class=\"text-green-400\">origem</span> primeiro, depois em <span class=\"text-blue-400\">destino</span>. Segure Shift ao clicar no destino para continuar conectando a partir da mesma origem.",
     "tool_delete_desc": "Remova componentes ou conexões. Componentes reembolsam 50% do custo.",
     "tool_unlink": "Desconectar",

@@ -313,7 +313,7 @@ export const KO_TRANSLATIONS = {
     "cache_desc_short": "캐시 레이어 ($60)",
     "storage_desc_short": "웹 데이터 저장 ($25)",
     "tools_controls": "도구 및 컨트롤",
-    "tool_select_desc": "서비스를 검사해 부하와 통계를 확인하세요. 컴퓨트/DB를 클릭해 업그레이드하세요.",
+    "tool_select_desc": "노드를 클릭하면 <span class=\"text-cyan-400\">나가는</span> 연결과 <span class=\"text-fuchsia-400\">들어오는</span> 연결이 표시됩니다. 드래그하면 이동합니다. Shift+클릭으로 여러 개를 선택해 함께 드래그하거나, 연결 또는 연결 해제를 고른 뒤 노드를 클릭해 모두에 적용하거나, Delete 키를 누르세요.",
     "tool_connect_desc": "노드를 연결합니다. <span class=\"text-green-400\">출발지</span>를 클릭한 다음 <span class=\"text-blue-400\">목적지</span>를 클릭하세요. 목적지를 클릭할 때 Shift 키를 누르고 있으면 같은 출발지에서 계속 연결할 수 있습니다.",
     "tool_delete_desc": "구성 요소 또는 연결을 제거합니다. 구성 요소는 비용의 50%를 환불합니다.",
     "tool_unlink": "연결 해제",

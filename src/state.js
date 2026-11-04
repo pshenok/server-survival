@@ -38,7 +38,8 @@ export const STATE = {
     },
 
     activeTool: 'select',
-    selectedNodeId: null,
+    selectedNodeId: null, // the Link tool's source
+    selection: new Set(), // what the Select tool has picked: node ids
     services: [],
     requests: [],
     connections: [],

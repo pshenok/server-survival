@@ -313,7 +313,7 @@ export const IT_TRANSLATIONS = {
     "cache_desc_short": "Livello Cache ($60)",
     "storage_desc_short": "Memorizza Dati Web ($25)",
     "tools_controls": "STRUMENTI E CONTROLLI",
-    "tool_select_desc": "Ispeziona i servizi per vedere carico e statistiche. Fai clic su Compute/DB per aggiornare.",
+    "tool_select_desc": "Fai clic su un nodo per vederne i collegamenti: <span class=\"text-cyan-400\">in uscita</span> e <span class=\"text-fuchsia-400\">in entrata</span>. Trascinalo per spostarlo. Maiusc+clic ne seleziona più di uno: trascinali insieme, usa Collega o Scollega e fai clic su un nodo per agire su tutti, oppure premi Canc.",
     "tool_connect_desc": "Collega i nodi tra loro. Fai clic su <span class=\"text-green-400\">Origine</span> e poi su <span class=\"text-blue-400\">Destinazione</span>. Tieni premuto Maiusc mentre fai clic sulla destinazione per continuare a collegare dalla stessa origine.",
     "tool_delete_desc": "Rimuovi componenti o collegamenti. I componenti rimborsano il 50% del costo.",
     "tool_unlink": "SCOLLEGA",

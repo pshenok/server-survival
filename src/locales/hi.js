@@ -347,7 +347,7 @@ export const HI_TRANSLATIONS = {
     "cache_desc_short": "Cache layer ($60)",
     "storage_desc_short": "Web data store करता है ($25)",
     "tools_controls": "TOOLS और CONTROLS",
-    "tool_select_desc": "Services inspect करके load और stats देखें। Upgrade के लिए Compute/DB पर क्लिक करें।",
+    "tool_select_desc": "किसी node पर क्लिक करके उसके links देखें: <span class=\"text-cyan-400\">outgoing</span> और <span class=\"text-fuchsia-400\">incoming</span>। Drag करके उसे हिलाएँ। Shift+क्लिक से कई nodes चुनें: उन्हें साथ में drag करें, Link या Unlink चुनकर किसी node पर क्लिक करें ताकि सभी पर लागू हो, या Delete दबाएँ।",
     "tool_connect_desc": "Nodes को आपस में link करें। पहले <span class=\"text-green-400\">Source</span> पर क्लिक करें, फिर <span class=\"text-blue-400\">Destination</span> पर। Destination पर क्लिक करते समय Shift दबाए रखें, ताकि उसी Source से आगे भी link कर सकें।",
     "tool_delete_desc": "Components या links हटाएँ। Components की 50% लागत वापस मिलती है।",
     "tool_unlink": "UNLINK",

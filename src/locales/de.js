@@ -313,7 +313,7 @@ export const DE_TRANSLATIONS = {
     "cache_desc_short": "Cache-Layer ($60)",
     "storage_desc_short": "Speichert Web-Daten ($25)",
     "tools_controls": "WERKZEUGE & STEUERUNG",
-    "tool_select_desc": "Inspiziere Dienste für Last und Statistiken. Klicke Compute/DB zum Upgraden.",
+    "tool_select_desc": "Klicke auf einen Knoten, um seine Verbindungen zu sehen: <span class=\"text-cyan-400\">ausgehende</span> und <span class=\"text-fuchsia-400\">eingehende</span>. Ziehen verschiebt ihn. Shift+Klick wählt mehrere aus: gemeinsam ziehen, mit Verbinden oder Trennen einen Knoten anklicken, um auf alle zu wirken, oder Entf drücken.",
     "tool_connect_desc": "Verbinde Knoten. Klicke <span class=\"text-green-400\">Quelle</span> dann <span class=\"text-blue-400\">Ziel</span>. Halte Shift beim Klick auf das Ziel, um von derselben Quelle weiter zu verbinden.",
     "tool_delete_desc": "Entferne Komponenten oder Verbindungen. Komponenten erstatten 50% der Kosten.",
     "tool_unlink": "TRENNEN",

@@ -91,6 +91,12 @@ export function showLinkRejected(fromType, toType, targets) {
     }, SHOW_MS - 300);
 }
 
+function linkSources() {
+    if (STATE.activeTool !== "connect") return [];
+    if (STATE.selection.size > 1) return [...STATE.selection];
+    return STATE.selectedNodeId ? [STATE.selectedNodeId] : [];
+}
+
 /**
  * Rings every node the picked Link source could connect to, before the player
  * clicks, so the rule is visible rather than discovered one refusal at a time.
@@ -98,13 +104,12 @@ export function showLinkRejected(fromType, toType, targets) {
  * paused. Any tool but Link, or no source picked yet, clears every ring.
  */
 export function showLinkTargets(now = 0) {
-    const sourceId = STATE.activeTool === "connect" ? STATE.selectedNodeId : null;
-    const targets = sourceId ? linkTargets(sourceId) : null;
+    const targets = new Set(linkSources().flatMap((id) => [...linkTargets(id)]));
     // A slow pulse, so a ring reads as an offer rather than as a state.
     const opacity = 0.55 + 0.35 * Math.sin(now / 250);
     for (const s of STATE.services) {
         if (!s.linkTargetRing) continue;
-        const on = targets !== null && targets.has(s.id);
+        const on = targets.has(s.id);
         s.linkTargetRing.visible = on;
         if (on) s.linkTargetRing.material.opacity = opacity;
     }
@@ -113,15 +118,9 @@ export function showLinkTargets(now = 0) {
 // Whether showSelectedLinks() has recoloured the links and owes them a reset.
 let linksPainted = false;
 
-function selectedNode() {
-    if (STATE.activeTool !== "select" || !STATE.selectedNodeId) return null;
-    if (STATE.selectedNodeId === "internet") return "internet";
-    return STATE.services.some((s) => s.id === STATE.selectedNodeId) ? STATE.selectedNodeId : null;
-}
-
 /**
- * Colours the links of the node the Select tool has picked: what it sends to,
- * what it receives from, and the rest dimmed so those two stand out.
+ * Colours the links of what the Select tool has picked: what it sends to, what
+ * it receives from, and the rest dimmed so those two stand out.
  *
  * Called from animate() last before the render, paused or not, because the
  * hover path in handlers.js resets every link on every pointer move. With
@@ -129,14 +128,15 @@ function selectedNode() {
  * last a frame, apart from the one reset a cleared selection is owed.
  */
 export function showSelectedLinks() {
-    const id = selectedNode();
-    if (!id && !linksPainted) return;
-    linksPainted = id !== null;
+    const picked = STATE.activeTool === "select" ? STATE.selection : null;
+    const any = picked !== null && picked.size > 0;
+    if (!any && !linksPainted) return;
+    linksPainted = any;
     const { line, lineActive, lineIncoming, lineDim } = CONFIG.colors;
     for (const c of STATE.connections) {
         if (!c.mesh?.material) continue;
         let color = line;
-        if (id) color = c.from === id ? lineActive : c.to === id ? lineIncoming : lineDim;
+        if (any) color = picked.has(c.from) ? lineActive : picked.has(c.to) ? lineIncoming : lineDim;
         c.mesh.material.color.setHex(color);
     }
 }

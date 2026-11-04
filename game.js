@@ -562,6 +562,7 @@ function resetGame(mode = "survival") {
     // player did not draw.
     STATE.activeTool = "select";
     STATE.selectedNodeId = null;
+    STATE.selection.clear();
     // A run that ended while the main menu was open left its own speed here,
     // and Resume restores it: a new run could start at the old run's 2x.
     STATE.previousTimeScale = 1;
@@ -1005,6 +1006,12 @@ window.startSandbox = () => {
 window.setTool = (t) => {
     STATE.activeTool = t;
     STATE.selectedNodeId = null;
+    // A multi-selection carries into Link and Unlink, which act on all of it.
+    // A single node does not: every drag leaves one selected, and the next
+    // Link click would become a wire the player never asked for.
+    if (STATE.selection.size < 2 || !["select", "connect", "unlink"].includes(t)) {
+        STATE.selection.clear();
+    }
     document
         .querySelectorAll(".service-btn")
         .forEach((b) => b.classList.remove("active"));
@@ -1469,7 +1476,7 @@ function animate(time) {
     }
 
     if (STATE.internetNode.ring) {
-        if (STATE.selectedNodeId === "internet") {
+        if (STATE.selectedNodeId === "internet" || STATE.selection.has("internet")) {
             STATE.internetNode.ring.material.opacity = 1.0;
         } else {
             STATE.internetNode.ring.material.opacity = 0.2;

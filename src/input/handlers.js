@@ -26,6 +26,8 @@ import {
     deleteConnection,
     deleteObject,
     getConnectionAtPoint,
+    linkTargets,
+    nodeById,
     snapToGrid,
     updateConnectionsForNode,
 } from "../sim/topology.js";
@@ -86,6 +88,8 @@ let isDraggingNode = false;
 let draggedNode = null;
 let dragOffset = new THREE.Vector3();
 let dragStartPos = new THREE.Vector3();
+// The rest of a multi-selection, moving with draggedNode: { node, start }.
+let dragGroup = [];
 
 let isPanning = false;
 let lastMouseX = 0;
@@ -417,7 +421,19 @@ function handlePrimaryDown(clientX, clientY, preventDefault = () => {}, shiftKey
     const i = getIntersect(clientX, clientY);
     if (STATE.activeTool === "select") {
         const i = getIntersect(clientX, clientY);
-        STATE.selectedNodeId = i.type === "ground" ? null : i.id;
+        const nodeId = i.type === "ground" ? null : i.id;
+        if (shiftKey) {
+            // Shift+click only edits the selection: no grab, no repair.
+            if (nodeId && !STATE.selection.delete(nodeId)) STATE.selection.add(nodeId);
+            preventDefault();
+            return;
+        }
+        // A click inside a multi-selection keeps it, to drag the group.
+        // finishNodeDrag narrows it to this node if nothing moved.
+        if (!STATE.selection.has(nodeId)) {
+            STATE.selection.clear();
+            if (nodeId) STATE.selection.add(nodeId);
+        }
         if (i.type === "service") {
             const svc = STATE.services.find((s) => s.id === i.id);
             // Use criticalHealth from config for consistency
@@ -440,6 +456,11 @@ function handlePrimaryDown(clientX, clientY, preventDefault = () => {}, shiftKey
         if (draggedNode) {
             isDraggingNode = true;
             dragStartPos.copy(draggedNode.position);
+            dragGroup = [...STATE.selection]
+                .filter((id) => id !== draggedNode.id)
+                .map(nodeById)
+                .filter(Boolean)
+                .map((node) => ({ node, start: node.position.clone() }));
             const hit = getIntersect(clientX, clientY);
             if (hit.pos) {
                 dragOffset.copy(draggedNode.position).sub(hit.pos);
@@ -451,8 +472,15 @@ function handlePrimaryDown(clientX, clientY, preventDefault = () => {}, shiftKey
     } else if (STATE.activeTool === "delete" && i.type === "service")
         deleteObject(i.id);
     else if (STATE.activeTool === "unlink") {
+        const onNode = i.type === "service" || i.type === "internet";
         const conn = getConnectionAtPoint(clientX, clientY);
-        if (conn) {
+        if (STATE.selection.size > 1 && onNode) {
+            if (unlinkSelectionFrom(i.id)) {
+                if (!shiftKey) STATE.selection.clear();
+            } else {
+                new Audio("assets/sounds/click-9.mp3").play();
+            }
+        } else if (conn) {
             deleteConnection(conn.from, conn.to);
         } else {
             new Audio("assets/sounds/click-9.mp3").play();
@@ -461,7 +489,10 @@ function handlePrimaryDown(clientX, clientY, preventDefault = () => {}, shiftKey
         STATE.activeTool === "connect" &&
         (i.type === "service" || i.type === "internet")
     ) {
-        if (STATE.selectedNodeId) {
+        if (STATE.selection.size > 1) {
+            linkSelectionTo(i.id);
+            if (!shiftKey) STATE.selection.clear();
+        } else if (STATE.selectedNodeId) {
             createConnection(STATE.selectedNodeId, i.id);
             // Shift keeps the source, to wire one node to several (#89).
             if (!shiftKey) STATE.selectedNodeId = null;
@@ -501,6 +532,23 @@ function handlePrimaryDown(clientX, clientY, preventDefault = () => {}, shiftKey
             createService(PLACEMENT_TYPE_MAP[STATE.activeTool], snapToGrid(i.pos));
         }
     }
+}
+
+// Links every selected node to `targetId`. When none of them may, the first one
+// tries anyway, because its refusal is what explains the rule to the player.
+function linkSelectionTo(targetId) {
+    const sources = [...STATE.selection];
+    const accepted = sources.filter((id) => linkTargets(id).has(targetId));
+    (accepted.length ? accepted : sources.slice(0, 1)).forEach((id) => createConnection(id, targetId));
+}
+
+// Removes the links between `id` and the selection, in either direction.
+function unlinkSelectionFrom(id) {
+    const links = STATE.connections.filter(
+        (c) => (STATE.selection.has(c.from) && c.to === id) || (c.from === id && STATE.selection.has(c.to))
+    );
+    links.forEach((c) => deleteConnection(c.from, c.to));
+    return links.length;
 }
 
 container.addEventListener("mousedown", (e) => {
@@ -547,19 +595,12 @@ function handlePointerMove(clientX, clientY) {
             const newPos = hit.pos.clone().add(dragOffset);
             newPos.y = 0;
 
-            draggedNode.position.copy(newPos);
-
-            if (draggedNode === STATE.internetNode) {
-                STATE.internetNode.mesh.position.x = newPos.x;
-                STATE.internetNode.mesh.position.z = newPos.z;
-                STATE.internetNode.ring.position.x = newPos.x;
-                STATE.internetNode.ring.position.z = newPos.z;
-            } else if (draggedNode.mesh) {
-                draggedNode.mesh.position.x = newPos.x;
-                draggedNode.mesh.position.z = newPos.z;
+            moveNodeTo(draggedNode, newPos);
+            for (const { node, start } of dragGroup) {
+                const pos = start.clone().add(newPos).sub(dragStartPos);
+                pos.y = 0;
+                moveNodeTo(node, pos);
             }
-
-            updateConnectionsForNode(draggedNode.id);
 
             container.style.cursor = "grabbing";
         }
@@ -747,7 +788,7 @@ function handlePointerMove(clientX, clientY) {
             }
             content += `</div>`;
 
-            if (STATE.activeTool === "select" && STATE.selectedNodeId === s.id) {
+            if (STATE.activeTool === "select" && STATE.selection.has(s.id)) {
                 content += `<div class="mt-1 border-t border-gray-700 pt-1">${selectedLinksLine(s.id)}</div>`;
             }
 
@@ -928,35 +969,50 @@ window.addEventListener("toolbarRendered", setupUITooltips);
 // if nothing is being dragged. Shared by every way a grab can end — mouse
 // release, touch release, touch cancel — since it only ever acts on the
 // module's own drag state and takes nothing from the event that ended it.
+function moveNodeTo(node, pos) {
+    node.position.copy(pos);
+
+    if (node === STATE.internetNode) {
+        STATE.internetNode.mesh.position.x = pos.x;
+        STATE.internetNode.mesh.position.z = pos.z;
+        STATE.internetNode.ring.position.x = pos.x;
+        STATE.internetNode.ring.position.z = pos.z;
+    } else if (node.mesh) {
+        node.mesh.position.x = pos.x;
+        node.mesh.position.z = pos.z;
+    }
+
+    updateConnectionsForNode(node.id);
+}
+
 function finishNodeDrag() {
     if (!(isDraggingNode && draggedNode)) return;
     isDraggingNode = false;
 
-    let snapped = snapToGrid(draggedNode.position);
+    const home = snapToGrid(dragStartPos);
+    const snapped = snapToGrid(draggedNode.position);
+    const group = dragGroup;
+    dragGroup = [];
+    // Every member lands the same whole number of tiles from where it started.
+    const landings = group.map(({ start }) => snapToGrid(start.clone().add(snapped).sub(home)));
 
     // Reject a drop onto a tile already occupied by another service —
     // otherwise the two overlap and whichever mesh the raycaster hits first
     // makes the other permanently unselectable (can't delete/upgrade it).
-    const occupied = STATE.services.some(
-        (s) => s !== draggedNode && s.position.distanceTo(snapped) < 1
+    // One blocked member sends the whole group back: a group that lands apart
+    // is not the shape the player was moving.
+    const moving = new Set([draggedNode, ...group.map((m) => m.node)]);
+    const occupied = [snapped, ...landings].some((pos) =>
+        STATE.services.some((s) => !moving.has(s) && s.position.distanceTo(pos) < 1)
     );
-    if (occupied) {
-        snapped = snapToGrid(dragStartPos);
+
+    moveNodeTo(draggedNode, occupied ? home : snapped);
+    group.forEach(({ node, start }, k) => moveNodeTo(node, occupied ? snapToGrid(start) : landings[k]));
+
+    if (group.length && !occupied && snapped.distanceTo(home) < 1) {
+        STATE.selection.clear();
+        STATE.selection.add(draggedNode.id);
     }
-
-    draggedNode.position.copy(snapped);
-
-    if (draggedNode === STATE.internetNode) {
-        STATE.internetNode.mesh.position.x = snapped.x;
-        STATE.internetNode.mesh.position.z = snapped.z;
-        STATE.internetNode.ring.position.x = snapped.x;
-        STATE.internetNode.ring.position.z = snapped.z;
-    } else if (draggedNode.mesh) {
-        draggedNode.mesh.position.x = snapped.x;
-        draggedNode.mesh.position.z = snapped.z;
-    }
-
-    updateConnectionsForNode(draggedNode.id);
 
     draggedNode = null;
     container.style.cursor = "default";
@@ -1001,6 +1057,7 @@ export function endPointerInteraction() {
     const wasActive = isDraggingNode || isPanning || isOrbiting;
     isDraggingNode = false;
     draggedNode = null;
+    dragGroup = [];
     isPanning = false;
     isOrbiting = false;
     if (container) container.style.cursor = "default";
@@ -1228,6 +1285,18 @@ document.addEventListener("keydown", (event) => {
         return;
     }
     if (isTypingTarget(event.target)) return;
+    // Backspace is what a Mac keyboard calls its Delete key.
+    if (
+        (event.key === "Delete" || event.key === "Backspace") &&
+        STATE.activeTool === "select" &&
+        STATE.isRunning &&
+        !window.tutorial?.isActive &&
+        document.getElementById("main-menu-modal").classList.contains("hidden")
+    ) {
+        [...STATE.selection].forEach(deleteObject);
+        STATE.selection.clear();
+        return;
+    }
     if (event.key === "H" || event.key === "h") {
         document.getElementById("statsPanel").classList.toggle("hidden");
         document.getElementById("detailsPanel").classList.toggle("hidden");

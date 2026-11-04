@@ -69,7 +69,7 @@ describe("clicking a node with the Select tool", () => {
     it("selects it", () => {
         down(alb);
 
-        expect(STATE.selectedNodeId).toBe(alb.id);
+        expect([...STATE.selection]).toEqual([alb.id]);
     });
 
     it("colours its outgoing and incoming links differently, and dims the rest", () => {
@@ -85,7 +85,7 @@ describe("clicking a node with the Select tool", () => {
     it("also works for the Internet node", () => {
         STATE.internetNode.connections = [];
         createConnection("internet", waf.id);
-        STATE.selectedNodeId = "internet";
+        STATE.selection.add("internet");
         showSelectedLinks();
 
         const c = STATE.connections.find((k) => k.from === "internet");
@@ -98,7 +98,7 @@ describe("clicking a node with the Select tool", () => {
             new globalThis.MouseEvent("mousedown", { bubbles: true, button: 0, clientX: 10, clientY: 10 })
         );
 
-        expect(STATE.selectedNodeId).toBe(alb.id);
+        expect([...STATE.selection]).toEqual([alb.id]);
         expect(container().style.cursor).toBe("grabbing");
     });
 
@@ -107,7 +107,7 @@ describe("clicking a node with the Select tool", () => {
         down(alb);
 
         expect(alb.health).toBeGreaterThan(10);
-        expect(STATE.selectedNodeId).toBe(alb.id);
+        expect([...STATE.selection]).toEqual([alb.id]);
     });
 
     it("clicking another node moves the selection", () => {
@@ -132,7 +132,7 @@ describe("the links go back to normal", () => {
         down(null);
         showSelectedLinks();
 
-        expect(STATE.selectedNodeId).toBeNull();
+        expect(STATE.selection.size).toBe(0);
         expect(allNormal()).toEqual(normal());
     });
 

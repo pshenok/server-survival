@@ -45,6 +45,7 @@ export function resetWorld({ money = 100000, gameMode = "sandbox" } = {}) {
   STATE.spawnTimer = 0;
   STATE.currentRPS = 0;
   STATE.selectedNodeId = null;
+  STATE.selection.clear();
   STATE.activeTool = "select";
 
   // ...and so do the interventions, which this helper's own header has
