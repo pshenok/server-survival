@@ -20,6 +20,8 @@ export const CONFIG = {
     waf: 0xa855f7,
     s3: 0x10b981,
     lineActive: 0x00FFFF,
+    lineIncoming: 0xFF00FF,
+    lineDim: 0x1B6B45,
     line: 0x00FF85,
     requestFail: 0xef4444,
     cache: 0xdc382d, // Redis red

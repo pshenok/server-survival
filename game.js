@@ -121,7 +121,7 @@ import { applyToolbarGating, renderToolbar } from "./src/ui/toolbar.js";
 import { achievements } from "./src/achievements/achievements.js";
 import { closeTrophies, showTrophies } from "./src/achievements/ui.js";
 import { initHudTabs } from "./src/ui/hud-tabs.js";
-import { showLinkTargets } from "./src/ui/link-feedback.js";
+import { showLinkTargets, showSelectedLinks } from "./src/ui/link-feedback.js";
 import { renderModeTitle } from "./src/ui/mode-title.js";
 
 STATE.sound = new SoundService();
@@ -1521,6 +1521,7 @@ function animate(time) {
         STATE.sound.playGameOver();
     }
 
+    showSelectedLinks();
     renderer.render(scene, camera);
 }
 
