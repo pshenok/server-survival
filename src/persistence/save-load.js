@@ -7,6 +7,7 @@ import { STATE } from "../state.js";
 import { resetMetrics } from "../core/metrics.js";
 import { resetResilience } from "../sim/circuit-breaker.js";
 import { i18n } from "../i18n.js";
+import { renderModeTitle } from "../ui/mode-title.js";
 // Achievements (#158): loading a save is a session boundary — baselines must
 // re-capture from the RESTORED board (elapsedGameTime is restored below but
 // STATE.failures is not), or a restored 300s save would instantly satisfy
@@ -252,6 +253,7 @@ function loadGameState(saveData = null) {
         STATE.gameStartTime = performance.now();
 
         STATE.gameMode = saveData.gameMode || "survival";
+        renderModeTitle();
 
         // A SAVE IS A DIFFERENT RUN, so the campaign stops here — the same
         // rule resetGame() follows, for the same reason and one path short of
