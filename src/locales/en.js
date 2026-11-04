@@ -657,6 +657,8 @@ export const EN_TRANSLATIONS = {
     "share_link_copied": "Link copied to clipboard!",
     "share_too_large": "This build is too large to fit in a link.",
     "share_copy_failed": "Copy failed — your browser blocked clipboard access.",
+    "share_test_sandbox": "Test in Sandbox (new tab)",
+    "share_tab_blocked": "Your browser blocked the new tab. Allow pop-ups for this page, or copy the link.",
 
     // Achievements (#158): Trophies panel + unlock toasts.
     "trophies": "Trophies",

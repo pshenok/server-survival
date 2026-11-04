@@ -608,6 +608,8 @@ export const DE_TRANSLATIONS = {
     "share_link_copied": "Link in die Zwischenablage kopiert!",
     "share_too_large": "Dieser Aufbau ist zu groß für einen Link.",
     "share_copy_failed": "Kopieren fehlgeschlagen — der Browser hat den Zugriff auf die Zwischenablage blockiert.",
+    "share_test_sandbox": "In Sandbox testen (neuer Tab)",
+    "share_tab_blocked": "Der Browser hat den neuen Tab blockiert. Erlaube Pop-ups für diese Seite oder kopiere den Link.",
 
     // The AI Wave (#87)
     "gpu": "GPU-Cluster",

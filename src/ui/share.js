@@ -278,11 +278,12 @@ function setShareStatus(key, colorClass) {
     const status = document.getElementById("share-status");
     if (!status) return;
     status.textContent = key ? i18n.t(key) : "";
-    status.className = `text-sm font-mono h-5 ${colorClass || ""}`;
+    status.className = `text-sm font-mono min-h-[1.25rem] ${colorClass || ""}`;
 }
 
 function showShareModal() {
     setShareStatus(null);
+    document.getElementById("btn-share-sandbox")?.classList.toggle("hidden", STATE.gameMode === "sandbox");
     document.getElementById("share-modal")?.classList.remove("hidden");
 }
 
@@ -324,6 +325,26 @@ function copyShareLink() {
     } else {
         done(legacyCopy(url));
     }
+}
+
+// Opens the current build in Sandbox in a new tab (#89), through the same link
+// and the same gate as a shared one, so this tab's run is untouched: the player
+// comes back to it paused, as they left it. The ~2KB limit is for links that
+// travel, and this one never leaves the browser, so the only limit here is what
+// the new tab would accept.
+function testInSandbox() {
+    const param = toBase64Url(JSON.stringify(encodeArch()));
+    if (!decodeArchParam(param)) {
+        setShareStatus("share_too_large", "text-yellow-400");
+        return;
+    }
+    const tab = window.open(`${location.origin}${location.pathname}?arch=${param}`, "_blank");
+    if (!tab) {
+        setShareStatus("share_tab_blocked", "text-red-400");
+        return;
+    }
+    window.setTimeScale(0);
+    closeShareModal();
 }
 
 // ==================== PNG EXPORT ====================
@@ -382,4 +403,5 @@ export {
     encodeArch,
     rebuildSharedArch,
     showShareModal,
+    testInSandbox,
 };

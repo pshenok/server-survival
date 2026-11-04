@@ -1027,7 +1027,13 @@
           Copy Link
         </button>
 
-        <div id="share-status" class="text-sm font-mono h-5"></div>
+        <button onclick="testInSandbox()" id="btn-share-sandbox"
+          data-i18n="share_test_sandbox"
+          class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-purple-400/50">
+          Test in Sandbox (new tab)
+        </button>
+
+        <div id="share-status" class="text-sm font-mono min-h-[1.25rem]"></div>
 
         <button onclick="closeShareModal()"
           data-i18n="cancel"

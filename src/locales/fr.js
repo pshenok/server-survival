@@ -608,6 +608,8 @@ export const FR_TRANSLATIONS = {
     "share_link_copied": "Lien copié dans le presse-papiers !",
     "share_too_large": "Cette construction est trop grande pour tenir dans un lien.",
     "share_copy_failed": "Échec de la copie — le navigateur a bloqué l'accès au presse-papiers.",
+    "share_test_sandbox": "Tester en bac à sable (nouvel onglet)",
+    "share_tab_blocked": "Le navigateur a bloqué le nouvel onglet. Autorisez les fenêtres surgissantes pour cette page, ou copiez le lien.",
 
     // The AI Wave (#87)
     "gpu": "Cluster GPU",

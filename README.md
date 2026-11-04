@@ -152,10 +152,11 @@ A fully customizable testing environment for experimenting with any architecture
 
 ### Share Your Architecture
 
-Built something you're proud of? The share panel exports your architecture two ways:
+Built something you're proud of? The share panel exports your architecture two ways, and lets you try it out:
 
 - **PNG export** — a clean image of your diagram to post anywhere.
 - **Shareable URL** — your whole build encoded in a `?arch=` link; anyone who opens it gets your architecture loaded and ready to run.
+- **Test in Sandbox** — opens your current build in Sandbox in a new tab, upgrades included, to try it under any traffic mix. Your run waits in its own tab, paused.
 
 ### Controls
 
