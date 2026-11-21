@@ -16,6 +16,20 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { STATE } from "../../src/state.js";
 import { resetGame } from "../../game.js";
 import { saveGameState, loadGameState } from "../../src/persistence/save-load.js";
+import { SERVICE_CATEGORIES, isTypeAllowed, setToolbarCategory } from "../../src/ui/toolbar.js";
+
+// Every category tab's buttons that still carry the campaign gate. Only the
+// active tab's buttons exist in the DOM, so each tab is rendered in turn
+// (without persisting, so the walk leaves no remembered tab behind).
+function blockedButtonsOnEveryTab() {
+    const blocked = [];
+    for (const cat of SERVICE_CATEGORIES) {
+        setToolbarCategory(cat.id, { persist: false });
+        document.querySelectorAll("#service-palette [data-campaign-blocked]")
+            .forEach((btn) => blocked.push(btn.id));
+    }
+    return blocked;
+}
 
 // What the campaign map writes before a level is playable.
 function unlock(upTo = 25) {
@@ -111,6 +125,24 @@ describe("a campaign level does not keep grading after you leave it", () => {
         for (let i = 0; i < 10; i++) frame(0.1);
         expect(STATE.campaign.ended).toBe(false);
         expect(STATE.campaign.outcome).not.toBe("win");
+    });
+
+    it("...and the loaded run gets its whole toolbar back, not the level's palette", () => {
+        // The level's palette gate is module state in ui/toolbar.js that only
+        // resetGame() cleared. Stopping the controller on load left it armed,
+        // so a save loaded over Level 15 could build nothing but Monitoring:
+        // every other button greyed out and unclickable, on every tab.
+        resetGame("survival");
+        saveGameState();
+
+        window.startCampaignLevel(15);
+        expect(isTypeAllowed("compute"), "level 15 should gate the palette").toBe(false);
+        expect(blockedButtonsOnEveryTab().length).toBeGreaterThan(0);
+
+        loadGameState();
+
+        expect(isTypeAllowed("compute"), "a loaded save kept the level's palette gate").toBe(true);
+        expect(blockedButtonsOnEveryTab(), "buttons still gated after the load").toEqual([]);
     });
 
     it("...and the loaded run does not wear the abandoned level's objectives", () => {

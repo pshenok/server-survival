@@ -401,7 +401,9 @@ function setToolbarCategory(id, { persist = true } = {}) {
     renderToolbar();
 }
 
-// Called by ui/campaign-ui.js when a level starts. Stores the gate, then
+// Called by ui/campaign-ui.js when a level starts, and with empty lists by
+// resetGame (any non-campaign mode) and loadGameState (a save is a different
+// run) to clear it again. Stores the gate, then
 // lands the player on the first tab that actually holds one of the level's
 // services (spec, "Campaign interaction" — mitigation 1) and redraws.
 function applyToolbarGating(allowed, forbidden) {

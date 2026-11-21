@@ -8,6 +8,7 @@ import { resetMetrics } from "../core/metrics.js";
 import { resetResilience } from "../sim/circuit-breaker.js";
 import { i18n } from "../i18n.js";
 import { renderModeTitle } from "../ui/mode-title.js";
+import { applyToolbarGating } from "../ui/toolbar.js";
 // Achievements (#158): loading a save is a session boundary — baselines must
 // re-capture from the RESTORED board (elapsedGameTime is restored below but
 // STATE.failures is not), or a restored 300s save would instantly satisfy
@@ -280,6 +281,13 @@ function loadGameState(saveData = null) {
         window.campaign?.exit();
         STATE.campaign.level = null;
         STATE.campaign.currentLevelId = null;
+        // ...and so does its palette gate. The gate is module state in
+        // ui/toolbar.js that only resetGame() cleared, so a save loaded over
+        // Level 15 kept a monitor-only toolbar: every other service button
+        // greyed out and unclickable on the player's own board. Cleared
+        // whatever mode the save holds, because the level that set it has
+        // just been stopped.
+        applyToolbarGating([], []);
         STATE.sandboxBudget = saveData.sandboxBudget || 2000;
         STATE.upkeepEnabled = saveData.upkeepEnabled !== false;
         // Same dead-fallback pattern as score above: spread of undefined is {}.
