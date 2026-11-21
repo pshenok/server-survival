@@ -168,5 +168,11 @@ describe("the README's numbers are the game's numbers", () => {
 
         expect(num(/Repair Costs:\*\* (\d+)% of service cost/, "manual repair") / 100)
             .toBeCloseTo(CONFIG.survival.degradation.repairCostPercent, 10);
+
+        // getAutoRepairUpkeep() bills a share of the BUILD cost every minute,
+        // not a share of upkeep: the README once said "+10% upkeep overhead",
+        // which undercounts the real charge more than sixfold on a $325 board.
+        expect(num(/Auto-Repair:\*\* (\d+)% of each service's build cost per minute/, "auto-repair") / 100)
+            .toBeCloseTo(CONFIG.survival.degradation.autoRepairCostPercent, 10);
     });
 });
