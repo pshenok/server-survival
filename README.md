@@ -110,7 +110,7 @@ Build your architecture using the toolbar. All 26 services are organized into fi
 - **Base Upkeep:** Each service has per-minute upkeep costs
 - **Upkeep Scaling:** Costs increase 1x to 2x over 10 minutes
 - **Repair Costs:** 15% of service cost to manually repair
-- **Auto-Repair:** +10% upkeep overhead when enabled
+- **Auto-Repair:** 10% of each service's build cost per minute while enabled (Survival only)
 
 ### Survival Mode
 

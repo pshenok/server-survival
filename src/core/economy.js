@@ -371,7 +371,7 @@ function getAutoRepairUpkeep() {
     if (STATE.gameMode !== "survival") return 0;
 
     const percent = CONFIG.survival.degradation?.autoRepairCostPercent || 0.1;
-    // 10% of total service cost per second
+    // 10% of total service build cost per minute, returned per second
     const totalServiceCost = STATE.services.reduce(
         (sum, s) => sum + s.config.cost,
         0

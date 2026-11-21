@@ -878,7 +878,7 @@ export const CONFIG = {
       criticalHealth: 40, // Higher threshold for critical state
       repairCostPercent: 0.15, // 15% of service cost to repair
       autoRepairEnabled: false, // Auto-repair toggle (user can enable)
-      autoRepairCostPercent: 0.1, // 10% additional upkeep when auto-repair enabled
+      autoRepairCostPercent: 0.1, // 10% of total build cost per minute while auto-repair is on
       autoRepairRate: 2, // Health points per second when idle
     },
 
