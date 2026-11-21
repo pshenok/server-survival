@@ -407,14 +407,23 @@ window.addEventListener("blur", () => {
 
 container.addEventListener("contextmenu", (e) => e.preventDefault());
 
+// A node damaged below the critical threshold, which a Select click repairs
+// instead of grabbing. Uses criticalHealth from config for consistency.
+function repairsOnSelect(svc) {
+    const degradation = CONFIG.survival.degradation;
+    return Boolean(svc && degradation?.enabled && svc.health < (degradation.criticalHealth || 40));
+}
+
 // The tool logic that fires on a primary click/tap: place, select-and-grab,
 // connect, delete, unlink, upgrade. Factored out so a touch tap (#12) reaches
 // exactly this code rather than a second copy of it — the mouse-only button-2/
 // button-1 orbit/pan gesture below is the only part that stays in the mouse
 // listener, since touch has no equivalent "other button" to check.
 // `preventDefault` defaults to a no-op: it is only ever called from the
-// drag-grab branch (to stop text-selection drag on desktop), and the touch
-// listener passes the real one. Touch has no Shift, so `shiftKey` stays false.
+// drag-grab branch (to stop text-selection drag on desktop); the touch
+// listener already prevents its own events. Touch has no Shift, so `shiftKey`
+// stays false. A touch runs this when the finger lifts, except a Select grab,
+// which starts as it lands (see the touch listeners below).
 function handlePrimaryDown(clientX, clientY, preventDefault = () => {}, shiftKey = false) {
     if (!STATE.isRunning) return;
 
@@ -436,9 +445,7 @@ function handlePrimaryDown(clientX, clientY, preventDefault = () => {}, shiftKey
         }
         if (i.type === "service") {
             const svc = STATE.services.find((s) => s.id === i.id);
-            // Use criticalHealth from config for consistency
-            const criticalHealth = CONFIG.survival.degradation?.criticalHealth || 40;
-            if (svc && svc.health < criticalHealth && CONFIG.survival.degradation?.enabled) {
+            if (repairsOnSelect(svc)) {
                 // Repair on click when damaged below critical threshold
                 if (svc.repair()) {
                     addInterventionWarning(
@@ -581,12 +588,11 @@ container.addEventListener("mouseleave", () => {
 // The whole hover/drag/pan/orbit continuation for a moving pointer — node
 // drag, camera pan, camera orbit, and (when none of those claim the move) the
 // hover tooltip + upgrade-indicator + connection-highlight tail. None of it
-// reads anything off the event but the coordinates, so a touch drag (#12)
-// calls this directly with a finger's clientX/clientY: dragging a grabbed
-// node behaves identically, and if nothing is grabbed the branches above
-// fall through to the same hover tail a mouse would — showing tooltip/
-// upgrade info under a stationary finger, which is harmless and often useful
-// mid-drag on touch too.
+// reads anything off the event but the coordinates, so touch (#12) calls this
+// directly with a finger's clientX/clientY: a drag of a grabbed node behaves
+// identically, and a lifted finger runs the hover tail once at the point it
+// left, which is how a tap shows the tooltip, the upgrade arrow and the AUTO
+// toggle (see liftFinger below).
 function handlePointerMove(clientX, clientY) {
     lastPointerPos = { x: clientX, y: clientY };
     if (isDraggingNode && draggedNode) {
@@ -1051,10 +1057,12 @@ window.addEventListener("blur", () => handlePointerRelease({ button: 0 }));
 
 // Ends any drag/pan in progress. Called by resetGame: a run boundary is not
 // a place for the pointer to still be holding something from the last one.
-// Covers touch too — it never introduced state of its own, only new ways to
-// arm the same isDraggingNode/isPanning/isOrbiting flags this already clears.
+// Covers touch too: besides the isDraggingNode/isPanning/isOrbiting flags it
+// arms, its only state of its own is the tap still waiting for its finger to
+// lift, which must not land in the next run either.
 export function endPointerInteraction() {
     const wasActive = isDraggingNode || isPanning || isOrbiting;
+    oneFinger = null;
     isDraggingNode = false;
     draggedNode = null;
     dragGroup = [];
@@ -1069,9 +1077,10 @@ export function endPointerInteraction() {
 // menu buttons but never a drag.
 //
 // One finger is the primary pointer: a tap reaches handlePrimaryDown exactly
-// like a left click, and dragging (after grabbing a node) reaches
-// handlePointerMove exactly like a mouse drag. Two fingers is unambiguously a
-// camera gesture — there is no second mouse button to reserve it for, so it
+// like a left click, once the finger lifts (see oneFinger below), and
+// dragging (after grabbing a node) reaches handlePointerMove exactly like a
+// mouse drag. Two fingers is unambiguously a camera gesture — there is no
+// second mouse button to reserve it for, so it
 // takes over pan (from the midpoint) and zoom (from the finger spacing) at
 // once, the way every touch map app combines them. A pinch starting while a
 // node is held drops the node rather than dragging it AND zooming, since a
@@ -1125,16 +1134,70 @@ function disarmTwoFinger() {
     isTwisting = false;
 }
 
+// The one-finger gesture in progress, from the touchstart that began it to the
+// touchend that lifts it: where it started, where the finger is now, whether
+// it is still a tap, and whether its click is still owed.
+//
+// A tap acts when the finger LIFTS, not when it lands. Browsers send each
+// finger's touchstart on its own, so the first finger of every pan, pinch and
+// twist arrives looking exactly like a tap, and acting on it at once built a
+// service, demolished, picked a link source or repaired under it. A second
+// finger, or a slide past TAP_SLOP, makes the gesture something else and the
+// tap is dropped. Only a Select grab starts as the finger lands, so a dragged
+// node follows the finger from the first move; a pinch then drops it as before.
+const TAP_SLOP = 10;
+let oneFinger = null;
+
+// Whether a Select press here grabs a node, which touch does as the finger
+// lands. Not a damaged node: Select repairs that one, and a repair is a tap.
+function selectGrabsAt(clientX, clientY) {
+    const i = getIntersect(clientX, clientY);
+    if (i.type === "internet") return true;
+    return i.type === "service" && !repairsOnSelect(STATE.services.find((s) => s.id === i.id));
+}
+
+// A lifted finger. A tap runs the click it owed, then the hover a mouse would
+// show at that point: the tooltip, and over a Compute the upgrade arrow and the
+// AUTO toggle. Those two are the only way to upgrade a Compute the level's
+// palette does not offer and to turn Auto-Scaling on, and touch has no hover
+// to bring them up otherwise. Both sit outside the canvas, so tapping them is
+// an ordinary click. The 4 Hz tooltip refresh in game.js keeps them live.
+function liftFinger(gesture) {
+    if (gesture.tap && gesture.owed) {
+        handlePrimaryDown(gesture.startX, gesture.startY);
+        // A Select press on a damaged node it cannot afford to repair grabs
+        // it instead; a tap lets go at once.
+        finishNodeDrag();
+    }
+    handlePointerMove(gesture.x, gesture.y);
+}
+
+// What a tap's hover left up stays where the board used to be once two
+// fingers move the camera, and the tooltip refresh would replay the hover at
+// that stale point. A mouse carries its hover along; a finger does not.
+function clearTouchHover() {
+    document.getElementById("tooltip").style.display = "none";
+    lastPointerPos = null;
+    if (hideUpgradeTimer) clearTimeout(hideUpgradeTimer);
+    hideUpgradeTimer = null;
+    hoveredUpgradeService = null;
+    if (upgradeIndicator) upgradeIndicator.classList.add("hidden");
+    if (hideAsgTimer) clearTimeout(hideAsgTimer);
+    hideAsgIndicator();
+}
+
 container.addEventListener("touchstart", (e) => {
     if (!STATE.isRunning) return;
 
     if (e.touches.length >= 2) {
+        oneFinger = null;
         if (isDraggingNode) {
             isDraggingNode = false;
             draggedNode = null;
         }
         isPanning = true;
         armTwoFinger(e.touches[0], e.touches[1]);
+        clearTouchHover();
         e.preventDefault();
         return;
     }
@@ -1148,17 +1211,21 @@ container.addEventListener("touchstart", (e) => {
     // a drag.
     e.preventDefault();
     const t = e.touches[0];
-    handlePrimaryDown(t.clientX, t.clientY, () => {});
+    const grab = STATE.activeTool === "select" && selectGrabsAt(t.clientX, t.clientY);
+    oneFinger = { startX: t.clientX, startY: t.clientY, x: t.clientX, y: t.clientY, tap: true, owed: !grab };
+    if (grab) handlePrimaryDown(t.clientX, t.clientY);
 }, { passive: false });
 
 container.addEventListener("touchmove", (e) => {
     if (e.touches.length >= 2) {
         e.preventDefault();
+        oneFinger = null;
         // touchstart ignores the board outside a running game; so does this.
         if (!STATE.isRunning) return;
         if (!twoFingerArmed) {
             isPanning = true;
             armTwoFinger(e.touches[0], e.touches[1]);
+            clearTouchHover();
             return;
         }
         const mid = touchMidpoint(e.touches[0], e.touches[1]);
@@ -1185,12 +1252,19 @@ container.addEventListener("touchmove", (e) => {
         return;
     }
 
-    // A single-finger move only ever means something while a node is being
-    // dragged — touch has no hover to drive the tooltip tail, and a stray
-    // single-finger move (a slightly shaky tap) should not smear a tooltip
-    // across the screen the way it harmlessly does under a mouse.
+    const t = e.touches[0];
+    if (oneFinger) {
+        oneFinger.x = t.clientX;
+        oneFinger.y = t.clientY;
+        if (Math.hypot(t.clientX - oneFinger.startX, t.clientY - oneFinger.startY) > TAP_SLOP) {
+            oneFinger.tap = false;
+        }
+    }
+    // A single-finger move only drives anything while a node is being
+    // dragged. The hover tail runs once, when the finger lifts, rather than
+    // smearing a tooltip along behind a moving finger.
     if (isDraggingNode) {
-        handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+        handlePointerMove(t.clientX, t.clientY);
         e.preventDefault();
     }
 }, { passive: false });
@@ -1205,6 +1279,9 @@ container.addEventListener("touchend", (e) => {
     }
     if (e.touches.length === 0) {
         finishNodeDrag();
+        const gesture = oneFinger;
+        oneFinger = null;
+        if (gesture) liftFinger(gesture);
     }
 });
 
@@ -1215,7 +1292,7 @@ container.addEventListener("touchend", (e) => {
 // than leave it armed for the next touch to inherit.
 container.addEventListener("touchcancel", () => {
     disarmTwoFinger();
-    endPointerInteraction();
+    endPointerInteraction(); // also drops the tap the cancelled finger owed
 });
 
 window.addEventListener("resize", () => {

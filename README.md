@@ -179,7 +179,8 @@ Built something you're proud of? The share panel exports your architecture two w
 
 #### On a phone or tablet
 
-- **Tap:** Works like a left click. It places the selected service, links two nodes, or demolishes and unlinks with those tools.
+- **Tap:** Works like a left click, once the finger lifts. It places the selected service, links two nodes, or demolishes and unlinks with those tools. A finger that slides away, or is joined by a second one, is not a tap, so a pinch never builds or demolishes anything.
+- **Tap a service:** Shows its stats, and the upgrade arrow when it has a higher tier; a Compute also gets its AUTO toggle. Tap either one to use it.
 - **One finger on a service:** Drag it to a new tile while the Select tool is active.
 - **Two fingers:** Drag to pan, pinch to zoom, twist to rotate (standing in for `Q`/`E`).
 - **HUD tabs:** On a phone-sized screen, in portrait or landscape, the panels open one at a time from the row of icons under the time controls. Tap the open one again to clear the board. The last two icons reset the camera, standing in for `R`, and switch between the isometric and top-down views, standing in for `T`.

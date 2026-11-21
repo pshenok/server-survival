@@ -21,6 +21,9 @@ import {
     resetCamera,
     toggleView,
 } from "../../src/input/handlers.js";
+import { CAMPAIGN_LEVELS } from "../../src/campaign/levels.js";
+import { createService } from "../../src/sim/topology.js";
+import { startCampaignLevel } from "../../src/ui/campaign-ui.js";
 import { raycastHits, resetRaycastHits } from "../helpers/three-stub.mjs";
 
 const container = () => document.getElementById("canvas-container");
@@ -44,11 +47,14 @@ beforeEach(() => {
 afterEach(resetRaycastHits);
 
 describe("a single-finger tap places a service, exactly like a left click", () => {
-    it("touchstart with one finger reaches the same placement path as mousedown", () => {
+    it("a tap reaches the same placement path as mousedown, once the finger lifts", () => {
         STATE.activeTool = "waf";
         expect(STATE.services).toHaveLength(0);
 
         container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        // Still down: it may yet be the first finger of a pinch.
+        expect(STATE.services).toHaveLength(0);
+        container().dispatchEvent(touchEvent("touchend", []));
 
         // The three-stub raycaster resolves every hit to ground at the
         // origin regardless of clientX/Y (see three-stub.mjs), same as it
@@ -69,6 +75,89 @@ describe("a single-finger tap places a service, exactly like a left click", () =
         STATE.isRunning = false;
         STATE.activeTool = "waf";
         container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        container().dispatchEvent(touchEvent("touchend", []));
+        expect(STATE.services).toHaveLength(0);
+    });
+});
+
+// A real browser sends one touchstart per finger, so a pinch, pan or twist
+// begins with a touchstart carrying the first finger alone: exactly what a
+// tap looks like. Every test above builds its gestures with both fingers in a
+// single touchstart, which is why acting on that first finger went unseen.
+describe("the first finger of a two-finger gesture is not a tap", () => {
+    // A two-finger pan, the fingers landing and lifting one at a time. The
+    // spacing stays put, so the zoom the later tests start from does too.
+    function panWithFingersInTurn() {
+        const f1 = touch(1, 400, 300);
+        container().dispatchEvent(touchEvent("touchstart", [f1]));
+        container().dispatchEvent(touchEvent("touchstart", [f1, touch(2, 500, 300)]));
+        container().dispatchEvent(touchEvent("touchmove", [touch(1, 380, 320), touch(2, 480, 320)]));
+        container().dispatchEvent(touchEvent("touchend", [touch(2, 480, 320)]));
+        container().dispatchEvent(touchEvent("touchend", []));
+    }
+    function placed(type) {
+        createService(type, new globalThis.THREE.Vector3(0, 0, 0));
+        return STATE.services[STATE.services.length - 1];
+    }
+
+    it("with a service armed, it builds nothing and charges nothing", () => {
+        STATE.activeTool = "waf";
+        const money = STATE.money;
+        panWithFingersInTurn();
+        expect(STATE.services).toHaveLength(0);
+        expect(STATE.money).toBe(money);
+    });
+
+    it("with Demolish armed, the node under it survives", () => {
+        const waf = placed("waf");
+        STATE.activeTool = "delete";
+        raycastHits.services = [{ object: waf.mesh }];
+        panWithFingersInTurn();
+        expect(STATE.services).toContain(waf);
+    });
+
+    it("with Link armed, it does not become the link source", () => {
+        const waf = placed("waf");
+        STATE.activeTool = "connect";
+        raycastHits.services = [{ object: waf.mesh }];
+        panWithFingersInTurn();
+        expect(STATE.selectedNodeId).toBeNull();
+    });
+
+    it("with Select, a damaged node under it is not repaired or charged", () => {
+        const waf = placed("waf");
+        waf.health = 20;
+        const money = STATE.money;
+        raycastHits.services = [{ object: waf.mesh }];
+        panWithFingersInTurn();
+        expect(waf.health).toBe(20);
+        expect(STATE.money).toBe(money);
+    });
+
+    it("a finger that slides away before lifting is not a tap either", () => {
+        STATE.activeTool = "waf";
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        container().dispatchEvent(touchEvent("touchmove", [touch(1, 440, 300)]));
+        container().dispatchEvent(touchEvent("touchend", []));
+        expect(STATE.services).toHaveLength(0);
+    });
+
+    it("a plain tap with Select still repairs a damaged node, when the finger lifts", () => {
+        const waf = placed("waf");
+        waf.health = 20;
+        raycastHits.services = [{ object: waf.mesh }];
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        expect(waf.health).toBe(20);
+        container().dispatchEvent(touchEvent("touchend", []));
+        expect(waf.health).toBe(100);
+    });
+
+    it("a plain tap with Demolish still removes the node under it", () => {
+        const waf = placed("waf");
+        STATE.activeTool = "delete";
+        raycastHits.services = [{ object: waf.mesh }];
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        container().dispatchEvent(touchEvent("touchend", []));
         expect(STATE.services).toHaveLength(0);
     });
 });
@@ -372,5 +461,78 @@ describe("touchcancel gives up the grab, same as an off-canvas mouse release (#2
         const before = internetPos();
         container().dispatchEvent(touchEvent("touchmove", [touch(2, 700, 400)]));
         expect(internetPos()).toEqual(before);
+    });
+});
+
+// A Compute the level's palette does not offer can be upgraded only from the
+// green arrow over it, and Auto-Scaling turned on only from the AUTO badge
+// under it. Both appear in the hover tail, which a touchscreen never reached:
+// a tap brought neither up, so Levels 5-8, 15 and 16 could not be won on a
+// phone. A lifted finger now runs that tail once where it left the board.
+describe("a tap on a Compute brings up its upgrade arrow and AUTO toggle", () => {
+    const upgradeArrow = () => document.getElementById("upgrade-indicator");
+    const autoBadge = () => document.getElementById("asg-indicator");
+    const tooltip = () => document.getElementById("tooltip");
+    const tap = (x, y) => {
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, x, y)]));
+        container().dispatchEvent(touchEvent("touchend", []));
+    };
+    // What the browser makes of a tap on an element outside the canvas.
+    const click = (el) => el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    beforeEach(() => {
+        upgradeArrow().classList.add("hidden");
+        autoBadge().classList.add("hidden");
+        tooltip().style.display = "none";
+    });
+    afterEach(() => resetGame("survival"));
+
+    it("on Level 16, where Compute is not in the palette, a tap upgrades it and turns AUTO on", () => {
+        localStorage.setItem(
+            "serverSurvivalCampaignProgress",
+            JSON.stringify({ version: 1, completed: {}, highestUnlocked: 25 })
+        );
+        startCampaignLevel(16);
+        expect(STATE.campaign.active).toBe(true);
+        expect(CAMPAIGN_LEVELS.find((l) => l.id === 16).allowedServices).not.toContain("compute");
+        STATE.isRunning = true;
+        STATE.money = 999;
+        const compute = STATE.services.find((s) => s.type === "compute");
+        expect(compute.tier).toBe(1);
+        expect(compute.asgEnabled).toBeFalsy();
+
+        raycastHits.services = [{ object: compute.mesh }];
+        tap(400, 300);
+        expect(upgradeArrow().classList.contains("hidden")).toBe(false);
+        expect(autoBadge().classList.contains("hidden")).toBe(false);
+        expect(tooltip().style.display).toBe("block");
+
+        click(upgradeArrow());
+        expect(compute.tier).toBe(2);
+        click(autoBadge());
+        expect(compute.asgEnabled).toBe(true);
+    });
+
+    it("tapping empty ground puts the tooltip away again", () => {
+        createService("compute", new globalThis.THREE.Vector3(0, 0, 0));
+        raycastHits.services = [{ object: STATE.services[0].mesh }];
+        tap(400, 300);
+        expect(tooltip().style.display).toBe("block");
+
+        resetRaycastHits();
+        tap(100, 100);
+        expect(tooltip().style.display).toBe("none");
+    });
+
+    it("two fingers moving the camera put it all away, rather than leave it over the old spot", () => {
+        createService("compute", new globalThis.THREE.Vector3(0, 0, 0));
+        raycastHits.services = [{ object: STATE.services[0].mesh }];
+        tap(400, 300);
+        expect(autoBadge().classList.contains("hidden")).toBe(false);
+
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, 300, 300), touch(2, 500, 300)]));
+        expect(tooltip().style.display).toBe("none");
+        expect(upgradeArrow().classList.contains("hidden")).toBe(true);
+        expect(autoBadge().classList.contains("hidden")).toBe(true);
     });
 });
