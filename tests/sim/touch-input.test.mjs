@@ -21,6 +21,7 @@ import {
     resetCamera,
     toggleView,
 } from "../../src/input/handlers.js";
+import { createService } from "../../src/sim/topology.js";
 import { raycastHits, resetRaycastHits } from "../helpers/three-stub.mjs";
 
 const container = () => document.getElementById("canvas-container");
@@ -44,11 +45,14 @@ beforeEach(() => {
 afterEach(resetRaycastHits);
 
 describe("a single-finger tap places a service, exactly like a left click", () => {
-    it("touchstart with one finger reaches the same placement path as mousedown", () => {
+    it("a tap reaches the same placement path as mousedown, once the finger lifts", () => {
         STATE.activeTool = "waf";
         expect(STATE.services).toHaveLength(0);
 
         container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        // Still down: it may yet be the first finger of a pinch.
+        expect(STATE.services).toHaveLength(0);
+        container().dispatchEvent(touchEvent("touchend", []));
 
         // The three-stub raycaster resolves every hit to ground at the
         // origin regardless of clientX/Y (see three-stub.mjs), same as it
@@ -69,6 +73,89 @@ describe("a single-finger tap places a service, exactly like a left click", () =
         STATE.isRunning = false;
         STATE.activeTool = "waf";
         container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        container().dispatchEvent(touchEvent("touchend", []));
+        expect(STATE.services).toHaveLength(0);
+    });
+});
+
+// A real browser sends one touchstart per finger, so a pinch, pan or twist
+// begins with a touchstart carrying the first finger alone: exactly what a
+// tap looks like. Every test above builds its gestures with both fingers in a
+// single touchstart, which is why acting on that first finger went unseen.
+describe("the first finger of a two-finger gesture is not a tap", () => {
+    // A two-finger pan, the fingers landing and lifting one at a time. The
+    // spacing stays put, so the zoom the later tests start from does too.
+    function panWithFingersInTurn() {
+        const f1 = touch(1, 400, 300);
+        container().dispatchEvent(touchEvent("touchstart", [f1]));
+        container().dispatchEvent(touchEvent("touchstart", [f1, touch(2, 500, 300)]));
+        container().dispatchEvent(touchEvent("touchmove", [touch(1, 380, 320), touch(2, 480, 320)]));
+        container().dispatchEvent(touchEvent("touchend", [touch(2, 480, 320)]));
+        container().dispatchEvent(touchEvent("touchend", []));
+    }
+    function placed(type) {
+        createService(type, new globalThis.THREE.Vector3(0, 0, 0));
+        return STATE.services[STATE.services.length - 1];
+    }
+
+    it("with a service armed, it builds nothing and charges nothing", () => {
+        STATE.activeTool = "waf";
+        const money = STATE.money;
+        panWithFingersInTurn();
+        expect(STATE.services).toHaveLength(0);
+        expect(STATE.money).toBe(money);
+    });
+
+    it("with Demolish armed, the node under it survives", () => {
+        const waf = placed("waf");
+        STATE.activeTool = "delete";
+        raycastHits.services = [{ object: waf.mesh }];
+        panWithFingersInTurn();
+        expect(STATE.services).toContain(waf);
+    });
+
+    it("with Link armed, it does not become the link source", () => {
+        const waf = placed("waf");
+        STATE.activeTool = "connect";
+        raycastHits.services = [{ object: waf.mesh }];
+        panWithFingersInTurn();
+        expect(STATE.selectedNodeId).toBeNull();
+    });
+
+    it("with Select, a damaged node under it is not repaired or charged", () => {
+        const waf = placed("waf");
+        waf.health = 20;
+        const money = STATE.money;
+        raycastHits.services = [{ object: waf.mesh }];
+        panWithFingersInTurn();
+        expect(waf.health).toBe(20);
+        expect(STATE.money).toBe(money);
+    });
+
+    it("a finger that slides away before lifting is not a tap either", () => {
+        STATE.activeTool = "waf";
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        container().dispatchEvent(touchEvent("touchmove", [touch(1, 440, 300)]));
+        container().dispatchEvent(touchEvent("touchend", []));
+        expect(STATE.services).toHaveLength(0);
+    });
+
+    it("a plain tap with Select still repairs a damaged node, when the finger lifts", () => {
+        const waf = placed("waf");
+        waf.health = 20;
+        raycastHits.services = [{ object: waf.mesh }];
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        expect(waf.health).toBe(20);
+        container().dispatchEvent(touchEvent("touchend", []));
+        expect(waf.health).toBe(100);
+    });
+
+    it("a plain tap with Demolish still removes the node under it", () => {
+        const waf = placed("waf");
+        STATE.activeTool = "delete";
+        raycastHits.services = [{ object: waf.mesh }];
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, 400, 300)]));
+        container().dispatchEvent(touchEvent("touchend", []));
         expect(STATE.services).toHaveLength(0);
     });
 });
@@ -374,3 +461,4 @@ describe("touchcancel gives up the grab, same as an off-canvas mouse release (#2
         expect(internetPos()).toEqual(before);
     });
 });
+
