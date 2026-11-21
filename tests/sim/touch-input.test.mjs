@@ -21,7 +21,9 @@ import {
     resetCamera,
     toggleView,
 } from "../../src/input/handlers.js";
+import { CAMPAIGN_LEVELS } from "../../src/campaign/levels.js";
 import { createService } from "../../src/sim/topology.js";
+import { startCampaignLevel } from "../../src/ui/campaign-ui.js";
 import { raycastHits, resetRaycastHits } from "../helpers/three-stub.mjs";
 
 const container = () => document.getElementById("canvas-container");
@@ -462,3 +464,75 @@ describe("touchcancel gives up the grab, same as an off-canvas mouse release (#2
     });
 });
 
+// A Compute the level's palette does not offer can be upgraded only from the
+// green arrow over it, and Auto-Scaling turned on only from the AUTO badge
+// under it. Both appear in the hover tail, which a touchscreen never reached:
+// a tap brought neither up, so Levels 5-8, 15 and 16 could not be won on a
+// phone. A lifted finger now runs that tail once where it left the board.
+describe("a tap on a Compute brings up its upgrade arrow and AUTO toggle", () => {
+    const upgradeArrow = () => document.getElementById("upgrade-indicator");
+    const autoBadge = () => document.getElementById("asg-indicator");
+    const tooltip = () => document.getElementById("tooltip");
+    const tap = (x, y) => {
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, x, y)]));
+        container().dispatchEvent(touchEvent("touchend", []));
+    };
+    // What the browser makes of a tap on an element outside the canvas.
+    const click = (el) => el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    beforeEach(() => {
+        upgradeArrow().classList.add("hidden");
+        autoBadge().classList.add("hidden");
+        tooltip().style.display = "none";
+    });
+    afterEach(() => resetGame("survival"));
+
+    it("on Level 16, where Compute is not in the palette, a tap upgrades it and turns AUTO on", () => {
+        localStorage.setItem(
+            "serverSurvivalCampaignProgress",
+            JSON.stringify({ version: 1, completed: {}, highestUnlocked: 25 })
+        );
+        startCampaignLevel(16);
+        expect(STATE.campaign.active).toBe(true);
+        expect(CAMPAIGN_LEVELS.find((l) => l.id === 16).allowedServices).not.toContain("compute");
+        STATE.isRunning = true;
+        STATE.money = 999;
+        const compute = STATE.services.find((s) => s.type === "compute");
+        expect(compute.tier).toBe(1);
+        expect(compute.asgEnabled).toBeFalsy();
+
+        raycastHits.services = [{ object: compute.mesh }];
+        tap(400, 300);
+        expect(upgradeArrow().classList.contains("hidden")).toBe(false);
+        expect(autoBadge().classList.contains("hidden")).toBe(false);
+        expect(tooltip().style.display).toBe("block");
+
+        click(upgradeArrow());
+        expect(compute.tier).toBe(2);
+        click(autoBadge());
+        expect(compute.asgEnabled).toBe(true);
+    });
+
+    it("tapping empty ground puts the tooltip away again", () => {
+        createService("compute", new globalThis.THREE.Vector3(0, 0, 0));
+        raycastHits.services = [{ object: STATE.services[0].mesh }];
+        tap(400, 300);
+        expect(tooltip().style.display).toBe("block");
+
+        resetRaycastHits();
+        tap(100, 100);
+        expect(tooltip().style.display).toBe("none");
+    });
+
+    it("two fingers moving the camera put it all away, rather than leave it over the old spot", () => {
+        createService("compute", new globalThis.THREE.Vector3(0, 0, 0));
+        raycastHits.services = [{ object: STATE.services[0].mesh }];
+        tap(400, 300);
+        expect(autoBadge().classList.contains("hidden")).toBe(false);
+
+        container().dispatchEvent(touchEvent("touchstart", [touch(1, 300, 300), touch(2, 500, 300)]));
+        expect(tooltip().style.display).toBe("none");
+        expect(upgradeArrow().classList.contains("hidden")).toBe(true);
+        expect(autoBadge().classList.contains("hidden")).toBe(true);
+    });
+});

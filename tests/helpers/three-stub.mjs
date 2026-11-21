@@ -64,6 +64,11 @@ export class Vector3 {
     this.z = a.z + (b.z - a.z) * t;
     return this;
   }
+  // No camera math: the point stays where it is. Enough for the hover code
+  // that places the upgrade arrow and the AUTO badge over a node on screen.
+  project() {
+    return this;
+  }
 }
 
 export class Vector2 {

@@ -588,12 +588,11 @@ container.addEventListener("mouseleave", () => {
 // The whole hover/drag/pan/orbit continuation for a moving pointer — node
 // drag, camera pan, camera orbit, and (when none of those claim the move) the
 // hover tooltip + upgrade-indicator + connection-highlight tail. None of it
-// reads anything off the event but the coordinates, so a touch drag (#12)
-// calls this directly with a finger's clientX/clientY: dragging a grabbed
-// node behaves identically, and if nothing is grabbed the branches above
-// fall through to the same hover tail a mouse would — showing tooltip/
-// upgrade info under a stationary finger, which is harmless and often useful
-// mid-drag on touch too.
+// reads anything off the event but the coordinates, so touch (#12) calls this
+// directly with a finger's clientX/clientY: a drag of a grabbed node behaves
+// identically, and a lifted finger runs the hover tail once at the point it
+// left, which is how a tap shows the tooltip, the upgrade arrow and the AUTO
+// toggle (see liftFinger below).
 function handlePointerMove(clientX, clientY) {
     lastPointerPos = { x: clientX, y: clientY };
     if (isDraggingNode && draggedNode) {
@@ -1157,7 +1156,12 @@ function selectGrabsAt(clientX, clientY) {
     return i.type === "service" && !repairsOnSelect(STATE.services.find((s) => s.id === i.id));
 }
 
-// A lifted finger. A tap runs the click it owed.
+// A lifted finger. A tap runs the click it owed, then the hover a mouse would
+// show at that point: the tooltip, and over a Compute the upgrade arrow and the
+// AUTO toggle. Those two are the only way to upgrade a Compute the level's
+// palette does not offer and to turn Auto-Scaling on, and touch has no hover
+// to bring them up otherwise. Both sit outside the canvas, so tapping them is
+// an ordinary click. The 4 Hz tooltip refresh in game.js keeps them live.
 function liftFinger(gesture) {
     if (gesture.tap && gesture.owed) {
         handlePrimaryDown(gesture.startX, gesture.startY);
@@ -1165,6 +1169,21 @@ function liftFinger(gesture) {
         // it instead; a tap lets go at once.
         finishNodeDrag();
     }
+    handlePointerMove(gesture.x, gesture.y);
+}
+
+// What a tap's hover left up stays where the board used to be once two
+// fingers move the camera, and the tooltip refresh would replay the hover at
+// that stale point. A mouse carries its hover along; a finger does not.
+function clearTouchHover() {
+    document.getElementById("tooltip").style.display = "none";
+    lastPointerPos = null;
+    if (hideUpgradeTimer) clearTimeout(hideUpgradeTimer);
+    hideUpgradeTimer = null;
+    hoveredUpgradeService = null;
+    if (upgradeIndicator) upgradeIndicator.classList.add("hidden");
+    if (hideAsgTimer) clearTimeout(hideAsgTimer);
+    hideAsgIndicator();
 }
 
 container.addEventListener("touchstart", (e) => {
@@ -1178,6 +1197,7 @@ container.addEventListener("touchstart", (e) => {
         }
         isPanning = true;
         armTwoFinger(e.touches[0], e.touches[1]);
+        clearTouchHover();
         e.preventDefault();
         return;
     }
@@ -1205,6 +1225,7 @@ container.addEventListener("touchmove", (e) => {
         if (!twoFingerArmed) {
             isPanning = true;
             armTwoFinger(e.touches[0], e.touches[1]);
+            clearTouchHover();
             return;
         }
         const mid = touchMidpoint(e.touches[0], e.touches[1]);
@@ -1239,10 +1260,9 @@ container.addEventListener("touchmove", (e) => {
             oneFinger.tap = false;
         }
     }
-    // A single-finger move only ever means something while a node is being
-    // dragged — touch has no hover to drive the tooltip tail, and a stray
-    // single-finger move (a slightly shaky tap) should not smear a tooltip
-    // across the screen the way it harmlessly does under a mouse.
+    // A single-finger move only drives anything while a node is being
+    // dragged. The hover tail runs once, when the finger lifts, rather than
+    // smearing a tooltip along behind a moving finger.
     if (isDraggingNode) {
         handlePointerMove(t.clientX, t.clientY);
         e.preventDefault();
