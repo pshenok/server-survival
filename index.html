@@ -936,6 +936,11 @@
           <span id="trophies-progress-label" class="text-xs opacity-75 font-normal">0/38</span>
         </button>
 
+        <button onclick="showScoreboard()" id="scoreboard-btn"
+          class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-emerald-400/50">
+          <span data-i18n="scoreboard">Scoreboard</span>
+        </button>
+
         <button onclick="document.getElementById('upload-file-input')?.click()" id="upload-btn"
           data-i18n="upload_game"
           class="w-full bg-blue-400 hover:bg-blue-300 text-black font-bold py-4 px-8 rounded-lg shadow-lg transform transition hover:scale-105 font-mono uppercase text-lg border border-cyan-400/50">
@@ -1711,6 +1716,38 @@
         </div>
         <div id="trophies-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <!-- populated by renderTrophiesPanel() -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scoreboard (#69): local top-10 of finished Survival runs, main menu only -->
+  <div id="scoreboard-modal"
+    class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden overflow-y-auto">
+    <div class="min-h-screen flex items-start justify-center p-6">
+      <div class="glass-panel rounded-2xl p-8 max-w-xl w-full border border-emerald-500/30">
+        <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+          <h2 class="text-3xl font-bold text-emerald-400" data-i18n="scoreboard_title">SCOREBOARD</h2>
+          <button onclick="closeScoreboard()" class="text-gray-400 hover:text-white text-2xl">×</button>
+        </div>
+        <p id="scoreboard-empty" class="text-gray-400 text-center py-6 hidden" data-i18n="scoreboard_empty">
+          No finished Survival runs yet.
+        </p>
+        <table id="scoreboard-table" class="w-full text-left hidden">
+          <thead class="text-xs uppercase text-gray-500">
+            <tr>
+              <th class="pb-2 pr-3">#</th>
+              <th class="pb-2 pr-3" data-i18n="scoreboard_col_score">Score</th>
+              <th class="pb-2 pr-3" data-i18n="scoreboard_col_time">Survived</th>
+              <th class="pb-2" data-i18n="scoreboard_col_date">Date</th>
+            </tr>
+          </thead>
+          <tbody id="scoreboard-body"></tbody>
+        </table>
+        <div class="flex justify-between items-center mt-6 gap-4">
+          <span class="text-xs text-gray-500" data-i18n="scoreboard_note">Saved in this browser only.</span>
+          <button id="scoreboard-clear-btn" onclick="onClearScoreboard()"
+            class="hidden text-xs text-gray-400 hover:text-red-400 underline" data-i18n="scoreboard_clear">Clear scoreboard</button>
         </div>
       </div>
     </div>

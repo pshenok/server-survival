@@ -121,6 +121,8 @@ import { applyToolbarGating, renderToolbar } from "./src/ui/toolbar.js";
 // from animate, and the Trophies panel handlers re-exposed on window below.
 import { achievements } from "./src/achievements/achievements.js";
 import { closeTrophies, showTrophies } from "./src/achievements/ui.js";
+import { recordScore } from "./src/persistence/scoreboard.js";
+import { closeScoreboard, onClearScoreboard, showScoreboard } from "./src/ui/scoreboard-ui.js";
 import { initHudTabs } from "./src/ui/hud-tabs.js";
 import { showLinkTargets, showSelectedLinks } from "./src/ui/link-feedback.js";
 import { renderModeTitle } from "./src/ui/mode-title.js";
@@ -1494,12 +1496,25 @@ function animate(time) {
         // Determine failure reason and generate tips
         const failureAnalysis = analyzeFailure();
 
+        // Scoreboard (#69): this block runs once per run (isRunning is now
+        // false), so each finished Survival game is recorded exactly once.
+        const scoreboardResult = recordScore({
+            score: STATE.score.total,
+            seconds: STATE.elapsedGameTime || 0,
+        });
+        const scoreboardLine = scoreboardResult.rank
+            ? `<div class="text-center text-sm text-emerald-400 mb-2">${
+                scoreboardResult.isBest ? i18n.t('scoreboard_new_best') + ' ' : ''
+            }${i18n.t('scoreboard_rank', { rank: scoreboardResult.rank })}</div>`
+            : "";
+
         document.getElementById("modal-title").innerText = i18n.t('system_failure');
         document.getElementById("modal-title").classList.add("text-red-500");
         document.getElementById("modal-desc").innerHTML = `
             <div class="text-left space-y-3">
                 <div class="text-center text-2xl font-bold text-yellow-400 mb-2">${i18n.t('final_score', { score: STATE.score.total })}</div>
-                <div class="text-center text-sm text-gray-400 mb-4">${i18n.t('survived_time', { time: formatTime(STATE.elapsedGameTime || 0) })}</div>
+                <div class="text-center text-sm text-gray-400 mb-2">${i18n.t('survived_time', { time: formatTime(STATE.elapsedGameTime || 0) })}</div>
+                ${scoreboardLine}
                 
                 <div class="bg-red-900/30 border border-red-500/50 rounded-lg p-3">
                     <div class="text-red-400 font-bold text-sm uppercase mb-1">${i18n.t('failure_reason')}</div>
@@ -1791,6 +1806,11 @@ window.onClickContinueGame = onClickContinueGame;
 // #158: the Trophies panel's inline handlers in index.html.
 window.showTrophies = showTrophies;
 window.closeTrophies = closeTrophies;
+
+// #69: the Scoreboard panel's inline handlers in index.html.
+window.showScoreboard = showScoreboard;
+window.closeScoreboard = closeScoreboard;
+window.onClearScoreboard = onClearScoreboard;
 
 // #157: the share modal's inline handlers in index.html.
 window.showShareModal = showShareModal;

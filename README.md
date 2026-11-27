@@ -14,6 +14,7 @@ Learn cloud by playing:
 
 - **Survival** — the core experience: survive as long as possible against escalating traffic, DDoS spikes, random events, and service degradation.
 - **Campaign** — 25 hand-crafted levels across 5 chapters (Basics → Optimization → Defense & Mastery → Production Readiness → The AI Wave). Each level teaches one architecture concept with pre-built diagrams, objectives, and a debrief.
+- **Scoreboard** — every finished Survival run is saved to a top-10 list on the main menu (best score first, shorter run wins ties). It lives in your browser's local storage only, so it is per-browser, not a global leaderboard.
 - **Sandbox** — a free-play lab: any budget, any traffic mix, no game over. Experiment with all 26 services.
 
 ## What It Teaches
